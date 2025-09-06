@@ -214,6 +214,9 @@
       }
     },
     "AccountBalance": {
+      "title": "AccountBalance",
+      "$id": "#AccountBalance",
+      "x-parser-schema-id": "AccountBalance",
       "type": "object",
       "required": [
         "accountId",
@@ -372,16 +375,25 @@
       }
     },
     "Side": {
+      "title": "Side",
+      "$id": "#Side",
+      "x-parser-schema-id": "Side",
       "type": "string",
       "enum": ["B", "A"],
       "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
     },
     "ExecutionType": {
+      "title": "ExecutionType",
+      "$id": "#ExecutionType",
+      "x-parser-schema-id": "ExecutionType",
       "type": "string",
       "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
       "description": "Type of execution"
     },
     "OrderStatus": {
+      "title": "OrderStatus",
+      "$id": "#OrderStatus",
+      "x-parser-schema-id": "OrderStatus",
       "type": "string",
       "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
       "description": "Order status"
@@ -390,31 +402,6 @@
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
-    },
-    "BaseUpdatePayload": {
-      "type": "object",
-      "required": [
-        "type",
-        "channel",
-        "data",
-        "timestamp"
-      ],
-      "properties": {
-        "type": {
-          "type": "string",
-          "const": "channel_data",
-          "description": "Message type"
-        },
-        "channel": {
-          "type": "string",
-          "description": "Channel identifier"
-        },
-        "timestamp": {
-          "type": "integer",
-          "description": "Update timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      }
     },
     "MarketDefinition": {
       "type": "object",
@@ -819,12 +806,18 @@
       }
     },
     "TimeInForce": {
+      "title": "TimeInForce",
+      "$id": "#TimeInForce",
+      "x-parser-schema-id": "TimeInForce",
       "type": "string",
       "enum": ["IOC", "GTC"],
       "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
       "example": "GTC"
     },
     "OrderType": {
+      "title": "OrderType",
+      "$id": "#OrderType",
+      "x-parser-schema-id": "OrderType",
       "type": "string",
       "enum": ["LIMIT", "TP", "SL"],
       "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
