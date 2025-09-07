@@ -6,15 +6,14 @@ This repository contains the API specifications for Reya Network's trading endpo
 
 - **`openapi-trading-v2.yaml`** - OpenAPI 3.0 specification for Reya DEX trading v2 REST API endpoints
 - **`asyncapi-trading-v2.yaml`** - AsyncAPI specification for Reya DEX trading v2 WebSocket streams
-- **`trading-schemas.json`** - JSON schemas used by the trading API
+- **`trading-schemas.json`** - JSON schemas used both openapi and asyncapi specifications
 
 ## Usage
 
 These specifications can be used to:
 - Generate client SDKs in various programming languages
-- Set up API documentation
-- Validate API requests and responses
-- Mock API servers for testing
+- Generate API documentation
+
 
 ## Related Resources
 
@@ -27,8 +26,8 @@ These specifications can be used to:
 
 ## Development
 
-This repository is included as a git submodule in the [Reya off-chain monorepo](https://github.com/Reya-Labs/reya-off-chain-monorepo) for development and maintenance purposes.
+It's recommended to include this repo as a git submodule in your project. As an example, see how it's done in the [Reya Python SDK](https://github.com/Reya-Labs/reya-python-sdk).
 
 ## License
 
-This project is licensed under the same terms as the Reya Network codebase.
+This project is licensed under the MIT License - see the LICENSE file for details.
