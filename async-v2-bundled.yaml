@@ -1,0 +1,688 @@
+info:
+  title: Reya DEX Trading WebSocket API v2
+  version: 2.0.0
+  description: |
+    Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats.
+  contact:
+    name: Reya Network
+    url: https://reya.xyz
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  production:
+    url: wss://ws.reya.xyz
+    protocol: wss
+    description: Production WebSocket server
+  test:
+    url: wss://websocket-testnet.reya.xyz
+    protocol: wss
+    description: Staging WebSocket server
+components:
+  parameters:
+    Symbol:
+      description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+      schema:
+        $ref: '#/components/schemas/Symbol'
+    Address:
+      description: Ethereum wallet address
+      schema:
+        $ref: '#/components/schemas/Address'
+  messages:
+    Ping:
+      name: ping
+      title: Ping Message
+      summary: Server heartbeat ping
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PingMessage'
+    Pong:
+      name: pong
+      title: Pong Message
+      summary: Client heartbeat response
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PongMessage'
+    MarketsSummaryUpdate:
+      name: marketsSummaryUpdate
+      title: Markets Summary Update
+      summary: Real-time update containing all market summaries
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MarketsSummaryUpdatePayload'
+    MarketSummaryUpdate:
+      name: marketSummaryUpdate
+      title: Market Summary Update
+      summary: Real-time update for a specific market summary
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MarketSummaryUpdatePayload'
+    PositionUpdate:
+      name: positionUpdate
+      title: Position Update
+      summary: Real-time position update for a wallet
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PositionUpdatePayload'
+    OpenOrderUpdate:
+      name: openOrderUpdate
+      title: Open Order Update
+      summary: Real-time open order update for a wallet
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OpenOrderUpdatePayload'
+    MarketPerpExecutionUpdate:
+      name: marketPerpExecutionUpdate
+      title: Market Perpetual Execution Update
+      summary: Real-time perpetual execution update for market
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MarketPerpExecutionUpdatePayload'
+    WalletPerpExecutionUpdate:
+      name: walletPerpExecutionUpdate
+      title: Wallet Perpetual Execution Update
+      summary: Real-time perpetual execution update for wallet
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WalletPerpExecutionUpdatePayload'
+    PricesUpdate:
+      name: pricesUpdate
+      title: Prices Update
+      summary: Real-time price updates for all symbols
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PricesUpdatePayload'
+    PriceUpdate:
+      name: priceUpdate
+      title: Price Update
+      summary: Real-time price update for a specific symbol
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PriceUpdatePayload'
+  schemas:
+    Symbol:
+      title: Symbol
+      type: string
+      pattern: ^[A-Z]+$
+      examples:
+        - BTCRUSDPERP
+        - ETHRUSD
+    Address:
+      title: Address
+      type: string
+      pattern: ^0x[a-fA-F0-9]{40}$
+      examples:
+        - '0x6c51275fd01d5dbd2da194e92f920f8598306df2'
+    PingMessage:
+      x-parser-schema-id: PingMessage
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: ping
+          description: Message type identifier
+        timestamp:
+          type: number
+          description: Server timestamp (milliseconds)
+          example: 1747927089946
+    PongMessage:
+      x-parser-schema-id: PongMessage
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: pong
+          description: Message type identifier
+        timestamp:
+          type: number
+          description: Client timestamp (milliseconds)
+          example: 1747927089946
+    BaseUpdateEnvelope:
+      x-parser-schema-id: BaseUpdateEnvelope
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - timestamp
+      properties:
+        type:
+          type: string
+          const: channel_data
+          description: Message type
+        timestamp:
+          type: number
+          description: Update timestamp (milliseconds)
+          example: 1747927089946
+    MarketsSummaryUpdateBody:
+      x-parser-schema-id: MarketsSummaryUpdateBody
+      title: MarketsSummaryUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          const: /v2/markets/summary
+          description: Channel identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MarketSummary'
+    MarketSummaryUpdateBody:
+      x-parser-schema-id: MarketSummaryUpdateBody
+      title: MarketSummaryUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          pattern: ^/v2/market/[A-Z]+/summary$
+        data:
+          $ref: '#/components/schemas/MarketSummary'
+    PositionUpdateBody:
+      x-parser-schema-id: PositionUpdateBody
+      title: PositionUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          pattern: ^/v2/wallet/0x[a-fA-F0-9]{40}/positions$
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+    OpenOrderUpdateBody:
+      x-parser-schema-id: OpenOrderUpdateBody
+      title: OpenOrderUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          pattern: ^/v2/wallet/0x[a-fA-F0-9]{40}/openOrders$
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+    MarketPerpExecutionUpdateBody:
+      x-parser-schema-id: MarketPerpExecutionUpdateBody
+      title: MarketPerpExecutionUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          pattern: ^/v2/market/[A-Z]+/perpExecutions$
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerpExecution'
+    WalletPerpExecutionUpdateBody:
+      x-parser-schema-id: WalletPerpExecutionUpdateBody
+      title: WalletPerpExecutionUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          pattern: ^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerpExecution'
+    PricesUpdateBody:
+      x-parser-schema-id: PricesUpdateBody
+      title: PricesUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          const: /v2/prices
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Price'
+    PriceUpdateBody:
+      x-parser-schema-id: PriceUpdateBody
+      title: PriceUpdateBody
+      type: object
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          type: string
+          pattern: ^/v2/prices/[A-Z]+$
+        data:
+          $ref: '#/components/schemas/Price'
+    MarketsSummaryUpdatePayload:
+      x-parser-schema-id: MarketsSummaryUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketsSummaryUpdateBody'
+    MarketSummaryUpdatePayload:
+      x-parser-schema-id: MarketSummaryUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketSummaryUpdateBody'
+    PositionUpdatePayload:
+      x-parser-schema-id: PositionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/PositionUpdateBody'
+    OpenOrderUpdatePayload:
+      x-parser-schema-id: OpenOrderUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/OpenOrderUpdateBody'
+    MarketPerpExecutionUpdatePayload:
+      x-parser-schema-id: MarketPerpExecutionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketPerpExecutionUpdateBody'
+    WalletPerpExecutionUpdatePayload:
+      x-parser-schema-id: WalletPerpExecutionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
+    PricesUpdatePayload:
+      x-parser-schema-id: PricesUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/PricesUpdateBody'
+    PriceUpdatePayload:
+      x-parser-schema-id: PriceUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/PriceUpdateBody'
+    MarketSummary:
+      type: object
+      required:
+        - symbol
+        - updatedAt
+        - longOiQty
+        - shortOiQty
+        - oiQty
+        - fundingRate
+        - longFundingValue
+        - shortFundingValue
+        - fundingRateVelocity
+        - volume24h
+      properties:
+        symbol:
+          type: string
+          example: BTCRUSDPERP
+        updatedAt:
+          type: integer
+          description: Time when the market summary was last calculated (milliseconds)
+          example: 1747927089946
+        longOiQty:
+          type: string
+          description: Long open interest in lots
+          example: '154.741'
+        shortOiQty:
+          type: string
+          description: Short open interest in lots
+          example: '154.706'
+        oiQty:
+          type: string
+          description: Total open interest quantity
+          example: '154.741'
+        fundingRate:
+          type: string
+          description: Current hourly funding rate
+          example: '-0.000509373441021089'
+        longFundingValue:
+          type: string
+          description: Current long funding value
+          example: '412142.26'
+        shortFundingValue:
+          type: string
+          description: Current short funding value
+          example: '412142.26'
+        fundingRateVelocity:
+          type: string
+          description: Funding rate velocity
+          example: '-0.00000006243'
+        volume24h:
+          type: string
+          example: '917833.49891'
+        pxChange24h:
+          type: string
+          example: '92.6272285500004'
+        throttledOraclePrice:
+          type: string
+          description: Last oracle price, at the moment of the last market summary update
+          example: '2666.48162040777'
+        throttledPoolPrice:
+          type: string
+          description: Last pool price, at the moment of the last market summary update
+          example: '2666.48166680625'
+        pricesUpdatedAt:
+          type: integer
+          description: Timestamp of the last price update (milliseconds)
+          example: 1747927089597
+    Position:
+      type: object
+      required:
+        - exchangeId
+        - symbol
+        - accountId
+        - qty
+        - side
+        - avgEntryPrice
+        - avgEntryFundingValue
+        - lastTradeSequenceNumber
+      properties:
+        exchangeId:
+          type: integer
+          example: 1
+        symbol:
+          type: string
+          example: BTCRUSDPERP
+        accountId:
+          type: integer
+          example: 12345
+        qty:
+          type: string
+          example: '1.5'
+        side:
+          $ref: '#/components/schemas/Side'
+        avgEntryPrice:
+          type: string
+          example: '43000.00'
+        avgEntryFundingValue:
+          type: string
+          description: Average entry funding value.
+          example: '100.25'
+        lastTradeSequenceNumber:
+          type: integer
+          description: Sequence number of last execution taken into account for the position.
+          example: 152954
+    Order:
+      type: object
+      required:
+        - exchangeId
+        - symbol
+        - accountId
+        - side
+        - limitPx
+        - orderType
+        - status
+        - createdAt
+        - lastUpdateAt
+      properties:
+        exchangeId:
+          type: integer
+          example: 1
+        symbol:
+          type: string
+          example: BTCRUSDPERP
+        accountId:
+          type: integer
+          example: 12345
+        orderId:
+          type: string
+          example: 123456789-123123123
+        qty:
+          type: string
+          example: '1.0'
+        execQty:
+          type: string
+          description: 'Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.'
+          example: '0.5'
+        side:
+          $ref: '#/components/schemas/Side'
+        limitPx:
+          type: string
+          example: '43000.00'
+        orderType:
+          $ref: '#/components/schemas/OrderType'
+        triggerPx:
+          type: string
+          description: Price at which TP/SL orders will be triggered, should not be set for other order types.
+          example: '50000.0'
+        timeInForce:
+          $ref: '#/components/schemas/TimeInForce'
+          description: Order time in force, exclusively used for LIMIT orders
+          example: GTC
+        reduceOnly:
+          type: boolean
+          description: Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.
+          example: false
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        createdAt:
+          type: integer
+          description: Creation timestamp (milliseconds)
+          example: 1747927089946
+        lastUpdateAt:
+          type: integer
+          description: Last update timestamp (milliseconds)
+          example: 1747927089946
+    PerpExecution:
+      type: object
+      required:
+        - exchangeId
+        - symbol
+        - accountId
+        - qty
+        - side
+        - fee
+        - price
+        - type
+        - timestamp
+        - sequenceNumber
+      properties:
+        exchangeId:
+          type: integer
+          example: 1
+        symbol:
+          type: string
+          example: BTCRUSDPERP
+        accountId:
+          type: integer
+          example: 12345
+        qty:
+          type: string
+          example: '1.0'
+        side:
+          $ref: '#/components/schemas/Side'
+        price:
+          type: string
+          example: '43000.00'
+        fee:
+          type: string
+          example: '0.50'
+        type:
+          $ref: '#/components/schemas/ExecutionType'
+        timestamp:
+          type: integer
+          description: Execution timestamp (milliseconds)
+          example: 1747927089946
+        sequenceNumber:
+          type: integer
+          description: Execution sequence number, increases by 1 for every perp execution in reya chain
+          example: 152954
+    Price:
+      type: object
+      required:
+        - symbol
+        - updatedAt
+      properties:
+        symbol:
+          type: string
+          example: BTCRUSDPERP
+        oraclePrice:
+          type: string
+          description: Oracle price, also known as spot price
+          example: '43000.00'
+        poolPrice:
+          type: string
+          description: Pool price
+          example: '42999.50'
+        updatedAt:
+          type: integer
+          description: Last update timestamp (milliseconds)
+          example: 1747927089946
+    Side:
+      title: Side
+      $id: '#Side'
+      x-parser-schema-id: Side
+      type: string
+      enum:
+        - B
+        - A
+      description: Order side (B = Buy/Bid, A = Ask/Sell)
+    ExecutionType:
+      title: ExecutionType
+      $id: '#ExecutionType'
+      x-parser-schema-id: ExecutionType
+      type: string
+      enum:
+        - ORDER_MATCH
+        - LIQUIDATION
+        - ADL
+      description: Type of execution
+    OrderStatus:
+      title: OrderStatus
+      $id: '#OrderStatus'
+      x-parser-schema-id: OrderStatus
+      type: string
+      enum:
+        - OPEN
+        - FILLED
+        - CANCELLED
+        - REJECTED
+      description: Order status
+    OrderType:
+      title: OrderType
+      $id: '#OrderType'
+      x-parser-schema-id: OrderType
+      type: string
+      enum:
+        - LIMIT
+        - TP
+        - SL
+      description: Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)
+      example: TP
+    TimeInForce:
+      title: TimeInForce
+      $id: '#TimeInForce'
+      x-parser-schema-id: TimeInForce
+      type: string
+      enum:
+        - IOC
+        - GTC
+      description: Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)
+      example: GTC
+asyncapi: 2.6.0
+defaultContentType: application/json
+channels:
+  /ping:
+    description: Heartbeat channel for connection health monitoring
+    subscribe:
+      summary: Receive ping messages from server
+      operationId: receivePing
+      message:
+        $ref: '#/components/messages/Ping'
+    publish:
+      summary: Send pong response to server
+      operationId: sendPong
+      message:
+        $ref: '#/components/messages/Pong'
+  /v2/markets/summary:
+    description: Real-time updates for all market summaries
+    subscribe:
+      summary: Receive market summaries updates
+      operationId: receiveMarketsSummary
+      message:
+        $ref: '#/components/messages/MarketsSummaryUpdate'
+  /v2/market/{symbol}/summary:
+    description: Real-time updates for a specific market's summary
+    parameters:
+      symbol:
+        $ref: '#/components/parameters/Symbol'
+    subscribe:
+      summary: Receive market summary updates
+      operationId: receiveMarketSummary
+      message:
+        $ref: '#/components/messages/MarketSummaryUpdate'
+  /v2/market/{symbol}/perpExecutions:
+    description: Real-time perpetual executions for a specific market
+    parameters:
+      symbol:
+        $ref: '#/components/parameters/Symbol'
+    subscribe:
+      summary: Receive perpetual execution updates for market
+      operationId: receiveMarketPerpExecutions
+      message:
+        $ref: '#/components/messages/MarketPerpExecutionUpdate'
+  /v2/wallet/{address}/positions:
+    description: Real-time position updates for a wallet
+    parameters:
+      address:
+        $ref: '#/components/parameters/Address'
+    subscribe:
+      summary: Receive position updates for wallet
+      operationId: receiveWalletPositions
+      message:
+        $ref: '#/components/messages/PositionUpdate'
+  /v2/wallet/{address}/openOrders:
+    description: Real-time updates for wallet's open orders
+    parameters:
+      address:
+        $ref: '#/components/parameters/Address'
+    subscribe:
+      summary: Receive open order updates for wallet
+      operationId: receiveWalletOpenOrders
+      message:
+        $ref: '#/components/messages/OpenOrderUpdate'
+  /v2/wallet/{address}/perpExecutions:
+    description: Real-time perpetual execution updates for a wallet
+    parameters:
+      address:
+        $ref: '#/components/parameters/Address'
+    subscribe:
+      summary: Receive perpetual execution updates for wallet
+      operationId: receiveWalletPerpExecutions
+      message:
+        $ref: '#/components/messages/WalletPerpExecutionUpdate'
+  /v2/prices:
+    description: Real-time price updates for all symbols
+    subscribe:
+      summary: Receive price updates for all symbols
+      operationId: receivePrices
+      message:
+        $ref: '#/components/messages/PricesUpdate'
+  /v2/prices/{symbol}:
+    description: Real-time price updates for a specific symbol
+    parameters:
+      symbol:
+        $ref: '#/components/parameters/Symbol'
+    subscribe:
+      summary: Receive price updates for specific symbol
+      operationId: receivePrice
+      message:
+        $ref: '#/components/messages/PriceUpdate'

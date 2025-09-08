@@ -30,9 +30,10 @@ It's recommended to include this repo as a git submodule in your project. As an 
 
 ### Generating monolithic yaml specs:
 
-In order to generate a single monolithic openapi yaml spec, run:
+In order to generate a single monolithic openapi or asyncapi yaml spec, run:
 ```
 npx @redocly/cli bundle openapi-trading-v2.yaml -o openapi-trading-v2-bundled.yaml
+npx @redocly/cli bundle asyncapi-trading-v2.yaml -o asyncapi-trading-v2-bundled.yaml
 ```
 
 
