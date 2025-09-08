@@ -436,7 +436,7 @@ components:
       description: Trading symbol (e.g., BTCRUSDPERP)
       schema:
         type: string
-        pattern: '^[A-Z]+$'
+        pattern: '^[A-Za-z0-9]+$'
         example: BTCRUSDPERP
 
     AddressParam:
