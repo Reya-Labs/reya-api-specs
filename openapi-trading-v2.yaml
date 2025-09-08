@@ -333,6 +333,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/accountBalances:
+    get:
+      summary: Get wallet account balances
+      description: Returns all account real balances for a wallet.
+      operationId: getWalletAccountBalances
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+      responses:
+        '200':
+          description: List of account balances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountBalance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/openOrders:
     get:
       summary: Get wallet open orders

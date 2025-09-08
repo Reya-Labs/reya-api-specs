@@ -213,6 +213,28 @@
         }
       }
     },
+    "AccountBalance": {
+      "type": "object",
+      "required": [
+        "accountId",
+        "symbol",
+        "realBalance"
+      ],
+      "properties": {
+        "accountId": {
+          "type": "integer",
+          "example": 12345
+        },
+        "symbol": {
+          "type": "string",
+          "example": "WSTETHRUSD"
+        },
+        "realBalance": {
+          "type": "string",
+          "example": "1.25"
+        }
+      }
+    },
     "PerpExecution": {
       "type": "object",
       "required": [
