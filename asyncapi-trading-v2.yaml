@@ -438,8 +438,6 @@ components:
       $ref: './trading-schemas.json#/definitions/Position'
     Order:
       $ref: './trading-schemas.json#/definitions/Order'
-    AccountBalance:
-      $ref: './trading-schemas.json#/definitions/AccountBalance'
     PerpExecution:
       $ref: './trading-schemas.json#/definitions/PerpExecution'
     Price:
