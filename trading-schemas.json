@@ -757,7 +757,7 @@
         }
       }
     },
-    "Error": {
+    "RequestError": {
       "type": "object",
       "required": [
         "error",
@@ -765,7 +765,7 @@
       ],
       "properties": {
         "error": {
-          "$ref": "#/definitions/ErrorCode"
+          "$ref": "#/definitions/RequestErrorCode"
         },
         "message": {
           "type": "string",
@@ -774,7 +774,24 @@
         }
       }
     },
-    "ErrorCode": {
+    "ServerError": {
+      "type": "object",
+      "required": [
+        "error",
+        "message"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/ServerErrorCode"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message",
+          "example": "Invalid symbol format"
+        }
+      }
+    },
+    "RequestErrorCode": {
       "type": "string",
       "enum": [
         "SYMBOL_NOT_FOUND",
@@ -782,7 +799,13 @@
         "NO_PRICES_FOUND_FOR_SYMBOL",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
-        "CANCEL_ORDER_OTHER_ERROR",
+        "CANCEL_ORDER_OTHER_ERROR"
+      ],
+      "description": "Standardized error codes for API responses"
+    },
+    "ServerErrorCode": {
+      "type": "string",
+      "enum": [
         "INTERNAL_SERVER_ERROR"
       ],
       "description": "Standardized error codes for API responses"

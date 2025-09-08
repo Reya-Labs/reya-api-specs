@@ -31,6 +31,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MarketDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /assetDefinitions:
     get:
@@ -47,6 +51,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AssetDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /liquidityParameters:
     get:
@@ -63,6 +71,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LiquidityParameters'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /globalFeeParameters:
     get:
@@ -77,6 +89,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GlobalFeeParameters'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /feeTiers:
     get:
@@ -93,6 +109,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FeeTierParameters'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 
   /markets/summary:
@@ -111,6 +131,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MarketSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /market/{symbol}/summary:
     get:
@@ -128,6 +152,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MarketSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /prices:
     get:
@@ -144,6 +172,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Price'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /prices/{symbol}:
     get:
@@ -160,6 +192,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Price'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /market/{symbol}/perpExecutions:
     get:
@@ -179,6 +215,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PerpExecutionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /candleHistory/{symbol}/{resolution}:
     get:
@@ -198,6 +238,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CandleHistoryData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/accounts:
     get:
@@ -216,6 +260,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/perpExecutions:
     get:
@@ -235,6 +283,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PerpExecutionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/spotExecutions:
     get:
@@ -254,6 +306,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SpotExecutionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/positions:
     get:
@@ -272,6 +328,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Position'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/openOrders:
     get:
@@ -291,6 +351,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/configuration:
     get:
@@ -308,6 +372,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WalletConfiguration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /createOrder:
     post:
@@ -329,6 +397,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /cancelOrder:
     post:
@@ -350,6 +422,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CancelOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   parameters:
@@ -463,11 +539,17 @@ components:
     OrderStatus:
       $ref: './trading-schemas.json#/definitions/OrderStatus'
 
-    Error:
-      $ref: './trading-schemas.json#/definitions/Error'
+    RequestError:
+      $ref: './trading-schemas.json#/definitions/ServerError'
 
-    ErrorCode:
-      $ref: './trading-schemas.json#/definitions/ErrorCode'
+    RequestErrorCode:
+      $ref: './trading-schemas.json#/definitions/ServerErrorCode'
+
+    ServerError:
+      $ref: './trading-schemas.json#/definitions/ServerError'
+
+    ServerErrorCode:
+      $ref: './trading-schemas.json#/definitions/ServerErrorCode'
 
     # Order Entry Schemas
     TimeInForce:
@@ -494,29 +576,19 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/RequestError'
           example:
-            error: BAD_REQUEST
+            error: INPUT_VALIDATION_ERROR
             message: Invalid request parameters
-
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: NOT_FOUND
-            message: Market not found
 
     InternalServerError:
       description: Internal server error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ServerError'
           example:
-            error: INTERNAL_ERROR
+            error: INTERNAL_SERVER_ERROR
             message: An unexpected error occurred
 
 tags:
