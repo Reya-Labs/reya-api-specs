@@ -217,7 +217,7 @@ components:
     Symbol:
       title: Symbol
       type: string
-      pattern: '^[A-Z]+$'
+      pattern: '^[A-Za-z0-9]+$'
       examples: [BTCRUSDPERP, ETHRUSD]
 
     Address:
@@ -296,7 +296,7 @@ components:
       properties:
         channel:
           type: string
-          pattern: '^/v2/market/[A-Z]+/summary$'
+          pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
         data:
           $ref: '#/components/schemas/MarketSummary'
 
@@ -336,7 +336,7 @@ components:
       properties:
         channel:
           type: string
-          pattern: '^/v2/market/[A-Z]+/perpExecutions$'
+          pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
         data:
           type: array
           items:
@@ -378,7 +378,7 @@ components:
       properties:
         channel:
           type: string
-          pattern: '^/v2/prices/[A-Z]+$'
+          pattern: '^/v2/prices/[A-Za-z0-9]+$'
         data:
           $ref: '#/components/schemas/Price'
 
