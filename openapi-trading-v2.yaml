@@ -540,10 +540,10 @@ components:
       $ref: './trading-schemas.json#/definitions/OrderStatus'
 
     RequestError:
-      $ref: './trading-schemas.json#/definitions/ServerError'
+      $ref: './trading-schemas.json#/definitions/RequestError'
 
     RequestErrorCode:
-      $ref: './trading-schemas.json#/definitions/ServerErrorCode'
+      $ref: './trading-schemas.json#/definitions/RequestErrorCode'
 
     ServerError:
       $ref: './trading-schemas.json#/definitions/ServerError'

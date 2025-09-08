@@ -28,6 +28,14 @@ These specifications can be used to:
 
 It's recommended to include this repo as a git submodule in your project. As an example, see how it's done in the [Reya Python SDK](https://github.com/Reya-Labs/reya-python-sdk).
 
+## Generating monolithic yaml specs:
+
+In order to generate a single monolithic openapi yaml spec, run:
+```
+npx @redocly/cli bundle openapi-trading-v2.yaml -o openapi-trading-v2-bundled.yaml
+```
+
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
