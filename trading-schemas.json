@@ -213,32 +213,6 @@
         }
       }
     },
-    "AccountBalance": {
-      "title": "AccountBalance",
-      "$id": "#AccountBalance",
-      "x-parser-schema-id": "AccountBalance",
-      "type": "object",
-      "required": [
-        "accountId",
-        "symbol",
-        "balance"
-      ],
-      "properties": {
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "symbol": {
-          "type": "string",
-          "example": "RUSD"
-        },
-        "balance": {
-          "type": "string",
-          "description": "Account balance",
-          "example": "25100.076"
-        }
-      }
-    },
     "PerpExecution": {
       "type": "object",
       "required": [
