@@ -28,7 +28,7 @@ These specifications can be used to:
 
 It's recommended to include this repo as a git submodule in your project. As an example, see how it's done in the [Reya Python SDK](https://github.com/Reya-Labs/reya-python-sdk).
 
-## Generating monolithic yaml specs:
+### Generating monolithic yaml specs:
 
 In order to generate a single monolithic openapi yaml spec, run:
 ```
