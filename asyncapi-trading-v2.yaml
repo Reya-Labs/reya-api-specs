@@ -80,16 +80,16 @@ channels:
       message:
         $ref: '#/components/messages/PositionUpdate'
 
-  /v2/wallet/{address}/openOrders:
-    description: Real-time updates for wallet's open orders
+  /v2/wallet/{address}/orderChanges:
+    description: Real-time order change updates for wallet
     parameters:
       address:
         $ref: '#/components/parameters/Address'
     subscribe:
-      summary: Receive open order updates for wallet
-      operationId: receiveWalletOpenOrders
+      summary: Receive order change updates for wallet
+      operationId: receiveWalletOrderChanges
       message:
-        $ref: '#/components/messages/OpenOrderUpdate'
+        $ref: '#/components/messages/OrderChangeUpdate'
 
   /v2/wallet/{address}/perpExecutions:
     description: Real-time perpetual execution updates for a wallet
@@ -173,13 +173,13 @@ components:
       payload:
         $ref: '#/components/schemas/PositionUpdatePayload'
 
-    OpenOrderUpdate:
-      name: openOrderUpdate
-      title: Open Order Update
-      summary: Real-time open order update for a wallet
+    OrderChangeUpdate:
+      name: orderChangeUpdate
+      title: Order Change Update
+      summary: Real-time order change update for a wallet
       contentType: application/json
       payload:
-        $ref: '#/components/schemas/OpenOrderUpdatePayload'
+        $ref: '#/components/schemas/OrderChangeUpdatePayload'
 
     MarketPerpExecutionUpdate:
       name: marketPerpExecutionUpdate
@@ -217,7 +217,7 @@ components:
     Symbol:
       title: Symbol
       type: string
-      pattern: '^[A-Z]+$'
+      pattern: '^[A-Za-z0-9]+$'
       examples: [BTCRUSDPERP, ETHRUSD]
 
     Address:
@@ -296,7 +296,7 @@ components:
       properties:
         channel:
           type: string
-          pattern: '^/v2/market/[A-Z]+/summary$'
+          pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
         data:
           $ref: '#/components/schemas/MarketSummary'
 
@@ -314,15 +314,15 @@ components:
           items:
             $ref: '#/components/schemas/Position'
 
-    OpenOrderUpdateBody:
-      x-parser-schema-id: OpenOrderUpdateBody
-      title: OpenOrderUpdateBody
+    OrderChangeUpdateBody:
+      x-parser-schema-id: OrderChangeUpdateBody
+      title: OrderChangeUpdateBody
       type: object
       required: [channel, data]
       properties:
         channel:
           type: string
-          pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/openOrders$'
+          pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$'
         data:
           type: array
           items:
@@ -336,7 +336,7 @@ components:
       properties:
         channel:
           type: string
-          pattern: '^/v2/market/[A-Z]+/perpExecutions$'
+          pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
         data:
           type: array
           items:
@@ -378,7 +378,7 @@ components:
       properties:
         channel:
           type: string
-          pattern: '^/v2/prices/[A-Z]+$'
+          pattern: '^/v2/prices/[A-Za-z0-9]+$'
         data:
           $ref: '#/components/schemas/Price'
 
@@ -401,11 +401,11 @@ components:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PositionUpdateBody'
 
-    OpenOrderUpdatePayload:
-      x-parser-schema-id: OpenOrderUpdatePayload
+    OrderChangeUpdatePayload:
+      x-parser-schema-id: OrderChangeUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/OpenOrderUpdateBody'
+        - $ref: '#/components/schemas/OrderChangeUpdateBody'
 
     MarketPerpExecutionUpdatePayload:
       x-parser-schema-id: MarketPerpExecutionUpdatePayload
