@@ -48,12 +48,12 @@
         },
         "longFundingValue": {
           "type": "string",
-          "description": "Current long funding value",
+          "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
         "shortFundingValue": {
           "type": "string",
-          "description": "Current short funding value",
+          "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
         "fundingRateVelocity": {
@@ -124,7 +124,7 @@
         },
         "avgEntryFundingValue": {
           "type": "string",
-          "description": "Average entry funding value.",
+          "description": "Average of funding values at the entry times of currently open exposure, which serves as a baseline from which to compute the accrued funding in the position: units x (fundingValue - avgEntryFundingValue)",
           "example": "100.25"
         },
         "lastTradeSequenceNumber": {
@@ -355,12 +355,12 @@
         },
         "oraclePrice": {
           "type": "string",
-          "description": "Oracle price, also known as spot price",
+          "description": "Price given by the Stork feeds, used both as the peg price for prices on Reya, as well as Mark Prices. The Stork price feed is usually the perp prices across three major CEXs",
           "example": "43000.00"
         },
         "poolPrice": {
           "type": "string",
-          "description": "Pool price",
+          "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
           "example": "42999.50"
         },
         "updatedAt": {
@@ -438,12 +438,12 @@
         },
         "liquidationMarginParameter": {
           "type": "string",
-          "description": "Liquidation margin requirement parameter",
+          "description": "Minimum percentage of notional that needs to be covered to avoid liquidation procedures for a given market; below this value, your account is subject to liquidation procedures. When cross margining, all requirements across markets are covered by the same balance, and all positions are subject to liquidations.",
           "example": "0.05"
         },
         "initialMarginParameter": {
           "type": "string",
-          "description": "Initial margin requirement parameter",
+          "description": "Minimum percentage of notional that needs to be covered post trade; if the account does not satisfy this requirement, trades will not get executed.",
           "example": "0.04"
         },
         "maxLeverage": {
@@ -453,7 +453,7 @@
         },
         "oiCap": {
           "type": "string",
-          "description": "Max absolute open interest",
+          "description": "Maximum one-sided open interest in units for a given market.",
           "example": "10000"
         }
       }
@@ -501,12 +501,12 @@
         },
         "priceHaircut": {
           "type": "string",
-          "description": "Price haircut percentage",
+          "description": "Notional discount to the value of a collateral when used to satisfy the margin requirements; it does not imply any token conversion, but is rather an accounting adjustment.",
           "example": "0.05"
         },
         "liquidationDiscount": {
           "type": "string",
-          "description": "Liquidation discount percentage",
+          "description": "Discount in the token price when liquidating collateral.",
           "example": "0.03"
         },
         "timestamp": {
@@ -647,12 +647,12 @@
         },
         "depth": {
           "type": "string",
-          "description": "Liquidity depth parameter",
+          "description": "Parameter determining the liquidity distribution along the AMM pricing curve, in particular expanding or contracting the max exposure parameter that would otherwise be determined by the capital available.",
           "example": "1000.0"
         },
         "velocityMultiplier": {
           "type": "string",
-          "description": "Velocity multiplier parameter",
+          "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
           "example": "1.5"
         }
       }
