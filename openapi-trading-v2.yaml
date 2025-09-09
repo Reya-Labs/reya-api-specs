@@ -517,6 +517,9 @@ components:
     Account:
       $ref: './trading-schemas.json#/definitions/Account'
 
+    AccountBalance:
+      $ref: './trading-schemas.json#/definitions/AccountBalance'
+
     PerpExecution:
       $ref: './trading-schemas.json#/definitions/PerpExecution'
 
