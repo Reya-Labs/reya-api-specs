@@ -50,7 +50,7 @@ The API uses a hierarchical channel structure with clear separation between diff
 
 2. **Wallet Data Channels**
    - `/v2/wallet/{address}/positions` - Position updates
-   - `/v2/wallet/{address}/openOrders` - Open order updates
+   - `/v2/wallet/{address}/orderChanges` - Order change updates
    - `/v2/wallet/{address}/perpExecutions` - Wallet-specific executions
 
 ### Parameter Validation
@@ -397,8 +397,8 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 
 </details>
 
-#### `/v2/wallet/{address}/openOrders`
-**Purpose**: Real-time updates for wallet's open orders
+#### `/v2/wallet/{address}/orderChanges`
+**Purpose**: Real-time order change updates for wallet
 
 **Parameters**:
 - `address`: Ethereum wallet address
@@ -407,7 +407,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 ```json
 {
   "type": "subscribe",
-  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/openOrders"
+  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/orderChanges"
 }
 ```
 
@@ -416,7 +416,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 {
   "type": "channel_data",
   "timestamp": 1747927089946,
-  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/openOrders",
+  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/orderChanges",
   "data": [
     {
       "exchangeId": 1,
