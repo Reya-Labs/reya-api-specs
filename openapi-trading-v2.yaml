@@ -336,7 +336,7 @@ paths:
   /wallet/{address}/accountBalances:
     get:
       summary: Get wallet account balances
-      description: Returns all account real balances for a wallet.
+      description: Returns all account balances for a wallet.
       operationId: getWalletAccountBalances
       tags:
         - Wallet Data
