@@ -217,7 +217,7 @@
       "type": "object",
       "required": [
         "accountId",
-        "symbol",
+        "asset",
         "realBalance"
       ],
       "properties": {
@@ -225,9 +225,9 @@
           "type": "integer",
           "example": 12345
         },
-        "symbol": {
+        "asset": {
           "type": "string",
-          "example": "WSTETHRUSD"
+          "example": "WSTETH"
         },
         "realBalance": {
           "type": "string",
