@@ -8,7 +8,7 @@ jobs:
     name: Version Bump for API Specs
     runs-on: ubuntu-latest
     if: github.event.action == 'opened' || github.event.action == 'synchronize'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
