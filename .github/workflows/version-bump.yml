@@ -102,20 +102,61 @@ jobs:
           
           echo "✅ Updated both spec files to version $NEW_VERSION"
 
-      - name: Validate version consistency (after manual changes)
+      - name: Validate version consistency and progression (after manual changes)
         if: steps.check-modified.outputs.openapi_modified != '0' || steps.check-modified.outputs.asyncapi_modified != '0'
         run: |
-          OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
-          ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
+          CURRENT_OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
+          CURRENT_ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
           
-          if [ "$OPENAPI_VERSION" != "$ASYNCAPI_VERSION" ]; then
+          # Check version consistency
+          if [ "$CURRENT_OPENAPI_VERSION" != "$CURRENT_ASYNCAPI_VERSION" ]; then
             echo "❌ ERROR: Version mismatch detected!"
-            echo "OpenAPI version: $OPENAPI_VERSION"
-            echo "AsyncAPI version: $ASYNCAPI_VERSION"
+            echo "OpenAPI version: $CURRENT_OPENAPI_VERSION"
+            echo "AsyncAPI version: $CURRENT_ASYNCAPI_VERSION"
             echo "Both specs must have the same version."
             exit 1
+          fi
+          
+          echo "✅ Version consistency verified: $CURRENT_OPENAPI_VERSION"
+          
+          # Get the base branch commit to compare versions
+          BASE_SHA=$(git merge-base HEAD origin/${{ github.base_ref }})
+          
+          # Get previous versions from base commit
+          PREV_OPENAPI_VERSION=$(git show $BASE_SHA:openapi-trading-v2.yaml | yq '.info.version' 2>/dev/null || echo "unknown")
+          PREV_ASYNCAPI_VERSION=$(git show $BASE_SHA:asyncapi-trading-v2.yaml | yq '.info.version' 2>/dev/null || echo "unknown")
+          
+          echo "Previous OpenAPI version: $PREV_OPENAPI_VERSION"
+          echo "Previous AsyncAPI version: $PREV_ASYNCAPI_VERSION"
+          echo "Current version: $CURRENT_OPENAPI_VERSION"
+          
+          # Only check version progression if we can get previous versions
+          if [ "$PREV_OPENAPI_VERSION" != "unknown" ] && [ "$PREV_ASYNCAPI_VERSION" != "unknown" ]; then
+            # Check that previous versions were consistent
+            if [ "$PREV_OPENAPI_VERSION" != "$PREV_ASYNCAPI_VERSION" ]; then
+              echo "⚠️  WARNING: Previous versions were inconsistent, skipping progression check"
+            else
+              # Use a simple version comparison function
+              version_compare() {
+                printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1
+              }
+              
+              LOWEST_VERSION=$(version_compare "$PREV_OPENAPI_VERSION" "$CURRENT_OPENAPI_VERSION")
+              
+              if [ "$LOWEST_VERSION" = "$CURRENT_OPENAPI_VERSION" ] && [ "$CURRENT_OPENAPI_VERSION" != "$PREV_OPENAPI_VERSION" ]; then
+                echo "❌ ERROR: Version regression detected!"
+                echo "Previous version: $PREV_OPENAPI_VERSION"
+                echo "Current version: $CURRENT_OPENAPI_VERSION"
+                echo "New version must be higher than the previous version."
+                exit 1
+              elif [ "$CURRENT_OPENAPI_VERSION" = "$PREV_OPENAPI_VERSION" ]; then
+                echo "⚠️  Version unchanged: $CURRENT_OPENAPI_VERSION"
+              else
+                echo "✅ Version progression verified: $PREV_OPENAPI_VERSION → $CURRENT_OPENAPI_VERSION"
+              fi
+            fi
           else
-            echo "✅ Version consistency verified: $OPENAPI_VERSION"
+            echo "⚠️  Cannot determine previous version, skipping progression check"
           fi
 
       - name: Commit version bump
