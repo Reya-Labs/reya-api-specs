@@ -231,6 +231,7 @@
         },
         "realBalance": {
           "type": "string",
+          "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
           "example": "1.25"
         }
       }
