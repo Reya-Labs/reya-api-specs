@@ -240,6 +240,29 @@
       },
       "additionalProperties": false
     },
+    "AccountBalance": {
+      "type": "object",
+      "required": [
+        "accountId",
+        "asset",
+        "realBalance"
+      ],
+      "properties": {
+        "accountId": {
+          "type": "integer",
+          "example": 12345
+        },
+        "asset": {
+          "type": "string",
+          "example": "WSTETH"
+        },
+        "realBalance": {
+          "type": "string",
+          "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
+          "example": "1.25"
+        }
+      }
+    },
     "PerpExecution": {
       "title": "PerpExecution",
       "$id": "#PerpExecution",
