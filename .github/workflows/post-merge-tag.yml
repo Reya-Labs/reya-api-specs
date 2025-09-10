@@ -1,0 +1,151 @@
+name: Post-Merge Version Tagging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'openapi-trading-v2.yaml'
+      - 'asyncapi-trading-v2.yaml'
+      - 'trading-schemas.json'
+
+jobs:
+  version-tag:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Get current versions
+        id: current-versions
+        run: |
+          OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
+          ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
+          echo "openapi_version=$OPENAPI_VERSION" >> $GITHUB_OUTPUT
+          echo "asyncapi_version=$ASYNCAPI_VERSION" >> $GITHUB_OUTPUT
+          echo "Current OpenAPI version: $OPENAPI_VERSION"
+          echo "Current AsyncAPI version: $ASYNCAPI_VERSION"
+
+      - name: Validate version consistency
+        id: validate-consistency
+        run: |
+          OPENAPI_VERSION="${{ steps.current-versions.outputs.openapi_version }}"
+          ASYNCAPI_VERSION="${{ steps.current-versions.outputs.asyncapi_version }}"
+          
+          if [ "$OPENAPI_VERSION" = "$ASYNCAPI_VERSION" ]; then
+            echo "versions_match=true" >> $GITHUB_OUTPUT
+            echo "version=$OPENAPI_VERSION" >> $GITHUB_OUTPUT
+            echo "✅ Versions are consistent: $OPENAPI_VERSION"
+          else
+            echo "versions_match=false" >> $GITHUB_OUTPUT
+            echo "❌ Version mismatch - OpenAPI: $OPENAPI_VERSION, AsyncAPI: $ASYNCAPI_VERSION"
+            exit 1
+          fi
+
+      - name: Check if version is new
+        id: check-version-new
+        if: steps.validate-consistency.outputs.versions_match == 'true'
+        run: |
+          VERSION="${{ steps.validate-consistency.outputs.version }}"
+          
+          # Check if tag already exists
+          if git tag -l | grep -q "^${VERSION}$"; then
+            echo "version_is_new=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Tag $VERSION already exists"
+          else
+            echo "version_is_new=true" >> $GITHUB_OUTPUT
+            echo "✅ Version $VERSION is new"
+          fi
+
+      - name: Create version tag
+        if: steps.check-version-new.outputs.version_is_new == 'true'
+        run: |
+          VERSION="${{ steps.validate-consistency.outputs.version }}"
+          COMMIT_SHA="${{ github.sha }}"
+          
+          # Create annotated tag
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "$VERSION" -m "Release version $VERSION
+          
+          Auto-tagged after merge to main branch.
+          
+          Changes included:
+          - OpenAPI Trading API v2: $VERSION
+          - AsyncAPI Trading WebSocket API v2: $VERSION"
+          
+          echo "✅ Created tag $VERSION for commit $COMMIT_SHA"
+
+      - name: Push tag
+        if: steps.check-version-new.outputs.version_is_new == 'true'
+        run: |
+          VERSION="${{ steps.validate-consistency.outputs.version }}"
+          git push origin "$VERSION"
+          echo "✅ Pushed tag $VERSION to remote"
+
+      - name: Create GitHub Release
+        if: steps.check-version-new.outputs.version_is_new == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.validate-consistency.outputs.version }}';
+            const commitSha = '${{ github.sha }}';
+            
+            // Get the commit message for context
+            const { data: commit } = await github.rest.git.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha,
+            });
+            
+            const releaseBody = `## API Specifications Release ${version}
+            
+            This release contains updates to the Reya DEX Trading API specifications.
+            
+            ### Updated Specifications
+            - **OpenAPI Trading API v2**: ${version}
+            - **AsyncAPI Trading WebSocket API v2**: ${version}
+            
+            ### Last Commit
+            \`${commitSha.substring(0, 7)}\`: ${commit.message.split('\n')[0]}
+            
+            ---
+            
+            🤖 *This release was automatically created after merging changes to main branch.*`;
+            
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: version,
+              name: `Release ${version}`,
+              body: releaseBody,
+              draft: false,
+              prerelease: false,
+            });
+            
+            console.log(`✅ Created GitHub release: ${release.html_url}`);
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "=== Post-Merge Version Tagging Results ==="
+          echo "OpenAPI Version: ${{ steps.current-versions.outputs.openapi_version }}"
+          echo "AsyncAPI Version: ${{ steps.current-versions.outputs.asyncapi_version }}"
+          echo "Versions Match: ${{ steps.validate-consistency.outputs.versions_match }}"
+          echo "Version is New: ${{ steps.check-version-new.outputs.version_is_new }}"
+          
+          if [ "${{ steps.check-version-new.outputs.version_is_new }}" = "true" ]; then
+            echo "✅ Successfully created tag and release for version ${{ steps.validate-consistency.outputs.version }}"
+          elif [ "${{ steps.validate-consistency.outputs.versions_match }}" = "false" ]; then
+            echo "❌ Failed: Version mismatch between specs"
+          elif [ "${{ steps.check-version-new.outputs.version_is_new }}" = "false" ]; then
+            echo "⚠️ Skipped: Version ${{ steps.validate-consistency.outputs.version }} already exists"
+          fi
