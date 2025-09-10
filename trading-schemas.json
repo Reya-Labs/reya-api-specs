@@ -241,6 +241,9 @@
       "additionalProperties": false
     },
     "AccountBalance": {
+      "title": "AccountBalance",
+      "$id": "#AccountBalance",
+      "x-parser-schema-id": "AccountBalance",
       "type": "object",
       "required": [
         "accountId",
@@ -261,7 +264,8 @@
           "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
           "example": "1.25"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "PerpExecution": {
       "title": "PerpExecution",
