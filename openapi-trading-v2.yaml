@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: Reya DEX Trading API v2
-  version: 2.0.0
+  version: 2.0.1
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -333,6 +333,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/accountBalances:
+    get:
+      summary: Get wallet account balances
+      description: Returns all account real balances for a wallet.
+      operationId: getWalletAccountBalances
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+      responses:
+        '200':
+          description: List of account balances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountBalance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/openOrders:
     get:
       summary: Get wallet open orders
@@ -493,6 +516,9 @@ components:
 
     Account:
       $ref: './trading-schemas.json#/definitions/Account'
+
+    AccountBalance:
+      $ref: './trading-schemas.json#/definitions/AccountBalance'
 
     PerpExecution:
       $ref: './trading-schemas.json#/definitions/PerpExecution'
