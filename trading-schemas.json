@@ -130,7 +130,7 @@
         "lastTradeSequenceNumber": {
           "type": "integer",
           "description": "Sequence number of last execution taken into account for the position.",
-          "example": 152954
+          "example": 15295
         }
       }
     },
