@@ -1,0 +1,182 @@
+name: Version Bump for API Specs
+
+on:
+  pull_request:
+    paths:
+      - 'openapi-trading-v2.yaml'
+      - 'asyncapi-trading-v2.yaml'
+      - 'trading-schemas.json'
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' || github.event.action == 'synchronize'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Get current versions
+        id: current-versions
+        run: |
+          OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
+          ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
+          echo "openapi_version=$OPENAPI_VERSION" >> $GITHUB_OUTPUT
+          echo "asyncapi_version=$ASYNCAPI_VERSION" >> $GITHUB_OUTPUT
+          echo "Current OpenAPI version: $OPENAPI_VERSION"
+          echo "Current AsyncAPI version: $ASYNCAPI_VERSION"
+
+      - name: Check if versions were modified in PR
+        id: check-modified
+        run: |
+          # Get the base branch commit
+          BASE_SHA=$(git merge-base HEAD origin/${{ github.base_ref }})
+          
+          # Simple check: did the version line change?
+          if git diff $BASE_SHA HEAD -- openapi-trading-v2.yaml | grep -q "^\+.*version:"; then
+            OPENAPI_MODIFIED=1
+          else
+            OPENAPI_MODIFIED=0
+          fi
+          
+          if git diff $BASE_SHA HEAD -- asyncapi-trading-v2.yaml | grep -q "^\+.*version:"; then
+            ASYNCAPI_MODIFIED=1
+          else
+            ASYNCAPI_MODIFIED=0
+          fi
+          
+          {
+            echo "openapi_modified=$OPENAPI_MODIFIED"
+            echo "asyncapi_modified=$ASYNCAPI_MODIFIED"
+          } >> $GITHUB_OUTPUT
+          
+          echo "OpenAPI version modified: $OPENAPI_MODIFIED"
+          echo "AsyncAPI version modified: $ASYNCAPI_MODIFIED"
+
+      - name: Check version consistency
+        id: check-consistency
+        run: |
+          OPENAPI_VERSION="${{ steps.current-versions.outputs.openapi_version }}"
+          ASYNCAPI_VERSION="${{ steps.current-versions.outputs.asyncapi_version }}"
+          
+          if [ "$OPENAPI_VERSION" = "$ASYNCAPI_VERSION" ]; then
+            echo "versions_match=true" >> $GITHUB_OUTPUT
+            echo "✅ Versions are consistent: $OPENAPI_VERSION"
+          else
+            echo "versions_match=false" >> $GITHUB_OUTPUT
+            echo "❌ Version mismatch - OpenAPI: $OPENAPI_VERSION, AsyncAPI: $ASYNCAPI_VERSION"
+          fi
+
+      - name: Bump patch version
+        id: bump-version
+        if: steps.check-modified.outputs.openapi_modified == '0' && steps.check-modified.outputs.asyncapi_modified == '0'
+        run: |
+          CURRENT_VERSION="${{ steps.current-versions.outputs.openapi_version }}"
+          
+          # Parse version (assuming format: major.minor.patch)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # Increment patch version
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
+          
+          # Update both spec files
+          yq -i ".info.version = \"$NEW_VERSION\"" openapi-trading-v2.yaml
+          yq -i ".info.version = \"$NEW_VERSION\"" asyncapi-trading-v2.yaml
+          
+          echo "✅ Updated both spec files to version $NEW_VERSION"
+
+      - name: Validate version consistency (after manual changes)
+        if: steps.check-modified.outputs.openapi_modified != '0' || steps.check-modified.outputs.asyncapi_modified != '0'
+        run: |
+          OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
+          ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
+          
+          if [ "$OPENAPI_VERSION" != "$ASYNCAPI_VERSION" ]; then
+            echo "❌ ERROR: Version mismatch detected!"
+            echo "OpenAPI version: $OPENAPI_VERSION"
+            echo "AsyncAPI version: $ASYNCAPI_VERSION"
+            echo "Both specs must have the same version."
+            exit 1
+          else
+            echo "✅ Version consistency verified: $OPENAPI_VERSION"
+          fi
+
+      - name: Commit version bump
+        if: steps.bump-version.outputs.new_version != ''
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add openapi-trading-v2.yaml asyncapi-trading-v2.yaml
+          git commit -m "chore: bump API specs version to ${{ steps.bump-version.outputs.new_version }}"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Add comment to PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            // Remove existing bot comments
+            for (const comment of comments) {
+              if (comment.body.includes('🤖 API Specs Version Check')) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
+            
+            const openApiModified = '${{ steps.check-modified.outputs.openapi_modified }}' !== '0';
+            const asyncApiModified = '${{ steps.check-modified.outputs.asyncapi_modified }}' !== '0';
+            const versionsMatch = '${{ steps.check-consistency.outputs.versions_match }}' === 'true';
+            const newVersion = '${{ steps.bump-version.outputs.new_version }}';
+            const currentOpenApiVersion = '${{ steps.current-versions.outputs.openapi_version }}';
+            const currentAsyncApiVersion = '${{ steps.current-versions.outputs.asyncapi_version }}';
+            
+            let message = '🤖 **API Specs Version Check**\n\n';
+            
+            if (newVersion) {
+              message += `✅ **Version automatically bumped to \`${newVersion}\`**\n`;
+              message += `- Previous version: \`${currentOpenApiVersion}\`\n`;
+              message += `- Both OpenAPI and AsyncAPI specs updated\n`;
+            } else if (openApiModified || asyncApiModified) {
+              message += '📝 **Manual version changes detected**\n\n';
+              if (versionsMatch) {
+                message += `✅ Version consistency verified: \`${currentOpenApiVersion}\`\n`;
+              } else {
+                message += `❌ **Version mismatch detected!**\n`;
+                message += `- OpenAPI version: \`${currentOpenApiVersion}\`\n`;
+                message += `- AsyncAPI version: \`${currentAsyncApiVersion}\`\n`;
+                message += `\n⚠️ Please ensure both specs have the same version.\n`;
+              }
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
