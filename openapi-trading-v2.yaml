@@ -114,6 +114,41 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /openapi-spec.yaml:
+    get:
+      summary: Get OpenAPI specification
+      description: Returns the complete OpenAPI specification for this API in YAML format
+      operationId: getOpenApiSpec
+      tags:
+        - Specs
+      responses:
+        '200':
+          description: OpenAPI specification in YAML format
+          content:
+            application/yaml:
+              schema:
+                type: string
+                format: binary
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /asyncapi-spec.yaml:
+    get:
+      summary: Get AsyncAPI specification
+      description: Returns the complete AsyncAPI specification for WebSocket API in YAML format
+      operationId: getAsyncApiSpec
+      tags:
+        - Specs
+      responses:
+        '200':
+          description: AsyncAPI specification in YAML format
+          content:
+            application/yaml:
+              schema:
+                type: string
+                format: binary
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /markets/summary:
     get:
@@ -618,6 +653,8 @@ components:
             message: An unexpected error occurred
 
 tags:
+  - name: Specs
+    description: OpenAPI and AsyncAPI specs
   - name: Reference Data
     description: Market definitions, global parameters, liquidity parameters, etc.
   - name: Market Data
