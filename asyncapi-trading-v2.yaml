@@ -26,7 +26,7 @@ servers:
     protocol: wss
     description: Production WebSocket server
   staging:
-    host: ws-staging.reya.xyz
+    host: websocket-staging.reya.xyz
     protocol: wss
     description: Staging WebSocket server
   test:
