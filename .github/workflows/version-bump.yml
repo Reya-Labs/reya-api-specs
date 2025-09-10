@@ -97,8 +97,8 @@ jobs:
           echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
           
           # Update both spec files
-          yq -i ".info.version = \"$NEW_VERSION\"" openapi-trading-v2.yaml
-          yq -i ".info.version = \"$NEW_VERSION\"" asyncapi-trading-v2.yaml
+          sed -i "s/^  version: .*$/  version: $NEW_VERSION/" openapi-trading-v2.yaml
+          sed -i "s/^  version: .*$/  version: $NEW_VERSION/" asyncapi-trading-v2.yaml
           
           echo "✅ Updated both spec files to version $NEW_VERSION"
 
