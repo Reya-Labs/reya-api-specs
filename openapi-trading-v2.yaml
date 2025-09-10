@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: Reya DEX Trading API v2
-  version: 2.0.2
+  version: 2.0.3
   contact:
     name: Reya Network
     url: https://reya.xyz
