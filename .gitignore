@@ -629,3 +629,6 @@ testing.py
 examples/config.json
 
 .openapi-generator/
+
+# Generated bundled files from API build
+*-bundled.yaml

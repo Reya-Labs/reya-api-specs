@@ -167,6 +167,7 @@
         "exchangeId",
         "symbol",
         "accountId",
+        "orderId",
         "side",
         "limitPx",
         "orderType",
@@ -387,7 +388,8 @@
       "type": "object",
       "required": [
         "symbol",
-        "updatedAt"
+        "updatedAt",
+        "oraclePrice"
       ],
       "properties": {
         "symbol": {
