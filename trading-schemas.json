@@ -2,7 +2,28 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://api.reya.xyz/schemas/trading-schemas.json",
   "definitions": {
+    "Symbol": {
+      "title": "Symbol",
+      "$id": "#Symbol",
+      "x-parser-schema-id": "Symbol",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+$",
+      "examples": ["BTCRUSDPERP", "ETHRUSD"],
+      "description": "Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)"
+    },
+    "Address": {
+      "title": "Address",
+      "$id": "#Address",
+      "x-parser-schema-id": "Address",
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$",
+      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"],
+      "description": "Ethereum wallet address"
+    },
     "MarketSummary": {
+      "title": "MarketSummary",
+      "$id": "#MarketSummary",
+      "x-parser-schema-id": "MarketSummary",
       "type": "object",
       "required": [
         "symbol",
@@ -18,8 +39,7 @@
       ],
       "properties": {
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "updatedAt": {
           "type": "integer",
@@ -84,9 +104,13 @@
           "description": "Timestamp of the last price update (milliseconds)",
           "example": 1747927089597
         }
-      }
+      },
+      "additionalProperties": true
     },
     "Position": {
+      "title": "Position",
+      "$id": "#Position",
+      "x-parser-schema-id": "Position",
       "type": "object",
       "required": [
         "exchangeId",
@@ -104,8 +128,7 @@
           "example": 1
         },
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "accountId": {
           "type": "integer",
@@ -132,9 +155,13 @@
           "description": "Sequence number of last execution taken into account for the position.",
           "example": 152954
         }
-      }
+      },
+      "additionalProperties": true
     },
     "Order": {
+      "title": "Order",
+      "$id": "#Order",
+      "x-parser-schema-id": "Order",
       "type": "object",
       "required": [
         "exchangeId",
@@ -154,8 +181,7 @@
           "example": 1
         },
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "accountId": {
           "type": "integer",
@@ -212,9 +238,13 @@
           "description": "Last update timestamp (milliseconds)",
           "example": 1747927089946
         }
-      }
+      },
+      "additionalProperties": true
     },
     "AccountBalance": {
+      "title": "AccountBalance",
+      "$id": "#AccountBalance",
+      "x-parser-schema-id": "AccountBalance",
       "type": "object",
       "required": [
         "accountId",
@@ -235,9 +265,13 @@
           "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
           "example": "1.25"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "PerpExecution": {
+      "title": "PerpExecution",
+      "$id": "#PerpExecution",
+      "x-parser-schema-id": "PerpExecution",
       "type": "object",
       "required": [
         "exchangeId",
@@ -257,8 +291,7 @@
           "example": 1
         },
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "accountId": {
           "type": "integer",
@@ -292,9 +325,13 @@
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
         }
-      }
+      },
+      "additionalProperties": true
     },
     "SpotExecution": {
+      "title": "SpotExecution",
+      "$id": "#SpotExecution",
+      "x-parser-schema-id": "SpotExecution",
       "type": "object",
       "required": [
         "exchangeId",
@@ -312,8 +349,7 @@
           "example": 1
         },
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSD"
+          "$ref": "#/definitions/Symbol"
         },
         "accountId": {
           "type": "integer",
@@ -342,9 +378,13 @@
           "description": "Execution timestamp (milliseconds)",
           "example": 1747927089946
         }
-      }
+      },
+      "additionalProperties": true
     },
     "Price": {
+      "title": "Price",
+      "$id": "#Price",
+      "x-parser-schema-id": "Price",
       "type": "object",
       "required": [
         "symbol",
@@ -353,8 +393,7 @@
       ],
       "properties": {
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "oraclePrice": {
           "type": "string",
@@ -371,7 +410,8 @@
           "description": "Last update timestamp (milliseconds)",
           "example": 1747927089946
         }
-      }
+      },
+      "additionalProperties": true
     },
     "Side": {
       "title": "Side",
@@ -398,11 +438,17 @@
       "description": "Order status"
     },
     "TierType": {
+      "title": "TierType",
+      "$id": "#TierType",
+      "x-parser-schema-id": "TierType",
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
     },
     "MarketDefinition": {
+      "title": "MarketDefinition",
+      "$id": "#MarketDefinition",
+      "x-parser-schema-id": "MarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -417,8 +463,7 @@
       ],
       "properties": {
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "marketId": {
           "type": "integer",
@@ -459,9 +504,13 @@
           "description": "Maximum one-sided open interest in units for a given market.",
           "example": "10000"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "Account": {
+      "title": "Account",
+      "$id": "#Account",
+      "x-parser-schema-id": "Account",
       "type": "object",
       "required": [
         "accountId",
@@ -482,9 +531,13 @@
           "description": "Last update timestamp (milliseconds)",
           "example": 1747927089946
         }
-      }
+      },
+      "additionalProperties": true
     },
     "AssetDefinition": {
+      "title": "AssetDefinition",
+      "$id": "#AssetDefinition",
+      "x-parser-schema-id": "AssetDefinition",
       "type": "object",
       "required": [
         "asset",
@@ -499,8 +552,7 @@
           "example": "WSTETH"
         },
         "spotMarketSymbol": {
-          "type": "string",
-          "example": "WSTETHRUSD"
+          "$ref": "#/definitions/Symbol"
         },
         "priceHaircut": {
           "type": "string",
@@ -517,9 +569,13 @@
           "description": "Configuration timestamp (milliseconds)",
           "example": 1747927089946
         }
-      }
+      },
+      "additionalProperties": true
     },
     "CandleHistoryData": {
+      "title": "CandleHistoryData",
+      "$id": "#CandleHistoryData",
+      "x-parser-schema-id": "CandleHistoryData",
       "type": "object",
       "required": [
         "t",
@@ -569,9 +625,13 @@
           "description": "Array of closing prices",
           "example": ["2555.387", "2560.118", "2560.439"]
         }
-      }
+      },
+      "additionalProperties": true
     },
     "FeeTierParameters": {
+      "title": "FeeTierParameters",
+      "$id": "#FeeTierParameters",
+      "x-parser-schema-id": "FeeTierParameters",
       "type": "object",
       "required": [
         "tierId",
@@ -603,9 +663,13 @@
         "tierType": {
           "$ref": "#/definitions/TierType"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "GlobalFeeParameters": {
+      "title": "GlobalFeeParameters",
+      "$id": "#GlobalFeeParameters",
+      "x-parser-schema-id": "GlobalFeeParameters",
       "type": "object",
       "required": [
         "ogDiscount",
@@ -634,9 +698,13 @@
           "description": "Affiliate referrer rebate",
           "example": "0.15"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "LiquidityParameters": {
+      "title": "LiquidityParameters",
+      "$id": "#LiquidityParameters",
+      "x-parser-schema-id": "LiquidityParameters",
       "type": "object",
       "required": [
         "symbol",
@@ -645,8 +713,7 @@
       ],
       "properties": {
         "symbol": {
-          "type": "string",
-          "example": "ETH-USD"
+          "$ref": "#/definitions/Symbol"
         },
         "depth": {
           "type": "string",
@@ -658,9 +725,13 @@
           "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
           "example": "1.5"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "WalletConfiguration": {
+      "title": "WalletConfiguration",
+      "$id": "#WalletConfiguration",
+      "x-parser-schema-id": "WalletConfiguration",
       "type": "object",
       "required": [
         "feeTierId",
@@ -689,9 +760,13 @@
           "description": "Referee status",
           "example": false
         }
-      }
+      },
+      "additionalProperties": true
     },
     "PerpExecutionList": {
+      "title": "PerpExecutionList",
+      "$id": "#PerpExecutionList",
+      "x-parser-schema-id": "PerpExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -707,9 +782,13 @@
         "meta": {
           "$ref": "#/definitions/PaginationMeta"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "SpotExecutionList": {
+      "title": "SpotExecutionList",
+      "$id": "#SpotExecutionList",
+      "x-parser-schema-id": "SpotExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -725,9 +804,13 @@
         "meta": {
           "$ref": "#/definitions/PaginationMeta"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "PaginationMeta": {
+      "title": "PaginationMeta",
+      "$id": "#PaginationMeta",
+      "x-parser-schema-id": "PaginationMeta",
       "type": "object",
       "required": [
         "limit",
@@ -754,9 +837,13 @@
           "description": "Timestamp of first result, in milliseconds",
           "example": 1756733579000
         }
-      }
+      },
+      "additionalProperties": true
     },
     "RequestError": {
+      "title": "RequestError",
+      "$id": "#RequestError",
+      "x-parser-schema-id": "RequestError",
       "type": "object",
       "required": [
         "error",
@@ -771,9 +858,13 @@
           "description": "Human-readable error message",
           "example": "Invalid symbol format"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "ServerError": {
+      "title": "ServerError",
+      "$id": "#ServerError",
+      "x-parser-schema-id": "ServerError",
       "type": "object",
       "required": [
         "error",
@@ -788,9 +879,13 @@
           "description": "Human-readable error message",
           "example": "Invalid symbol format"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "RequestErrorCode": {
+      "title": "RequestErrorCode",
+      "$id": "#RequestErrorCode",
+      "x-parser-schema-id": "RequestErrorCode",
       "type": "string",
       "enum": [
         "SYMBOL_NOT_FOUND",
@@ -803,6 +898,9 @@
       "description": "Standardized error codes for API responses"
     },
     "ServerErrorCode": {
+      "title": "ServerErrorCode",
+      "$id": "#ServerErrorCode",
+      "x-parser-schema-id": "ServerErrorCode",
       "type": "string",
       "enum": [
         "INTERNAL_SERVER_ERROR"
@@ -810,6 +908,9 @@
       "description": "Standardized error codes for API responses"
     },
     "SymbolMarketId": {
+      "title": "SymbolMarketId",
+      "$id": "#SymbolMarketId",
+      "x-parser-schema-id": "SymbolMarketId",
       "type": "object",
       "required": [
         "symbol",
@@ -817,15 +918,15 @@
       ],
       "properties": {
         "symbol": {
-          "type": "string",
-          "example": "BTCRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "marketId": {
           "type": "integer",
           "description": "Market identifier",
           "example": 2
         }
-      }
+      },
+      "additionalProperties": true
     },
     "TimeInForce": {
       "title": "TimeInForce",
@@ -846,6 +947,9 @@
       "example": "TP"
     },
     "CreateOrderRequest": {
+      "title": "CreateOrderRequest",
+      "$id": "#CreateOrderRequest",
+      "x-parser-schema-id": "CreateOrderRequest",
       "type": "object",
       "required": [
         "exchangeId",
@@ -863,8 +967,7 @@
           "example": 1
         },
         "symbol": {
-          "type": "string",
-          "example": "ETHRUSDPERP"
+          "$ref": "#/definitions/Symbol"
         },
         "accountId": {
           "type": "integer",
@@ -913,18 +1016,20 @@
           "example": "1234567890"
         },
         "signerWallet": {
-          "type": "string",
-          "description": "Signer wallet address",
-          "example": "0x1234567890123456789012345678901234567890"
+          "$ref": "#/definitions/Address"
         },
         "expiresAfter": {
           "type": "integer",
           "description": "Expiration timestamp (exclusively for IOC orders). The order will only be filled before this timestamp.",
           "example": 1676923200
         }
-      }
+      },
+      "additionalProperties": true
     },
     "CreateOrderResponse": {
+      "title": "CreateOrderResponse",
+      "$id": "#CreateOrderResponse",
+      "x-parser-schema-id": "CreateOrderResponse",
       "type": "object",
       "required": [
         "status"
@@ -938,9 +1043,13 @@
           "description": "Created order ID (currently generated for all order types except IOC)",
           "example": "123456789-123123123"
         }
-      }
+      },
+      "additionalProperties": true
     },
     "CancelOrderRequest": {
+      "title": "CancelOrderRequest",
+      "$id": "#CancelOrderRequest",
+      "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
         "orderId",
@@ -957,9 +1066,13 @@
           "description": "See signatures section for more details on how to generate.",
           "example": "0x5678..."
         }
-      }
+      },
+      "additionalProperties": true
     },
     "CancelOrderResponse": {
+      "title": "CancelOrderResponse",
+      "$id": "#CancelOrderResponse",
+      "x-parser-schema-id": "CancelOrderResponse",
       "type": "object",
       "required": [
         "status",
@@ -974,7 +1087,8 @@
           "description": "Cancelled order ID",
           "example": "123456789-123123123"
         }
-      }
+      },
+      "additionalProperties": true
     }
   }
 }
