@@ -105,7 +105,7 @@
           "example": 1747927089597
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "Position": {
       "title": "Position",
@@ -156,7 +156,7 @@
           "example": 152954
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "Order": {
       "title": "Order",
@@ -239,7 +239,7 @@
           "example": 1747927089946
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "AccountBalance": {
       "title": "AccountBalance",
@@ -266,7 +266,7 @@
           "example": "1.25"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "PerpExecution": {
       "title": "PerpExecution",
@@ -326,7 +326,7 @@
           "example": 152954
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "SpotExecution": {
       "title": "SpotExecution",
@@ -379,7 +379,7 @@
           "example": 1747927089946
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "Price": {
       "title": "Price",
@@ -411,7 +411,7 @@
           "example": 1747927089946
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "Side": {
       "title": "Side",
@@ -505,7 +505,7 @@
           "example": "10000"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "Account": {
       "title": "Account",
@@ -532,7 +532,7 @@
           "example": 1747927089946
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "AssetDefinition": {
       "title": "AssetDefinition",
@@ -570,7 +570,7 @@
           "example": 1747927089946
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
@@ -626,7 +626,7 @@
           "example": ["2555.387", "2560.118", "2560.439"]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "FeeTierParameters": {
       "title": "FeeTierParameters",
@@ -664,7 +664,7 @@
           "$ref": "#/definitions/TierType"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "GlobalFeeParameters": {
       "title": "GlobalFeeParameters",
@@ -699,7 +699,7 @@
           "example": "0.15"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "LiquidityParameters": {
       "title": "LiquidityParameters",
@@ -726,7 +726,7 @@
           "example": "1.5"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "WalletConfiguration": {
       "title": "WalletConfiguration",
@@ -761,7 +761,7 @@
           "example": false
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "PerpExecutionList": {
       "title": "PerpExecutionList",
@@ -783,7 +783,7 @@
           "$ref": "#/definitions/PaginationMeta"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "SpotExecutionList": {
       "title": "SpotExecutionList",
@@ -805,7 +805,7 @@
           "$ref": "#/definitions/PaginationMeta"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "PaginationMeta": {
       "title": "PaginationMeta",
@@ -838,7 +838,7 @@
           "example": 1756733579000
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "RequestError": {
       "title": "RequestError",
@@ -859,7 +859,7 @@
           "example": "Invalid symbol format"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "ServerError": {
       "title": "ServerError",
@@ -880,7 +880,7 @@
           "example": "Invalid symbol format"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "RequestErrorCode": {
       "title": "RequestErrorCode",
@@ -926,7 +926,7 @@
           "example": 2
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "TimeInForce": {
       "title": "TimeInForce",
@@ -1024,7 +1024,7 @@
           "example": 1676923200
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "CreateOrderResponse": {
       "title": "CreateOrderResponse",
@@ -1044,7 +1044,7 @@
           "example": "123456789-123123123"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "CancelOrderRequest": {
       "title": "CancelOrderRequest",
@@ -1067,7 +1067,7 @@
           "example": "0x5678..."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "CancelOrderResponse": {
       "title": "CancelOrderResponse",
@@ -1088,7 +1088,7 @@
           "example": "123456789-123123123"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     }
   }
 }

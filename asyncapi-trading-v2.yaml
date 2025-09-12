@@ -473,6 +473,7 @@ components:
 
     BaseUpdateEnvelope:
       type: object
+      title: BaseUpdateEnvelope
       additionalProperties: false
       required:
         - type
@@ -487,6 +488,7 @@ components:
 
     MarketsSummaryUpdateBody:
       type: object
+      title: MarketsSummaryUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -496,11 +498,13 @@ components:
           $ref: '#/components/schemas/MarketsSummaryChannel'
         data:
           type: array
+          title: MarketSummaryList
           items:
             $ref: './trading-schemas.json#/definitions/MarketSummary'
 
     MarketSummaryUpdateBody:
       type: object
+      title: MarketSummaryUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -513,6 +517,7 @@ components:
 
     PositionUpdateBody:
       type: object
+      title: PositionUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -522,11 +527,13 @@ components:
           $ref: '#/components/schemas/WalletPositionsChannelPattern'
         data:
           type: array
+          title: PositionList
           items:
             $ref: './trading-schemas.json#/definitions/Position'
 
     OrderChangeUpdateBody:
       type: object
+      title: OrderChangeUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -536,11 +543,13 @@ components:
           $ref: '#/components/schemas/WalletOrderChangesChannelPattern'
         data:
           type: array
+          title: OrderList
           items:
             $ref: './trading-schemas.json#/definitions/Order'
 
     MarketPerpExecutionUpdateBody:
       type: object
+      title: MarketPerpExecutionUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -550,11 +559,13 @@ components:
           $ref: '#/components/schemas/MarketPerpExecutionsChannelPattern'
         data:
           type: array
+          title: PerpExecutionList
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
 
     WalletPerpExecutionUpdateBody:
       type: object
+      title: WalletPerpExecutionUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -564,11 +575,13 @@ components:
           $ref: '#/components/schemas/WalletPerpExecutionsChannelPattern'
         data:
           type: array
+          title: WalletPerpExecutionList
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
 
     PricesUpdateBody:
       type: object
+      title: PricesUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -578,11 +591,13 @@ components:
           $ref: '#/components/schemas/PricesChannel'
         data:
           type: array
+          title: PriceList
           items:
             $ref: './trading-schemas.json#/definitions/Price'
 
     PriceUpdateBody:
       type: object
+      title: PriceUpdateBody
       additionalProperties: false
       required:
         - channel
@@ -594,47 +609,56 @@ components:
           $ref: './trading-schemas.json#/definitions/Price'
 
     MarketsSummaryUpdatePayload:
+      title: MarketsSummaryUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketsSummaryUpdateBody'
 
     MarketSummaryUpdatePayload:
+      title: MarketSummaryUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketSummaryUpdateBody'
 
     PositionUpdatePayload:
+      title: PositionUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PositionUpdateBody'
 
     OrderChangeUpdatePayload:
+      title: OrderChangeUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/OrderChangeUpdateBody'
 
     MarketPerpExecutionUpdatePayload:
+      title: MarketPerpExecutionUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketPerpExecutionUpdateBody'
 
     WalletPerpExecutionUpdatePayload:
+      title: WalletPerpExecutionUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
 
     PricesUpdatePayload:
+      title: PricesUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PricesUpdateBody'
 
     PriceUpdatePayload:
+      title: PriceUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PriceUpdateBody'
 
     PingMessagePayload:
       type: object
+      title: PingMessagePayload
       additionalProperties: false
       properties:
         type:
@@ -648,6 +672,7 @@ components:
 
     PongMessagePayload:
       type: object
+      title: PongMessagePayload
       additionalProperties: false
       properties:
         type:
@@ -661,6 +686,7 @@ components:
 
     SubscribeMessagePayload:
       type: object
+      title: SubscribeMessagePayload
       additionalProperties: false
       properties:
         type:
@@ -679,6 +705,7 @@ components:
 
     UnsubscribeMessagePayload:
       type: object
+      title: UnsubscribeMessagePayload
       additionalProperties: false
       properties:
         type:
@@ -697,6 +724,7 @@ components:
 
     SubscribedMessagePayload:
       type: object
+      title: SubscribedMessagePayload
       additionalProperties: false
       properties:
         type:
@@ -707,6 +735,7 @@ components:
           example: /v2/markets/summary
         contents:
           type: object
+          title: SubscriptionContents
           description: Optional initial data for the subscription
       required:
         - type
@@ -714,6 +743,7 @@ components:
 
     UnsubscribedMessagePayload:
       type: object
+      title: UnsubscribedMessagePayload
       additionalProperties: false
       properties:
         type:
@@ -728,6 +758,7 @@ components:
 
     ErrorMessagePayload:
       type: object
+      title: ErrorMessagePayload
       additionalProperties: false
       properties:
         type:
