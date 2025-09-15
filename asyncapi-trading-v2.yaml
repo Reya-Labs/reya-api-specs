@@ -138,6 +138,17 @@ channels:
       priceUpdate:
         $ref: '#/components/messages/PriceUpdate'
 
+  marketDepth:
+    address: /v2/market/{symbol}/depth
+    description: Real-time L2 depth snapshot for a specific market
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., BTCRUSDPERP)
+        location: $message.payload#/symbol
+    messages:
+      marketDepthUpdate:
+        $ref: '#/components/messages/MarketDepthUpdate'
+
 operations:
   sendPing:
     action: send
@@ -262,6 +273,14 @@ operations:
       - $ref: '#/channels/price/messages/priceUpdate'
     summary: Receive price updates for specific symbol
 
+  receiveMarketDepth:
+    action: receive
+    channel:
+      $ref: '#/channels/marketDepth'
+    messages:
+      - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
+    summary: Receive L2 depth snapshots for specific market
+
 components:
   messages:
     MarketsSummaryUpdate:
@@ -319,6 +338,13 @@ components:
       summary: Real-time price update for a specific symbol
       payload:
         $ref: '#/components/schemas/PriceUpdatePayload'
+
+    MarketDepthUpdate:
+      name: marketDepthUpdate
+      title: Market Depth Update
+      summary: Real-time L2 depth snapshot for a specific market
+      payload:
+        $ref: '#/components/schemas/MarketDepthUpdatePayload'
 
     PingMessage:
       name: ping
@@ -471,6 +497,11 @@ components:
       pattern: '^/v2/prices/[A-Za-z0-9]+$'
       description: Channel pattern for specific price updates
 
+    MarketDepthChannelPattern:
+      type: string
+      pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
+      description: Channel pattern for specific market depth snapshots
+
     BaseUpdateEnvelope:
       type: object
       title: BaseUpdateEnvelope
@@ -608,6 +639,19 @@ components:
         data:
           $ref: './trading-schemas.json#/definitions/Price'
 
+    MarketDepthUpdateBody:
+      type: object
+      title: MarketDepthUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketDepthChannelPattern'
+        data:
+          $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+
     MarketsSummaryUpdatePayload:
       title: MarketsSummaryUpdatePayload
       allOf:
@@ -655,6 +699,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PriceUpdateBody'
+
+    MarketDepthUpdatePayload:
+      title: MarketDepthUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketDepthUpdateBody'
 
     PingMessagePayload:
       type: object
