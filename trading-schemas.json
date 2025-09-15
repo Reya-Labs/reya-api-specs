@@ -1089,6 +1089,66 @@
         }
       },
       "additionalProperties": true
+    },
+    "Level": {
+      "title": "Level",
+      "$id": "#Level",
+      "x-parser-schema-id": "Level",
+      "type": "object",
+      "required": [
+        "px",
+        "qty"
+      ],
+      "properties": {
+        "px": {
+          "type": "string",
+          "description": "Price level",
+          "example": "0.5668"
+        },
+        "qty": {
+          "type": "string",
+          "description": "Aggregated quantity at this price level",
+          "example": "4410.7976"
+        }
+      },
+      "additionalProperties": true
+    },
+    "DepthSnapshot": {
+      "title": "DepthSnapshot",
+      "$id": "#DepthSnapshot",
+      "x-parser-schema-id": "DepthSnapshot",
+      "type": "object",
+      "required": [
+        "symbol",
+        "bids",
+        "asks",
+        "updatedAt"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "bids": {
+          "type": "array",
+          "description": "Bid side levels aggregated by price, sorted descending by px",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "asks": {
+          "type": "array",
+          "description": "Ask side levels aggregated by price, sorted ascending by px",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "updatedAt": {
+          "type": "integer",
+          "description": "Snapshot generation timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
     }
   }
 }
