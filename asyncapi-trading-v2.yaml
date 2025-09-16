@@ -1,8 +1,14 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.0.5
-  description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
+  version: 2.1.0
+  description: |
+    Real-time WebSocket API for Reya Network's decentralized exchange.
+
+    This API follows a subscription-based pattern where:
+    1. Clients subscribe to channels and receive initial snapshots
+    2. Subsequent updates are sent as incremental deltas
+    3. All data uses human-readable formats without blockchain specifics
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -10,6 +16,8 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   tags:
+    - name: control
+      description: Connection control and subscription management
     - name: markets
       description: Market data and summaries
     - name: wallet
@@ -38,23 +46,18 @@ defaultContentType: application/json
 
 channels:
   control:
-    description: Channel for control messages like subscribe, unsubscribe, ping, etc.
+    description: |
+      Bidirectional control channel for subscription management.
+
+      Subscription Flow:
+      1. Client sends subscribe message with channel
+      2. Server responds with snapshot message containing initial data
+      3. Server sends update messages for incremental changes
+      4. Client can unsubscribe to stop receiving updates
     address: null
     messages:
-      pingMessage:
-        $ref: '#/components/messages/PingMessage'
-      pongMessage:
-        $ref: '#/components/messages/PongMessage'
-      subscribeMessage:
-        $ref: '#/components/messages/SubscribeMessage'
-      unsubscribeMessage:
-        $ref: '#/components/messages/UnsubscribeMessage'
-      subscribedMessage:
-        $ref: '#/components/messages/SubscribedMessage'
-      unsubscribedMessage:
-        $ref: '#/components/messages/UnsubscribedMessage'
-      errorMessage:
-        $ref: '#/components/messages/ErrorMessage'
+      controlMessages:
+        $ref: '#/components/messages/ControlMessages'
     bindings:
       ws: {}
 
@@ -62,715 +65,496 @@ channels:
     address: /v2/markets/summary
     description: Real-time updates for all market summaries
     messages:
-      marketsSummaryUpdate:
-        $ref: '#/components/messages/MarketsSummaryUpdate'
+      marketsSummaryData:
+        $ref: '#/components/messages/MarketsSummaryData'
 
   marketSummary:
     address: /v2/market/{symbol}/summary
     description: Real-time updates for a specific market's summary
     parameters:
       symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+        $ref: '#/components/parameters/Symbol'
     messages:
-      marketSummaryUpdate:
-        $ref: '#/components/messages/MarketSummaryUpdate'
+      marketSummaryData:
+        $ref: '#/components/messages/MarketSummaryData'
 
-  marketPerpExecutions:
+  marketExecutions:
     address: /v2/market/{symbol}/perpExecutions
     description: Real-time perpetual executions for a specific market
     parameters:
       symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+        $ref: '#/components/parameters/Symbol'
     messages:
-      marketPerpExecutionUpdate:
-        $ref: '#/components/messages/MarketPerpExecutionUpdate'
+      marketExecutionData:
+        $ref: '#/components/messages/MarketExecutionData'
 
-  walletPositions:
-    address: /v2/wallet/{address}/positions
-    description: Real-time position updates for a wallet
+  walletData:
+    address: /v2/wallet/{address}/{dataType}
+    description: Real-time wallet data updates (positions, orders, executions)
     parameters:
       address:
-        description: Ethereum wallet address
-        location: $message.payload#/address
+        $ref: '#/components/parameters/WalletAddress'
+      dataType:
+        description: Type of wallet data
+        enum: [positions, orderChanges, perpExecutions]
     messages:
-      positionUpdate:
-        $ref: '#/components/messages/PositionUpdate'
+      walletData:
+        $ref: '#/components/messages/WalletData'
 
-  walletOrderChanges:
-    address: /v2/wallet/{address}/orderChanges
-    description: Real-time order change updates for wallet
-    parameters:
-      address:
-        description: Ethereum wallet address
-        location: $message.payload#/address
-    messages:
-      orderChangeUpdate:
-        $ref: '#/components/messages/OrderChangeUpdate'
-
-  walletPerpExecutions:
-    address: /v2/wallet/{address}/perpExecutions
-    description: Real-time perpetual execution updates for a wallet
-    parameters:
-      address:
-        description: Ethereum wallet address
-        location: $message.payload#/address
-    messages:
-      walletPerpExecutionUpdate:
-        $ref: '#/components/messages/WalletPerpExecutionUpdate'
-
-  prices:
+  pricesGlobal:
     address: /v2/prices
     description: Real-time price updates for all symbols
     messages:
-      pricesUpdate:
-        $ref: '#/components/messages/PricesUpdate'
+      pricesData:
+        $ref: '#/components/messages/PricesData'
 
-  price:
+  priceSymbol:
     address: /v2/prices/{symbol}
     description: Real-time price updates for a specific symbol
     parameters:
       symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+        $ref: '#/components/parameters/Symbol'
     messages:
-      priceUpdate:
-        $ref: '#/components/messages/PriceUpdate'
+      priceData:
+        $ref: '#/components/messages/PriceData'
 
 operations:
-  sendPing:
+  # Control Operations
+  subscribe:
     action: send
     channel:
       $ref: '#/channels/control'
+    summary: Subscribe to a data channel
+    description: |
+      Subscribe to a specific channel to receive data updates.
+      Server will respond with initial snapshot followed by incremental updates.
     messages:
-      - $ref: '#/channels/control/messages/pingMessage'
-    summary: Send ping to check connection
-    description: Client sends ping to server.
+      - $ref: '#/components/messages/Subscribe'
 
-  sendSubscribe:
+  unsubscribe:
     action: send
     channel:
       $ref: '#/channels/control'
+    summary: Unsubscribe from a data channel
     messages:
-      - $ref: '#/channels/control/messages/subscribeMessage'
-    summary: Send subscribe request
-    description: Client sends subscribe to a specific channel.
+      - $ref: '#/components/messages/Unsubscribe'
 
-  sendUnsubscribe:
+  ping:
     action: send
     channel:
       $ref: '#/channels/control'
+    summary: Send ping to test connection
     messages:
-      - $ref: '#/channels/control/messages/unsubscribeMessage'
-    summary: Send unsubscribe request
-    description: Client sends unsubscribe from a specific channel.
+      - $ref: '#/components/messages/Ping'
 
-  receivePong:
+  receiveControlResponse:
     action: receive
     channel:
       $ref: '#/channels/control'
+    summary: Receive control responses (pong, subscribed, unsubscribed, errors)
     messages:
-      - $ref: '#/channels/control/messages/pongMessage'
-    summary: Receive pong response
+      - $ref: '#/components/messages/ControlMessages'
 
-  receiveSubscribed:
+  # Data Reception Operations
+  receiveMarketData:
+    action: receive
+    channels:
+      - $ref: '#/channels/marketsSummary'
+      - $ref: '#/channels/marketSummary'
+      - $ref: '#/channels/marketExecutions'
+    summary: Receive market-related data updates
+    description: Snapshots and updates for market summaries and executions
+
+  receiveWalletData:
     action: receive
     channel:
-      $ref: '#/channels/control'
-    messages:
-      - $ref: '#/channels/control/messages/subscribedMessage'
-    summary: Receive confirmation of subscription
+      $ref: '#/channels/walletData'
+    summary: Receive wallet-specific data updates
+    description: Snapshots and updates for positions, orders, and executions
 
-  receiveUnsubscribed:
+  receivePriceData:
     action: receive
-    channel:
-      $ref: '#/channels/control'
-    messages:
-      - $ref: '#/channels/control/messages/unsubscribedMessage'
-    summary: Receive confirmation of unsubscription
-
-  receiveError:
-    action: receive
-    channel:
-      $ref: '#/channels/control'
-    messages:
-      - $ref: '#/channels/control/messages/errorMessage'
-    summary: Receive error messages
-
-  receiveMarketsSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketsSummary'
-    messages:
-      - $ref: '#/channels/marketsSummary/messages/marketsSummaryUpdate'
-    summary: Receive market summaries updates
-
-  receiveMarketSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketSummary'
-    messages:
-      - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
-    summary: Receive specific market summary updates
-
-  receiveMarketPerpExecutions:
-    action: receive
-    channel:
-      $ref: '#/channels/marketPerpExecutions'
-    messages:
-      - $ref: '#/channels/marketPerpExecutions/messages/marketPerpExecutionUpdate'
-    summary: Receive perpetual execution updates for market
-
-  receiveWalletPositions:
-    action: receive
-    channel:
-      $ref: '#/channels/walletPositions'
-    messages:
-      - $ref: '#/channels/walletPositions/messages/positionUpdate'
-    summary: Receive position updates for wallet
-
-  receiveWalletOrderChanges:
-    action: receive
-    channel:
-      $ref: '#/channels/walletOrderChanges'
-    messages:
-      - $ref: '#/channels/walletOrderChanges/messages/orderChangeUpdate'
-    summary: Receive order change updates for wallet
-
-  receiveWalletPerpExecutions:
-    action: receive
-    channel:
-      $ref: '#/channels/walletPerpExecutions'
-    messages:
-      - $ref: '#/channels/walletPerpExecutions/messages/walletPerpExecutionUpdate'
-    summary: Receive perpetual execution updates for wallet
-
-  receivePrices:
-    action: receive
-    channel:
-      $ref: '#/channels/prices'
-    messages:
-      - $ref: '#/channels/prices/messages/pricesUpdate'
-    summary: Receive price updates for all symbols
-
-  receivePrice:
-    action: receive
-    channel:
-      $ref: '#/channels/price'
-    messages:
-      - $ref: '#/channels/price/messages/priceUpdate'
-    summary: Receive price updates for specific symbol
+    channels:
+      - $ref: '#/channels/pricesGlobal'
+      - $ref: '#/channels/priceSymbol'
+    summary: Receive price data updates
+    description: Snapshots and updates for price information
 
 components:
+  parameters:
+    Symbol:
+      description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+      schema:
+        $ref: './trading-schemas.json#/definitions/Symbol'
+
+    WalletAddress:
+      description: Ethereum wallet address
+      schema:
+        $ref: './trading-schemas.json#/definitions/Address'
+
   messages:
-    MarketsSummaryUpdate:
-      name: marketsSummaryUpdate
-      title: Markets Summary Update
-      summary: Real-time update containing all market summaries
-      payload:
-        $ref: '#/components/schemas/MarketsSummaryUpdatePayload'
-
-    MarketSummaryUpdate:
-      name: marketSummaryUpdate
-      title: Market Summary Update
-      summary: Real-time update for a specific market summary
-      payload:
-        $ref: '#/components/schemas/MarketSummaryUpdatePayload'
-
-    PositionUpdate:
-      name: positionUpdate
-      title: Position Update
-      summary: Real-time position update for a wallet
-      payload:
-        $ref: '#/components/schemas/PositionUpdatePayload'
-
-    OrderChangeUpdate:
-      name: orderChangeUpdate
-      title: Order Change Update
-      summary: Real-time order change update for a wallet
-      payload:
-        $ref: '#/components/schemas/OrderChangeUpdatePayload'
-
-    MarketPerpExecutionUpdate:
-      name: marketPerpExecutionUpdate
-      title: Market Perpetual Execution Update
-      summary: Real-time perpetual execution update for market
-      payload:
-        $ref: '#/components/schemas/MarketPerpExecutionUpdatePayload'
-
-    WalletPerpExecutionUpdate:
-      name: walletPerpExecutionUpdate
-      title: Wallet Perpetual Execution Update
-      summary: Real-time perpetual execution update for wallet
-      payload:
-        $ref: '#/components/schemas/WalletPerpExecutionUpdatePayload'
-
-    PricesUpdate:
-      name: pricesUpdate
-      title: Prices Update
-      summary: Real-time price updates for all symbols
-      payload:
-        $ref: '#/components/schemas/PricesUpdatePayload'
-
-    PriceUpdate:
-      name: priceUpdate
-      title: Price Update
-      summary: Real-time price update for a specific symbol
-      payload:
-        $ref: '#/components/schemas/PriceUpdatePayload'
-
-    PingMessage:
-      name: ping
-      title: Ping Message
-      summary: Ping message to check connection
-      payload:
-        $ref: '#/components/schemas/PingMessagePayload'
-
-    PongMessage:
-      name: pong
-      title: Pong Message
-      summary: Pong response from server
-      payload:
-        $ref: '#/components/schemas/PongMessagePayload'
-
-    SubscribeMessage:
+    # Control Messages (sent by client)
+    Subscribe:
       name: subscribe
       title: Subscribe Message
       summary: Subscribe to a channel
       payload:
-        $ref: '#/components/schemas/SubscribeMessagePayload'
+        type: object
+        required: [type, channel]
+        properties:
+          type:
+            const: subscribe
+          channel:
+            $ref: './trading-schemas.json#/definitions/ChannelAddress'
+          id:
+            type: string
+            description: Optional request identifier
 
-    UnsubscribeMessage:
+    Unsubscribe:
       name: unsubscribe
       title: Unsubscribe Message
       summary: Unsubscribe from a channel
       payload:
-        $ref: '#/components/schemas/UnsubscribeMessagePayload'
+        type: object
+        required: [type, channel]
+        properties:
+          type:
+            const: unsubscribe
+          channel:
+            $ref: './trading-schemas.json#/definitions/ChannelAddress'
+          id:
+            type: string
 
-    SubscribedMessage:
-      name: subscribed
-      title: Subscribed Message
-      summary: Confirmation of successful subscription
+    Ping:
+      name: ping
+      title: Ping Message
+      summary: Ping message to test connection
       payload:
-        $ref: '#/components/schemas/SubscribedMessagePayload'
+        type: object
+        required: [type]
+        properties:
+          type:
+            const: ping
+          id:
+            type: string
+          timestamp:
+            $ref: './trading-schemas.json#/definitions/UnsignedInteger'
 
-    UnsubscribedMessage:
-      name: unsubscribed
-      title: Unsubscribed Message
-      summary: Confirmation of successful unsubscription
+    # Control Responses (sent by server)
+    ControlMessages:
+      name: controlMessages
+      title: Control Messages
+      summary: Server control responses
       payload:
-        $ref: '#/components/schemas/UnsubscribedMessagePayload'
+        oneOf:
+          - $ref: '#/components/schemas/PongMessage'
+          - $ref: '#/components/schemas/SubscribedMessage'
+          - $ref: '#/components/schemas/UnsubscribedMessage'
+          - $ref: '#/components/schemas/ErrorMessage'
 
-    ErrorMessage:
-      name: error
-      title: Error Message
-      summary: Error message
+    # Data Messages (sent by server)
+    MarketsSummaryData:
+      name: marketsSummaryData
+      title: Markets Summary Data
+      summary: All markets summary data (snapshot or update)
       payload:
-        $ref: '#/components/schemas/ErrorMessagePayload'
+        oneOf:
+          - $ref: '#/components/schemas/MarketsSummarySnapshot'
+          - $ref: '#/components/schemas/MarketsSummaryUpdate'
 
-  parameters:
-    Symbol:
-      description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-      location: $message.payload#/symbol
+    MarketSummaryData:
+      name: marketSummaryData
+      title: Market Summary Data
+      summary: Single market summary data (snapshot or update)
+      payload:
+        oneOf:
+          - $ref: '#/components/schemas/MarketSummarySnapshot'
+          - $ref: '#/components/schemas/MarketSummaryUpdate'
 
-    Address:
-      description: Ethereum wallet address
-      location: $message.payload#/address
+    MarketExecutionData:
+      name: marketExecutionData
+      title: Market Execution Data
+      summary: Market execution data (snapshot or update)
+      payload:
+        oneOf:
+          - $ref: '#/components/schemas/MarketExecutionSnapshot'
+          - $ref: '#/components/schemas/MarketExecutionUpdate'
+
+    WalletData:
+      name: walletData
+      title: Wallet Data
+      summary: Wallet-specific data (snapshot or update)
+      payload:
+        oneOf:
+          - $ref: '#/components/schemas/PositionSnapshot'
+          - $ref: '#/components/schemas/PositionUpdate'
+          - $ref: '#/components/schemas/OrderSnapshot'
+          - $ref: '#/components/schemas/OrderUpdate'
+          - $ref: '#/components/schemas/WalletExecutionSnapshot'
+          - $ref: '#/components/schemas/WalletExecutionUpdate'
+
+    PricesData:
+      name: pricesData
+      title: Prices Data
+      summary: All prices data (snapshot or update)
+      payload:
+        oneOf:
+          - $ref: '#/components/schemas/PricesSnapshot'
+          - $ref: '#/components/schemas/PricesUpdate'
+
+    PriceData:
+      name: priceData
+      title: Price Data
+      summary: Single price data (snapshot or update)
+      payload:
+        oneOf:
+          - $ref: '#/components/schemas/PriceSnapshot'
+          - $ref: '#/components/schemas/PriceUpdate'
 
   schemas:
-    # Common message type enums
-    ChannelDataMessageType:
-      type: string
-      enum:
-        - channel_data
-      description: Message type for channel data updates
-
-    PingMessageType:
-      type: string
-      enum:
-        - ping
-      description: Message type for ping messages
-
-    PongMessageType:
-      type: string
-      enum:
-        - pong
-      description: Message type for pong messages
-
-    SubscribeMessageType:
-      type: string
-      enum:
-        - subscribe
-      description: Message type for subscribe messages
-
-    UnsubscribeMessageType:
-      type: string
-      enum:
-        - unsubscribe
-      description: Message type for unsubscribe messages
-
-    SubscribedMessageType:
-      type: string
-      enum:
-        - subscribed
-      description: Message type for subscribed confirmation messages
-
-    UnsubscribedMessageType:
-      type: string
-      enum:
-        - unsubscribed
-      description: Message type for unsubscribed confirmation messages
-
-    ErrorMessageType:
-      type: string
-      enum:
-        - error
-      description: Message type for error messages
-
-    # Common channel patterns
-    MarketsSummaryChannel:
-      type: string
-      enum:
-        - /v2/markets/summary
-      description: Channel for all markets summary updates
-
-    PricesChannel:
-      type: string
-      enum:
-        - /v2/prices
-      description: Channel for all prices updates
-
-    MarketSummaryChannelPattern:
-      type: string
-      pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
-      description: Channel pattern for specific market summary updates
-
-    MarketPerpExecutionsChannelPattern:
-      type: string
-      pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
-      description: Channel pattern for market perpetual executions
-
-    WalletPositionsChannelPattern:
-      type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
-      description: Channel pattern for wallet positions updates
-
-    WalletOrderChangesChannelPattern:
-      type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$'
-      description: Channel pattern for wallet order changes
-
-    WalletPerpExecutionsChannelPattern:
-      type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
-      description: Channel pattern for wallet perpetual executions
-
-    PriceChannelPattern:
-      type: string
-      pattern: '^/v2/prices/[A-Za-z0-9]+$'
-      description: Channel pattern for specific price updates
-
-    BaseUpdateEnvelope:
-      type: object
-      title: BaseUpdateEnvelope
-      additionalProperties: false
-      required:
-        - type
-        - timestamp
-      properties:
-        type:
-          $ref: '#/components/schemas/ChannelDataMessageType'
-        timestamp:
-          type: number
-          description: Update timestamp (milliseconds)
-          example: 1747927089946
-
-    MarketsSummaryUpdateBody:
-      type: object
-      title: MarketsSummaryUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/MarketsSummaryChannel'
-        data:
-          type: array
-          title: MarketSummaryList
-          items:
-            $ref: './trading-schemas.json#/definitions/MarketSummary'
-
-    MarketSummaryUpdateBody:
-      type: object
-      title: MarketSummaryUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/MarketSummaryChannelPattern'
-        data:
-          $ref: './trading-schemas.json#/definitions/MarketSummary'
-
-    PositionUpdateBody:
-      type: object
-      title: PositionUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletPositionsChannelPattern'
-        data:
-          type: array
-          title: PositionList
-          items:
-            $ref: './trading-schemas.json#/definitions/Position'
-
-    OrderChangeUpdateBody:
-      type: object
-      title: OrderChangeUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletOrderChangesChannelPattern'
-        data:
-          type: array
-          title: OrderList
-          items:
-            $ref: './trading-schemas.json#/definitions/Order'
-
-    MarketPerpExecutionUpdateBody:
-      type: object
-      title: MarketPerpExecutionUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/MarketPerpExecutionsChannelPattern'
-        data:
-          type: array
-          title: PerpExecutionList
-          items:
-            $ref: './trading-schemas.json#/definitions/PerpExecution'
-
-    WalletPerpExecutionUpdateBody:
-      type: object
-      title: WalletPerpExecutionUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletPerpExecutionsChannelPattern'
-        data:
-          type: array
-          title: WalletPerpExecutionList
-          items:
-            $ref: './trading-schemas.json#/definitions/PerpExecution'
-
-    PricesUpdateBody:
-      type: object
-      title: PricesUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/PricesChannel'
-        data:
-          type: array
-          title: PriceList
-          items:
-            $ref: './trading-schemas.json#/definitions/Price'
-
-    PriceUpdateBody:
-      type: object
-      title: PriceUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/PriceChannelPattern'
-        data:
-          $ref: './trading-schemas.json#/definitions/Price'
-
-    MarketsSummaryUpdatePayload:
-      title: MarketsSummaryUpdatePayload
+    # Control Message Schemas
+    PongMessage:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketsSummaryUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type]
+          properties:
+            type:
+              const: pong
 
-    MarketSummaryUpdatePayload:
-      title: MarketSummaryUpdatePayload
+    SubscribedMessage:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketSummaryUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type, channel]
+          properties:
+            type:
+              const: subscribed
+            channel:
+              $ref: './trading-schemas.json#/definitions/ChannelAddress'
 
-    PositionUpdatePayload:
-      title: PositionUpdatePayload
+    UnsubscribedMessage:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PositionUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type, channel]
+          properties:
+            type:
+              const: unsubscribed
+            channel:
+              $ref: './trading-schemas.json#/definitions/ChannelAddress'
 
-    OrderChangeUpdatePayload:
-      title: OrderChangeUpdatePayload
+    ErrorMessage:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/OrderChangeUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type, message]
+          properties:
+            type:
+              const: error
+            message:
+              type: string
+              description: Error description
 
-    MarketPerpExecutionUpdatePayload:
-      title: MarketPerpExecutionUpdatePayload
+    # Market Data Schemas
+    MarketsSummarySnapshot:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketPerpExecutionUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              const: /v2/markets/summary
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/MarketSummary'
 
-    WalletPerpExecutionUpdatePayload:
-      title: WalletPerpExecutionUpdatePayload
+    MarketsSummaryUpdate:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              const: /v2/markets/summary
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/MarketSummary'
 
-    PricesUpdatePayload:
-      title: PricesUpdatePayload
+    MarketSummarySnapshot:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PricesUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              $ref: './trading-schemas.json#/definitions/MarketChannelPattern'
+            data:
+              $ref: './trading-schemas.json#/definitions/MarketSummary'
 
-    PriceUpdatePayload:
-      title: PriceUpdatePayload
+    MarketSummaryUpdate:
       allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PriceUpdateBody'
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              $ref: './trading-schemas.json#/definitions/MarketChannelPattern'
+            data:
+              $ref: './trading-schemas.json#/definitions/MarketSummary'
 
-    PingMessagePayload:
-      type: object
-      title: PingMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/PingMessageType'
-        timestamp:
-          type: integer
-          description: Optional timestamp in milliseconds
-          example: 1747927089946
-      required:
-        - type
+    MarketExecutionSnapshot:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/PerpExecution'
 
-    PongMessagePayload:
-      type: object
-      title: PongMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/PongMessageType'
-        timestamp:
-          type: integer
-          description: Optional timestamp in milliseconds
-          example: 1747927089946
-      required:
-        - type
+    MarketExecutionUpdate:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/PerpExecution'
 
-    SubscribeMessagePayload:
-      type: object
-      title: SubscribeMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/SubscribeMessageType'
-        channel:
-          type: string
-          description: Channel path to subscribe to
-          example: /v2/markets/summary
-        id:
-          type: string
-          description: Optional request identifier
-          example: "req123"
-      required:
-        - type
-        - channel
+    # Wallet Data Schemas
+    PositionSnapshot:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/Position'
 
-    UnsubscribeMessagePayload:
-      type: object
-      title: UnsubscribeMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/UnsubscribeMessageType'
-        channel:
-          type: string
-          description: Channel path to unsubscribe from
-          example: /v2/markets/summary
-        id:
-          type: string
-          description: Optional request identifier
-          example: "req123"
-      required:
-        - type
-        - channel
+    PositionUpdate:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/Position'
 
-    SubscribedMessagePayload:
-      type: object
-      title: SubscribedMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/SubscribedMessageType'
-        channel:
-          type: string
-          description: Channel that was subscribed to
-          example: /v2/markets/summary
-        contents:
-          type: object
-          title: SubscriptionContents
-          description: Optional initial data for the subscription
-      required:
-        - type
-        - channel
+    OrderSnapshot:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/Order'
 
-    UnsubscribedMessagePayload:
-      type: object
-      title: UnsubscribedMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/UnsubscribedMessageType'
-        channel:
-          type: string
-          description: Channel that was unsubscribed from
-          example: /v2/markets/summary
-      required:
-        - type
-        - channel
+    OrderUpdate:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/Order'
 
-    ErrorMessagePayload:
-      type: object
-      title: ErrorMessagePayload
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/ErrorMessageType'
-        message:
-          type: string
-          description: Error description
-          example: "Invalid channel"
-        channel:
-          type: string
-          description: Optional channel related to the error
-          example: /v2/markets/summary
-      required:
-        - type
-        - message
+    WalletExecutionSnapshot:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/PerpExecution'
+
+    WalletExecutionUpdate:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/PerpExecution'
+
+    # Price Data Schemas
+    PricesSnapshot:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              const: /v2/prices
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/Price'
+
+    PricesUpdate:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              const: /v2/prices
+            data:
+              type: array
+              items:
+                $ref: './trading-schemas.json#/definitions/Price'
+
+    PriceSnapshot:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/SnapshotMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/prices/[A-Za-z0-9]+$'
+            data:
+              $ref: './trading-schemas.json#/definitions/Price'
+
+    PriceUpdate:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/UpdateMessage'
+        - type: object
+          required: [data]
+          properties:
+            channel:
+              pattern: '^/v2/prices/[A-Za-z0-9]+$'
+            data:
+              $ref: './trading-schemas.json#/definitions/Price'

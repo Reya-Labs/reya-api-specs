@@ -1105,6 +1105,167 @@
         }
       },
       "additionalProperties": true
+    },
+    "MessageType": {
+      "title": "MessageType",
+      "$id": "#MessageType",
+      "x-parser-schema-id": "MessageType",
+      "type": "string",
+      "enum": ["ping", "pong", "subscribe", "unsubscribe", "subscribed", "unsubscribed", "error", "snapshot", "update"],
+      "description": "WebSocket message types"
+    },
+    "ChannelAddress": {
+      "title": "ChannelAddress",
+      "$id": "#ChannelAddress",
+      "x-parser-schema-id": "ChannelAddress",
+      "type": "string",
+      "oneOf": [
+        {
+          "const": "/v2/markets/summary",
+          "title": "All Markets Summary"
+        },
+        {
+          "pattern": "^/v2/market/[A-Za-z0-9]+/summary$",
+          "title": "Single Market Summary"
+        },
+        {
+          "pattern": "^/v2/market/[A-Za-z0-9]+/perpExecutions$",
+          "title": "Market Executions"
+        },
+        {
+          "pattern": "^/v2/wallet/0x[a-fA-F0-9]{40}/positions$",
+          "title": "Wallet Positions"
+        },
+        {
+          "pattern": "^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$",
+          "title": "Wallet Order Changes"
+        },
+        {
+          "pattern": "^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$",
+          "title": "Wallet Executions"
+        },
+        {
+          "const": "/v2/prices",
+          "title": "All Prices"
+        },
+        {
+          "pattern": "^/v2/prices/[A-Za-z0-9]+$",
+          "title": "Single Price"
+        }
+      ],
+      "description": "WebSocket channel addresses"
+    },
+    "BaseMessage": {
+      "title": "BaseMessage",
+      "$id": "#BaseMessage",
+      "x-parser-schema-id": "BaseMessage",
+      "type": "object",
+      "required": ["type", "timestamp"],
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/MessageType"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Message timestamp (milliseconds)"
+        },
+        "id": {
+          "type": "string",
+          "description": "Optional message identifier"
+        }
+      }
+    },
+    "ControlMessage": {
+      "title": "ControlMessage",
+      "$id": "#ControlMessage",
+      "x-parser-schema-id": "ControlMessage",
+      "allOf": [
+        {"$ref": "#/definitions/BaseMessage"},
+        {
+          "type": "object",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/ChannelAddress"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error or status message"
+            }
+          }
+        }
+      ]
+    },
+    "SnapshotMessage": {
+      "title": "SnapshotMessage",
+      "$id": "#SnapshotMessage",
+      "x-parser-schema-id": "SnapshotMessage",
+      "allOf": [
+        {"$ref": "#/definitions/BaseMessage"},
+        {
+          "type": "object",
+          "required": ["channel", "snapshot"],
+          "properties": {
+            "type": {
+              "const": "snapshot"
+            },
+            "channel": {
+              "$ref": "#/definitions/ChannelAddress"
+            },
+            "snapshot": {
+              "const": true,
+              "description": "Indicates this is initial snapshot data"
+            }
+          }
+        }
+      ]
+    },
+    "UpdateMessage": {
+      "title": "UpdateMessage",
+      "$id": "#UpdateMessage",
+      "x-parser-schema-id": "UpdateMessage",
+      "allOf": [
+        {"$ref": "#/definitions/BaseMessage"},
+        {
+          "type": "object",
+          "required": ["channel", "update"],
+          "properties": {
+            "type": {
+              "const": "update"
+            },
+            "channel": {
+              "$ref": "#/definitions/ChannelAddress"
+            },
+            "update": {
+              "const": true,
+              "description": "Indicates this is incremental update data"
+            }
+          }
+        }
+      ]
+    },
+    "WalletChannelPattern": {
+      "title": "WalletChannelPattern",
+      "$id": "#WalletChannelPattern",
+      "x-parser-schema-id": "WalletChannelPattern",
+      "type": "string",
+      "pattern": "^/v2/wallet/0x[a-fA-F0-9]{40}/(positions|orderChanges|perpExecutions)$",
+      "description": "Channel pattern for wallet-specific data"
+    },
+    "MarketChannelPattern": {
+      "title": "MarketChannelPattern",
+      "$id": "#MarketChannelPattern",
+      "x-parser-schema-id": "MarketChannelPattern",
+      "type": "string",
+      "pattern": "^/v2/market/[A-Za-z0-9]+/(summary|perpExecutions)$",
+      "description": "Channel pattern for market-specific data"
+    },
+    "PriceChannelPattern": {
+      "title": "PriceChannelPattern",
+      "$id": "#PriceChannelPattern",
+      "x-parser-schema-id": "PriceChannelPattern",
+      "type": "string",
+      "pattern": "^/v2/prices(/[A-Za-z0-9]+)?$",
+      "description": "Channel pattern for price data"
     }
   }
 }
