@@ -493,8 +493,7 @@ components:
       required: true
       description: Trading symbol (e.g., BTCRUSDPERP)
       schema:
-        type: string
-        pattern: '^[A-Za-z0-9]+$'
+        $ref: './trading-schemas.json#/definitions/Symbol'
         example: BTCRUSDPERP
 
     AddressParam:
@@ -502,8 +501,7 @@ components:
       in: path
       required: true
       schema:
-        type: string
-        pattern: '^0x[a-fA-F0-9]{40}$'
+        $ref: './trading-schemas.json#/definitions/Address'
         example: '0x6c51275fd01d5dbd2da194e92f920f8598306df2'
 
     StartTimeParam:
@@ -512,8 +510,7 @@ components:
       required: false
       description: Return results after this sequence number (for pagination)
       schema:
-        type: integer
-        format: int64
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733379000
 
     EndTimeParam:
@@ -522,8 +519,7 @@ components:
       required: false
       description: Return results before this sequence number (for pagination)
       schema:
-        type: integer
-        format: int64
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
 
     ResolutionParam:
