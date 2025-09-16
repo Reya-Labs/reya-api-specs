@@ -172,7 +172,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: version,
-              name: `🏷️ Release ${version}`,
+              name: `🏷️ ${version}`,
               body: releaseBody,
               draft: false,
               prerelease: false,
