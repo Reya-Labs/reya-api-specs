@@ -1266,6 +1266,36 @@
       "type": "string",
       "pattern": "^/v2/prices(/[A-Za-z0-9]+)?$",
       "description": "Channel pattern for price data"
+    },
+    "ErrorCode": {
+      "title": "ErrorCode",
+      "$id": "#ErrorCode",
+      "x-parser-schema-id": "ErrorCode",
+      "type": "string",
+      "enum": [
+        "INVALID_CHANNEL",
+        "INVALID_MESSAGE_TYPE",
+        "INVALID_ADDRESS_FORMAT",
+        "MISSING_REQUIRED_FIELD",
+        "SUBSCRIPTION_FAILED",
+        "SNAPSHOT_FETCH_ERROR",
+        "UNAUTHORIZED",
+        "RATE_LIMITED",
+        "MAX_SUBSCRIPTIONS_EXCEEDED",
+        "SNAPSHOT_TIMEOUT",
+        "CONNECTION_TIMEOUT"
+      ],
+      "description": "WebSocket API error codes"
+    },
+    "CorrelationId": {
+      "title": "CorrelationId",
+      "$id": "#CorrelationId",
+      "x-parser-schema-id": "CorrelationId",
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Correlation identifier for request/reply matching"
     }
   }
 }

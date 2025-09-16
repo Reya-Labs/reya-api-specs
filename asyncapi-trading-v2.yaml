@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.1.0
+  version: 2.2.0
   description: |
     Real-time WebSocket API for Reya Network's decentralized exchange.
 
@@ -9,6 +9,14 @@ info:
     1. Clients subscribe to channels and receive initial snapshots
     2. Subsequent updates are sent as incremental deltas
     3. All data uses human-readable formats without blockchain specifics
+
+    Key Features:
+    - Request/reply patterns with correlation IDs for message tracing
+    - Comprehensive error handling with specific error codes
+    - WebSocket-specific bindings and protocol information
+    - Proper snapshot vs. update message distinction
+    - Channel address normalization (wallet addresses lowercased)
+    - Built-in support for connection management and rate limiting
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -33,14 +41,44 @@ servers:
     host: ws.reya.xyz
     protocol: wss
     description: Production WebSocket server
+    bindings:
+      ws:
+        method: GET
+        headers:
+          type: object
+          properties:
+            Authorization:
+              type: string
+              description: Optional Bearer token for authenticated channels
+            User-Agent:
+              type: string
+              description: Client identification
+        query:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Optional authentication token
   staging:
     host: websocket-staging.reya.xyz
     protocol: wss
     description: Staging WebSocket server
+    bindings:
+      ws:
+        method: GET
+        headers:
+          type: object
+          properties:
+            Authorization:
+              type: string
+              description: Optional Bearer token for authenticated channels
   test:
     host: websocket-testnet.reya.xyz
     protocol: wss
     description: Test WebSocket server
+    bindings:
+      ws:
+        method: GET
 
 defaultContentType: application/json
 
@@ -56,10 +94,30 @@ channels:
       4. Client can unsubscribe to stop receiving updates
     address: null
     messages:
+      subscribe:
+        $ref: '#/components/messages/Subscribe'
+      unsubscribe:
+        $ref: '#/components/messages/Unsubscribe'
+      ping:
+        $ref: '#/components/messages/Ping'
       controlMessages:
         $ref: '#/components/messages/ControlMessages'
+      subscribedResponse:
+        $ref: '#/components/messages/SubscribedResponse'
+      unsubscribedResponse:
+        $ref: '#/components/messages/UnsubscribedResponse'
+      pongResponse:
+        $ref: '#/components/messages/PongResponse'
     bindings:
-      ws: {}
+      ws:
+        method: GET
+        headers:
+          type: object
+          properties:
+            Sec-WebSocket-Protocol:
+              type: string
+              enum: [trading-v2]
+              description: WebSocket sub-protocol for trading API
 
   marketsSummary:
     address: /v2/markets/summary
@@ -73,7 +131,8 @@ channels:
     description: Real-time updates for a specific market's summary
     parameters:
       symbol:
-        $ref: '#/components/parameters/Symbol'
+        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+        location: $message.payload#/symbol
     messages:
       marketSummaryData:
         $ref: '#/components/messages/MarketSummaryData'
@@ -83,7 +142,8 @@ channels:
     description: Real-time perpetual executions for a specific market
     parameters:
       symbol:
-        $ref: '#/components/parameters/Symbol'
+        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+        location: $message.payload#/symbol
     messages:
       marketExecutionData:
         $ref: '#/components/messages/MarketExecutionData'
@@ -93,9 +153,11 @@ channels:
     description: Real-time wallet data updates (positions, orders, executions)
     parameters:
       address:
-        $ref: '#/components/parameters/WalletAddress'
+        description: Ethereum wallet address (normalized to lowercase)
+        location: $message.payload#/address
       dataType:
         description: Type of wallet data
+        location: $message.payload#/dataType
         enum: [positions, orderChanges, perpExecutions]
     messages:
       walletData:
@@ -113,13 +175,14 @@ channels:
     description: Real-time price updates for a specific symbol
     parameters:
       symbol:
-        $ref: '#/components/parameters/Symbol'
+        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+        location: $message.payload#/symbol
     messages:
       priceData:
         $ref: '#/components/messages/PriceData'
 
 operations:
-  # Control Operations
+  # Control Operations with Request/Reply patterns
   subscribe:
     action: send
     channel:
@@ -127,9 +190,17 @@ operations:
     summary: Subscribe to a data channel
     description: |
       Subscribe to a specific channel to receive data updates.
-      Server will respond with initial snapshot followed by incremental updates.
+      Server will respond with subscribed confirmation and initial snapshot, followed by incremental updates.
     messages:
-      - $ref: '#/components/messages/Subscribe'
+      - $ref: '#/channels/control/messages/subscribe'
+    reply:
+      address:
+        description: Server responds on the same WebSocket connection
+        location: $message.payload#/channel
+      channel:
+        $ref: '#/channels/control'
+      messages:
+        - $ref: '#/channels/control/messages/subscribedResponse'
 
   unsubscribe:
     action: send
@@ -137,7 +208,15 @@ operations:
       $ref: '#/channels/control'
     summary: Unsubscribe from a data channel
     messages:
-      - $ref: '#/components/messages/Unsubscribe'
+      - $ref: '#/channels/control/messages/unsubscribe'
+    reply:
+      address:
+        description: Server confirms unsubscription
+        location: $message.payload#/channel
+      channel:
+        $ref: '#/channels/control'
+      messages:
+        - $ref: '#/channels/control/messages/unsubscribedResponse'
 
   ping:
     action: send
@@ -145,7 +224,15 @@ operations:
       $ref: '#/channels/control'
     summary: Send ping to test connection
     messages:
-      - $ref: '#/components/messages/Ping'
+      - $ref: '#/channels/control/messages/ping'
+    reply:
+      address:
+        description: Server responds with pong
+        location: $message.payload#/channel
+      channel:
+        $ref: '#/channels/control'
+      messages:
+        - $ref: '#/channels/control/messages/pongResponse'
 
   receiveControlResponse:
     action: receive
@@ -153,17 +240,35 @@ operations:
       $ref: '#/channels/control'
     summary: Receive control responses (pong, subscribed, unsubscribed, errors)
     messages:
-      - $ref: '#/components/messages/ControlMessages'
+      - $ref: '#/channels/control/messages/controlMessages'
 
   # Data Reception Operations
-  receiveMarketData:
+  receiveMarketsSummaryData:
     action: receive
-    channels:
-      - $ref: '#/channels/marketsSummary'
-      - $ref: '#/channels/marketSummary'
-      - $ref: '#/channels/marketExecutions'
-    summary: Receive market-related data updates
-    description: Snapshots and updates for market summaries and executions
+    channel:
+      $ref: '#/channels/marketsSummary'
+    summary: Receive all markets summary data updates
+    description: Snapshots and updates for all market summaries
+    messages:
+      - $ref: '#/channels/marketsSummary/messages/marketsSummaryData'
+
+  receiveMarketSummaryData:
+    action: receive
+    channel:
+      $ref: '#/channels/marketSummary'
+    summary: Receive specific market summary data updates
+    description: Snapshots and updates for specific market summaries
+    messages:
+      - $ref: '#/channels/marketSummary/messages/marketSummaryData'
+
+  receiveMarketExecutionData:
+    action: receive
+    channel:
+      $ref: '#/channels/marketExecutions'
+    summary: Receive market execution data updates
+    description: Snapshots and updates for market executions
+    messages:
+      - $ref: '#/channels/marketExecutions/messages/marketExecutionData'
 
   receiveWalletData:
     action: receive
@@ -171,26 +276,48 @@ operations:
       $ref: '#/channels/walletData'
     summary: Receive wallet-specific data updates
     description: Snapshots and updates for positions, orders, and executions
+    messages:
+      - $ref: '#/channels/walletData/messages/walletData'
+
+  receivePricesData:
+    action: receive
+    channel:
+      $ref: '#/channels/pricesGlobal'
+    summary: Receive all prices data updates
+    description: Snapshots and updates for all price information
+    messages:
+      - $ref: '#/channels/pricesGlobal/messages/pricesData'
 
   receivePriceData:
     action: receive
-    channels:
-      - $ref: '#/channels/pricesGlobal'
-      - $ref: '#/channels/priceSymbol'
-    summary: Receive price data updates
-    description: Snapshots and updates for price information
+    channel:
+      $ref: '#/channels/priceSymbol'
+    summary: Receive specific price data updates
+    description: Snapshots and updates for specific price information
+    messages:
+      - $ref: '#/channels/priceSymbol/messages/priceData'
 
 components:
+  correlationIds:
+    subscriptionCorrelation:
+      description: Correlates subscription requests with responses and data updates
+      location: $message.payload#/id
+
+    requestCorrelation:
+      description: Correlates ping/pong and control messages
+      location: $message.payload#/id
+
   parameters:
     Symbol:
       description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-      schema:
-        $ref: './trading-schemas.json#/definitions/Symbol'
+      location: $message.payload#/symbol
 
     WalletAddress:
-      description: Ethereum wallet address
-      schema:
-        $ref: './trading-schemas.json#/definitions/Address'
+      description: |
+        Ethereum wallet address.
+        Note: Addresses are automatically normalized to lowercase by the server.
+      location: $message.payload#/address
+      x-normalization: lowercase
 
   messages:
     # Control Messages (sent by client)
@@ -198,6 +325,8 @@ components:
       name: subscribe
       title: Subscribe Message
       summary: Subscribe to a channel
+      correlationId:
+        $ref: '#/components/correlationIds/subscriptionCorrelation'
       payload:
         type: object
         required: [type, channel]
@@ -208,12 +337,18 @@ components:
             $ref: './trading-schemas.json#/definitions/ChannelAddress'
           id:
             type: string
-            description: Optional request identifier
+            description: Request identifier for correlating responses
+        examples:
+          - type: subscribe
+            channel: "/v2/wallet/0x1234567890abcdef1234567890abcdef12345678/positions"
+            id: "sub-123"
 
     Unsubscribe:
       name: unsubscribe
       title: Unsubscribe Message
       summary: Unsubscribe from a channel
+      correlationId:
+        $ref: '#/components/correlationIds/subscriptionCorrelation'
       payload:
         type: object
         required: [type, channel]
@@ -224,11 +359,18 @@ components:
             $ref: './trading-schemas.json#/definitions/ChannelAddress'
           id:
             type: string
+            description: Request identifier for correlating responses
+        examples:
+          - type: unsubscribe
+            channel: "/v2/wallet/0x1234567890abcdef1234567890abcdef12345678/positions"
+            id: "unsub-123"
 
     Ping:
       name: ping
       title: Ping Message
       summary: Ping message to test connection
+      correlationId:
+        $ref: '#/components/correlationIds/requestCorrelation'
       payload:
         type: object
         required: [type]
@@ -237,20 +379,56 @@ components:
             const: ping
           id:
             type: string
+            description: Request identifier for correlating pong response
           timestamp:
             $ref: './trading-schemas.json#/definitions/UnsignedInteger'
+        examples:
+          - type: ping
+            id: "ping-456"
+            timestamp: 1747927089946
+
+    # Reply Messages (sent by server in response to client requests)
+    SubscribedResponse:
+      name: subscribedResponse
+      title: Subscribed Response
+      summary: Server confirms subscription with initial snapshot
+      correlationId:
+        $ref: '#/components/correlationIds/subscriptionCorrelation'
+      payload:
+        $ref: '#/components/schemas/SubscribedMessage'
+
+    UnsubscribedResponse:
+      name: unsubscribedResponse
+      title: Unsubscribed Response
+      summary: Server confirms unsubscription
+      correlationId:
+        $ref: '#/components/correlationIds/subscriptionCorrelation'
+      payload:
+        $ref: '#/components/schemas/UnsubscribedMessage'
+
+    PongResponse:
+      name: pongResponse
+      title: Pong Response
+      summary: Server responds to ping
+      correlationId:
+        $ref: '#/components/correlationIds/requestCorrelation'
+      payload:
+        $ref: '#/components/schemas/PongMessage'
 
     # Control Responses (sent by server)
     ControlMessages:
       name: controlMessages
       title: Control Messages
-      summary: Server control responses
+      summary: Server control responses and error messages
       payload:
         oneOf:
           - $ref: '#/components/schemas/PongMessage'
           - $ref: '#/components/schemas/SubscribedMessage'
           - $ref: '#/components/schemas/UnsubscribedMessage'
           - $ref: '#/components/schemas/ErrorMessage'
+          - $ref: '#/components/schemas/ValidationError'
+          - $ref: '#/components/schemas/SubscriptionError'
+          - $ref: '#/components/schemas/TimeoutError'
 
     # Data Messages (sent by server)
     MarketsSummaryData:
@@ -321,6 +499,13 @@ components:
           properties:
             type:
               const: pong
+            id:
+              type: string
+              description: Correlation ID from the ping request
+          examples:
+            - type: pong
+              timestamp: 1747927089946
+              id: "ping-456"
 
     SubscribedMessage:
       allOf:
@@ -332,6 +517,18 @@ components:
               const: subscribed
             channel:
               $ref: './trading-schemas.json#/definitions/ChannelAddress'
+            id:
+              type: string
+              description: Correlation ID from the subscribe request
+            contents:
+              type: object
+              description: Initial snapshot data for the subscribed channel
+          examples:
+            - type: subscribed
+              timestamp: 1747927089946
+              channel: "/v2/wallet/0x1234567890abcdef1234567890abcdef12345678/positions"
+              id: "sub-123"
+              contents: {"data": []}
 
     UnsubscribedMessage:
       allOf:
@@ -343,6 +540,14 @@ components:
               const: unsubscribed
             channel:
               $ref: './trading-schemas.json#/definitions/ChannelAddress'
+            id:
+              type: string
+              description: Correlation ID from the unsubscribe request
+          examples:
+            - type: unsubscribed
+              timestamp: 1747927089946
+              channel: "/v2/wallet/0x1234567890abcdef1234567890abcdef12345678/positions"
+              id: "unsub-123"
 
     ErrorMessage:
       allOf:
@@ -354,7 +559,115 @@ components:
               const: error
             message:
               type: string
-              description: Error description
+              description: Generic error description
+            channel:
+              $ref: './trading-schemas.json#/definitions/ChannelAddress'
+              description: Channel related to the error (if applicable)
+            id:
+              type: string
+              description: Correlation ID from the original request (if applicable)
+          examples:
+            - type: error
+              timestamp: 1747927089946
+              message: "Invalid type"
+              id: "req-789"
+
+    ValidationError:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type, message, errorCode]
+          properties:
+            type:
+              const: error
+            errorCode:
+              type: string
+              enum: [INVALID_CHANNEL, INVALID_MESSAGE_TYPE, INVALID_ADDRESS_FORMAT, MISSING_REQUIRED_FIELD]
+              description: Specific validation error code
+            message:
+              type: string
+              description: Human-readable validation error message
+            channel:
+              type: string
+              description: Invalid channel name that caused the error
+            field:
+              type: string
+              description: Field name that failed validation (if applicable)
+            id:
+              type: string
+              description: Correlation ID from the original request
+          examples:
+            - type: error
+              timestamp: 1747927089946
+              errorCode: "INVALID_CHANNEL"
+              message: "Invalid channel name"
+              channel: "/v2/invalid/channel"
+              id: "sub-456"
+
+    SubscriptionError:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type, message, errorCode]
+          properties:
+            type:
+              const: error
+            errorCode:
+              type: string
+              enum: [SUBSCRIPTION_FAILED, SNAPSHOT_FETCH_ERROR, UNAUTHORIZED, RATE_LIMITED, MAX_SUBSCRIPTIONS_EXCEEDED]
+              description: Specific subscription error code
+            message:
+              type: string
+              description: Human-readable subscription error message
+            channel:
+              $ref: './trading-schemas.json#/definitions/ChannelAddress'
+              description: Channel that failed to subscribe
+            retryAfter:
+              type: integer
+              description: Seconds to wait before retrying (for rate limiting)
+            id:
+              type: string
+              description: Correlation ID from the subscribe request
+          examples:
+            - type: error
+              timestamp: 1747927089946
+              errorCode: "SUBSCRIPTION_FAILED"
+              message: "Error while fetching snapshot from /v2/wallet/0x1234.../positions"
+              channel: "/v2/wallet/0x1234567890abcdef1234567890abcdef12345678/positions"
+              id: "sub-789"
+
+    TimeoutError:
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/ControlMessage'
+        - type: object
+          required: [type, message, errorCode]
+          properties:
+            type:
+              const: error
+            errorCode:
+              type: string
+              enum: [SNAPSHOT_TIMEOUT, CONNECTION_TIMEOUT]
+              description: Specific timeout error code
+            message:
+              type: string
+              description: Human-readable timeout error message
+            channel:
+              $ref: './trading-schemas.json#/definitions/ChannelAddress'
+              description: Channel that experienced timeout
+            timeoutMs:
+              type: integer
+              description: Timeout duration in milliseconds
+            id:
+              type: string
+              description: Correlation ID from the original request
+          examples:
+            - type: error
+              timestamp: 1747927089946
+              errorCode: "SNAPSHOT_TIMEOUT"
+              message: "Timeout while fetching initial snapshot"
+              channel: "/v2/wallet/0x1234567890abcdef1234567890abcdef12345678/positions"
+              timeoutMs: 10000
+              id: "sub-999"
 
     # Market Data Schemas
     MarketsSummarySnapshot:
