@@ -56,6 +56,123 @@
       "examples": [1747927089946, 1756733379000],
       "description": "Unsigned integer"
     },
+    "RequestErrorCode": {
+      "title": "RequestErrorCode",
+      "$id": "#RequestErrorCode",
+      "x-parser-schema-id": "RequestErrorCode",
+      "type": "string",
+      "enum": [
+        "SYMBOL_NOT_FOUND",
+        "NO_ACCOUNTS_FOUND",
+        "NO_PRICES_FOUND_FOR_SYMBOL",
+        "INPUT_VALIDATION_ERROR",
+        "CREATE_ORDER_OTHER_ERROR",
+        "CANCEL_ORDER_OTHER_ERROR"
+      ],
+      "description": "Standardized error codes for API responses"
+    },
+    "ServerErrorCode": {
+      "title": "ServerErrorCode",
+      "$id": "#ServerErrorCode",
+      "x-parser-schema-id": "ServerErrorCode",
+      "type": "string",
+      "enum": [
+        "INTERNAL_SERVER_ERROR"
+      ],
+      "description": "Standardized error codes for API responses"
+    },
+    "Side": {
+      "title": "Side",
+      "$id": "#Side",
+      "x-parser-schema-id": "Side",
+      "type": "string",
+      "enum": ["B", "A"],
+      "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
+    },
+    "TimeInForce": {
+      "title": "TimeInForce",
+      "$id": "#TimeInForce",
+      "x-parser-schema-id": "TimeInForce",
+      "type": "string",
+      "enum": ["IOC", "GTC"],
+      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
+      "example": "GTC"
+    },
+    "OrderType": {
+      "title": "OrderType",
+      "$id": "#OrderType",
+      "x-parser-schema-id": "OrderType",
+      "type": "string",
+      "enum": ["LIMIT", "TP", "SL"],
+      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
+      "example": "TP"
+    },
+    "ExecutionType": {
+      "title": "ExecutionType",
+      "$id": "#ExecutionType",
+      "x-parser-schema-id": "ExecutionType",
+      "type": "string",
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
+      "description": "Type of execution"
+    },
+    "OrderStatus": {
+      "title": "OrderStatus",
+      "$id": "#OrderStatus",
+      "x-parser-schema-id": "OrderStatus",
+      "type": "string",
+      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
+      "description": "Order status"
+    },
+    "TierType": {
+      "title": "TierType",
+      "$id": "#TierType",
+      "x-parser-schema-id": "TierType",
+      "type": "string",
+      "enum": ["REGULAR", "VIP"],
+      "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
+    },
+    "RequestError": {
+      "title": "RequestError",
+      "$id": "#RequestError",
+      "x-parser-schema-id": "RequestError",
+      "type": "object",
+      "required": [
+        "error",
+        "message"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/RequestErrorCode"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message",
+          "example": "Invalid symbol format"
+        }
+      },
+      "additionalProperties": true
+    },
+    "ServerError": {
+      "title": "ServerError",
+      "$id": "#ServerError",
+      "x-parser-schema-id": "ServerError",
+      "type": "object",
+      "required": [
+        "error",
+        "message"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/ServerErrorCode"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message",
+          "example": "Invalid symbol format"
+        }
+      },
+      "additionalProperties": true
+    },
     "MarketSummary": {
       "title": "MarketSummary",
       "$id": "#MarketSummary",
@@ -304,6 +421,28 @@
       },
       "additionalProperties": true
     },
+    "PerpExecutionList": {
+      "title": "PerpExecutionList",
+      "$id": "#PerpExecutionList",
+      "x-parser-schema-id": "PerpExecutionList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PerpExecution"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
     "PerpExecution": {
       "title": "PerpExecution",
       "$id": "#PerpExecution",
@@ -360,6 +499,28 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
+        }
+      },
+      "additionalProperties": true
+    },
+    "SpotExecutionList": {
+      "title": "SpotExecutionList",
+      "$id": "#SpotExecutionList",
+      "x-parser-schema-id": "SpotExecutionList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SpotExecution"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
@@ -449,38 +610,7 @@
       },
       "additionalProperties": true
     },
-    "Side": {
-      "title": "Side",
-      "$id": "#Side",
-      "x-parser-schema-id": "Side",
-      "type": "string",
-      "enum": ["B", "A"],
-      "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
-    },
-    "ExecutionType": {
-      "title": "ExecutionType",
-      "$id": "#ExecutionType",
-      "x-parser-schema-id": "ExecutionType",
-      "type": "string",
-      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
-      "description": "Type of execution"
-    },
-    "OrderStatus": {
-      "title": "OrderStatus",
-      "$id": "#OrderStatus",
-      "x-parser-schema-id": "OrderStatus",
-      "type": "string",
-      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
-      "description": "Order status"
-    },
-    "TierType": {
-      "title": "TierType",
-      "$id": "#TierType",
-      "x-parser-schema-id": "TierType",
-      "type": "string",
-      "enum": ["REGULAR", "VIP"],
-      "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
-    },
+
     "MarketDefinition": {
       "title": "MarketDefinition",
       "$id": "#MarketDefinition",
@@ -799,50 +929,6 @@
       },
       "additionalProperties": true
     },
-    "PerpExecutionList": {
-      "title": "PerpExecutionList",
-      "$id": "#PerpExecutionList",
-      "x-parser-schema-id": "PerpExecutionList",
-      "type": "object",
-      "required": [
-        "data",
-        "meta"
-      ],
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PerpExecution"
-          }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        }
-      },
-      "additionalProperties": true
-    },
-    "SpotExecutionList": {
-      "title": "SpotExecutionList",
-      "$id": "#SpotExecutionList",
-      "x-parser-schema-id": "SpotExecutionList",
-      "type": "object",
-      "required": [
-        "data",
-        "meta"
-      ],
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SpotExecution"
-          }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        }
-      },
-      "additionalProperties": true
-    },
     "PaginationMeta": {
       "title": "PaginationMeta",
       "$id": "#PaginationMeta",
@@ -875,91 +961,6 @@
         }
       },
       "additionalProperties": true
-    },
-    "RequestError": {
-      "title": "RequestError",
-      "$id": "#RequestError",
-      "x-parser-schema-id": "RequestError",
-      "type": "object",
-      "required": [
-        "error",
-        "message"
-      ],
-      "properties": {
-        "error": {
-          "$ref": "#/definitions/RequestErrorCode"
-        },
-        "message": {
-          "type": "string",
-          "description": "Human-readable error message",
-          "example": "Invalid symbol format"
-        }
-      },
-      "additionalProperties": true
-    },
-    "ServerError": {
-      "title": "ServerError",
-      "$id": "#ServerError",
-      "x-parser-schema-id": "ServerError",
-      "type": "object",
-      "required": [
-        "error",
-        "message"
-      ],
-      "properties": {
-        "error": {
-          "$ref": "#/definitions/ServerErrorCode"
-        },
-        "message": {
-          "type": "string",
-          "description": "Human-readable error message",
-          "example": "Invalid symbol format"
-        }
-      },
-      "additionalProperties": true
-    },
-    "RequestErrorCode": {
-      "title": "RequestErrorCode",
-      "$id": "#RequestErrorCode",
-      "x-parser-schema-id": "RequestErrorCode",
-      "type": "string",
-      "enum": [
-        "SYMBOL_NOT_FOUND",
-        "NO_ACCOUNTS_FOUND",
-        "NO_PRICES_FOUND_FOR_SYMBOL",
-        "INPUT_VALIDATION_ERROR",
-        "CREATE_ORDER_OTHER_ERROR",
-        "CANCEL_ORDER_OTHER_ERROR"
-      ],
-      "description": "Standardized error codes for API responses"
-    },
-    "ServerErrorCode": {
-      "title": "ServerErrorCode",
-      "$id": "#ServerErrorCode",
-      "x-parser-schema-id": "ServerErrorCode",
-      "type": "string",
-      "enum": [
-        "INTERNAL_SERVER_ERROR"
-      ],
-      "description": "Standardized error codes for API responses"
-    },
-    "TimeInForce": {
-      "title": "TimeInForce",
-      "$id": "#TimeInForce",
-      "x-parser-schema-id": "TimeInForce",
-      "type": "string",
-      "enum": ["IOC", "GTC"],
-      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
-      "example": "GTC"
-    },
-    "OrderType": {
-      "title": "OrderType",
-      "$id": "#OrderType",
-      "x-parser-schema-id": "OrderType",
-      "type": "string",
-      "enum": ["LIMIT", "TP", "SL"],
-      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
-      "example": "TP"
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
