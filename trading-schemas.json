@@ -1130,14 +1130,14 @@
         },
         "bids": {
           "type": "array",
-          "description": "Bid side levels aggregated by price, sorted descending by px",
+          "description": "Bid side levels aggregated by price, sorted descending by price",
           "items": {
             "$ref": "#/definitions/Level"
           }
         },
         "asks": {
           "type": "array",
-          "description": "Ask side levels aggregated by price, sorted ascending by px",
+          "description": "Ask side levels aggregated by price, sorted ascending by price",
           "items": {
             "$ref": "#/definitions/Level"
           }
