@@ -38,14 +38,28 @@
       "examples": ["1.0", "0.001", "154.741"],
       "description": "Non-negative decimal string"
     },
-    "Decimal": {
-      "title": "Decimal",
+    "SignedDecimal": {
+      "title": "SignedDecimal",
       "$id": "#Decimal",
-      "x-parser-schema-id": "Decimal",
+      "x-parser-schema-id": "SignedDecimal",
       "type": "string",
       "pattern": "^-?\\d+(\\.\\d+)?$",
       "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75"],
       "description": "Decimal string"
+    },
+    "PriceValue": {
+      "title": "PriceValue",
+      "$id": "#PriceValue",
+      "x-parser-schema-id": "PriceValue",
+      "$ref": "#/definitions/SignedDecimal",
+      "description": "Price value as a signed decimal string"
+    },
+    "Qty": {
+      "title": "Qty",
+      "$id": "#Qty",
+      "x-parser-schema-id": "Qty",
+      "$ref": "#/definitions/UnsignedDecimal",
+      "description": "Quantity value as an unsigned decimal string"
     },
     "UnsignedInteger": {
       "title": "UnsignedInteger",
@@ -215,22 +229,22 @@
           "example": "154.741"
         },
         "fundingRate": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Current hourly funding rate",
           "example": "-0.000509373441021089"
         },
         "longFundingValue": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
         "shortFundingValue": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
         "fundingRateVelocity": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Funding rate velocity",
           "example": "-0.00000006243"
         },
@@ -239,16 +253,16 @@
           "example": "917833.49891"
         },
         "pxChange24h": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "example": "92.6272285500004"
         },
         "throttledOraclePrice": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "description": "Last oracle price, at the moment of the last market summary update",
           "example": "2666.48162040777"
         },
         "throttledPoolPrice": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "description": "Last pool price, at the moment of the last market summary update",
           "example": "2666.48166680625"
         },
@@ -288,18 +302,18 @@
           "example": 12345
         },
         "qty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "example": "1.5"
         },
         "side": {
           "$ref": "#/definitions/Side"
         },
         "avgEntryPrice": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "example": "43000.00"
         },
         "avgEntryFundingValue": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Average of funding values at the entry times of currently open exposure, which serves as a baseline from which to compute the accrued funding in the position: units x (fundingValue - avgEntryFundingValue)",
           "example": "100.25"
         },
@@ -345,11 +359,11 @@
           "example": "123456789-123123123"
         },
         "qty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "example": "1.0"
         },
         "execQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
           "example": "0.5"
         },
@@ -357,14 +371,14 @@
           "$ref": "#/definitions/Side"
         },
         "limitPx": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
         "orderType": {
           "$ref": "#/definitions/OrderType"
         },
         "triggerPx": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "description": "Price at which TP/SL orders will be triggered, should not be set for other order types.",
           "example": "50000.0"
         },
@@ -473,18 +487,18 @@
           "example": 12345
         },
         "qty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "example": "1.0"
         },
         "side": {
           "$ref": "#/definitions/Side"
         },
         "price": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
         "fee": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "example": "0.50"
         },
         "type": {
@@ -556,15 +570,15 @@
           "$ref": "#/definitions/Side"
         },
         "qty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "example": "1.0"
         },
         "price": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
         "fee": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "example": "0.0"
         },
         "type": {
@@ -593,12 +607,12 @@
           "$ref": "#/definitions/Symbol"
         },
         "oraclePrice": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "description": "Price given by the Stork feeds, used both as the peg price for prices on Reya, as well as Mark Prices. The Stork price feed is usually the perp prices across three major CEXs",
           "example": "43000.00"
         },
         "poolPrice": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/PriceValue",
           "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
           "example": "42999.50"
         },
@@ -637,7 +651,7 @@
           "example": 1
         },
         "minOrderQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "example": "0.001"
         },
         "qtyStepSize": {
@@ -762,7 +776,7 @@
         "o": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Decimal"
+            "$ref": "#/definitions/SignedDecimal"
           },
           "description": "Array of opening prices",
           "example": ["2557.997", "2555.386", "2560.118"]
@@ -770,7 +784,7 @@
         "h": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Decimal"
+            "$ref": "#/definitions/SignedDecimal"
           },
           "description": "Array of high prices",
           "example": ["2558.000", "2560.699", "2560.729"]
@@ -778,7 +792,7 @@
         "l": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Decimal"
+            "$ref": "#/definitions/SignedDecimal"
           },
           "description": "Array of low prices",
           "example": ["2554.637", "2553.436", "2559.368"]
@@ -786,7 +800,7 @@
         "c": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Decimal"
+            "$ref": "#/definitions/SignedDecimal"
           },
           "description": "Array of closing prices",
           "example": ["2555.387", "2560.118", "2560.439"]
@@ -812,12 +826,12 @@
           "example": 1
         },
         "takerFee": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Taker fee rate (fee will be qty * takerFee)",
           "example": "0.0004"
         },
         "makerFee": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Maker fee rate (fee will be qty * makerFee)",
           "example": "0.0002"
         },
@@ -995,11 +1009,11 @@
           "example": true
         },
         "limitPx": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "example": "50000.0"
         },
         "qty": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/Qty",
           "example": "0.1"
         },
         "orderType": {
@@ -1012,7 +1026,7 @@
           "example": "GTC"
         },
         "triggerPx": {
-          "$ref": "#/definitions/Decimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Trigger price, only for TP/SL orders",
           "example": "50000.0"
         },
