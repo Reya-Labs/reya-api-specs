@@ -271,7 +271,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DepthSnapshot'
+                $ref: '#/components/schemas/Depth'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -669,8 +669,8 @@ components:
     Level:
       $ref: './trading-schemas.json#/definitions/Level'
 
-    DepthSnapshot:
-      $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+    Depth:
+      $ref: './trading-schemas.json#/definitions/Depth'
 
   responses:
     BadRequest:

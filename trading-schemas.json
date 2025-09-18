@@ -1113,10 +1113,10 @@
       },
       "additionalProperties": true
     },
-    "DepthSnapshot": {
-      "title": "DepthSnapshot",
-      "$id": "#DepthSnapshot",
-      "x-parser-schema-id": "DepthSnapshot",
+    "Depth": {
+      "title": "Depth",
+      "$id": "#Depth",
+      "x-parser-schema-id": "Depth",
       "type": "object",
       "required": [
         "symbol",

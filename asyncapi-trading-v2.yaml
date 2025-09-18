@@ -650,7 +650,7 @@ components:
         channel:
           $ref: '#/components/schemas/MarketDepthChannelPattern'
         data:
-          $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+          $ref: './trading-schemas.json#/definitions/Depth'
 
     MarketsSummaryUpdatePayload:
       title: MarketsSummaryUpdatePayload
