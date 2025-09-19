@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.0.4
+  version: 2.0.5
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -16,6 +16,42 @@ servers:
     description: Testnet server
 
 paths:
+  /openapi-spec.yaml:
+    get:
+      summary: Get OpenAPI specification
+      description: Returns the complete OpenAPI specification for this API in YAML format
+      operationId: getOpenApiSpec
+      tags:
+        - Specs
+      responses:
+        '200':
+          description: OpenAPI specification in YAML format
+          content:
+            application/yaml:
+              schema:
+                type: string
+                format: binary
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /asyncapi-spec.yaml:
+    get:
+      summary: Get AsyncAPI specification
+      description: Returns the complete AsyncAPI specification for WebSocket API in YAML format
+      operationId: getAsyncApiSpec
+      tags:
+        - Specs
+      responses:
+        '200':
+          description: AsyncAPI specification in YAML format
+          content:
+            application/yaml:
+              schema:
+                type: string
+                format: binary
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /marketDefinitions:
     get:
       summary: Get market definitions
@@ -111,42 +147,6 @@ paths:
                   $ref: '#/components/schemas/FeeTierParameters'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /openapi-spec.yaml:
-    get:
-      summary: Get OpenAPI specification
-      description: Returns the complete OpenAPI specification for this API in YAML format
-      operationId: getOpenApiSpec
-      tags:
-        - Specs
-      responses:
-        '200':
-          description: OpenAPI specification in YAML format
-          content:
-            application/yaml:
-              schema:
-                type: string
-                format: binary
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /asyncapi-spec.yaml:
-    get:
-      summary: Get AsyncAPI specification
-      description: Returns the complete AsyncAPI specification for WebSocket API in YAML format
-      operationId: getAsyncApiSpec
-      tags:
-        - Specs
-      responses:
-        '200':
-          description: AsyncAPI specification in YAML format
-          content:
-            application/yaml:
-              schema:
-                type: string
-                format: binary
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -493,8 +493,7 @@ components:
       required: true
       description: Trading symbol (e.g., BTCRUSDPERP)
       schema:
-        type: string
-        pattern: '^[A-Za-z0-9]+$'
+        $ref: './trading-schemas.json#/definitions/Symbol'
         example: BTCRUSDPERP
 
     AddressParam:
@@ -502,8 +501,7 @@ components:
       in: path
       required: true
       schema:
-        type: string
-        pattern: '^0x[a-fA-F0-9]{40}$'
+        $ref: './trading-schemas.json#/definitions/Address'
         example: '0x6c51275fd01d5dbd2da194e92f920f8598306df2'
 
     StartTimeParam:
@@ -512,8 +510,7 @@ components:
       required: false
       description: Return results after this sequence number (for pagination)
       schema:
-        type: integer
-        format: int64
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733379000
 
     EndTimeParam:
@@ -522,8 +519,7 @@ components:
       required: false
       description: Return results before this sequence number (for pagination)
       schema:
-        type: integer
-        format: int64
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
 
     ResolutionParam:
@@ -537,38 +533,17 @@ components:
         example: '1m'
 
   schemas:
-    MarketSummary:
-      $ref: './trading-schemas.json#/definitions/MarketSummary'
+    RequestError:
+      $ref: './trading-schemas.json#/definitions/RequestError'
+
+    ServerError:
+      $ref: './trading-schemas.json#/definitions/ServerError'
 
     MarketDefinition:
       $ref: './trading-schemas.json#/definitions/MarketDefinition'
 
-    Position:
-      $ref: './trading-schemas.json#/definitions/Position'
-
-    Order:
-      $ref: './trading-schemas.json#/definitions/Order'
-
-    Account:
-      $ref: './trading-schemas.json#/definitions/Account'
-
-    AccountBalance:
-      $ref: './trading-schemas.json#/definitions/AccountBalance'
-
-    PerpExecution:
-      $ref: './trading-schemas.json#/definitions/PerpExecution'
-
-    SpotExecution:
-      $ref: './trading-schemas.json#/definitions/SpotExecution'
-
-    Price:
-      $ref: './trading-schemas.json#/definitions/Price'
-
     AssetDefinition:
       $ref: './trading-schemas.json#/definitions/AssetDefinition'
-
-    CandleHistoryData:
-      $ref: './trading-schemas.json#/definitions/CandleHistoryData'
 
     FeeTierParameters:
       $ref: './trading-schemas.json#/definitions/FeeTierParameters'
@@ -582,42 +557,32 @@ components:
     WalletConfiguration:
       $ref: './trading-schemas.json#/definitions/WalletConfiguration'
 
+    MarketSummary:
+      $ref: './trading-schemas.json#/definitions/MarketSummary'
+
+    Position:
+      $ref: './trading-schemas.json#/definitions/Position'
+
+    Order:
+      $ref: './trading-schemas.json#/definitions/Order'
+
+    Account:
+      $ref: './trading-schemas.json#/definitions/Account'
+
+    AccountBalance:
+      $ref: './trading-schemas.json#/definitions/AccountBalance'
+
     PerpExecutionList:
       $ref: './trading-schemas.json#/definitions/PerpExecutionList'
 
     SpotExecutionList:
       $ref: './trading-schemas.json#/definitions/SpotExecutionList'
 
-    PaginationParameters:
-      $ref: './trading-schemas.json#/definitions/PaginationMeta'
+    Price:
+      $ref: './trading-schemas.json#/definitions/Price'
 
-    Side:
-      $ref: './trading-schemas.json#/definitions/Side'
-
-    ExecutionType:
-      $ref: './trading-schemas.json#/definitions/ExecutionType'
-
-    OrderStatus:
-      $ref: './trading-schemas.json#/definitions/OrderStatus'
-
-    RequestError:
-      $ref: './trading-schemas.json#/definitions/RequestError'
-
-    RequestErrorCode:
-      $ref: './trading-schemas.json#/definitions/RequestErrorCode'
-
-    ServerError:
-      $ref: './trading-schemas.json#/definitions/ServerError'
-
-    ServerErrorCode:
-      $ref: './trading-schemas.json#/definitions/ServerErrorCode'
-
-    # Order Entry Schemas
-    TimeInForce:
-      $ref: './trading-schemas.json#/definitions/TimeInForce'
-
-    OrderType:
-      $ref: './trading-schemas.json#/definitions/OrderType'
+    CandleHistoryData:
+      $ref: './trading-schemas.json#/definitions/CandleHistoryData'
 
     CreateOrderRequest:
       $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
