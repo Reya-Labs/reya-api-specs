@@ -11,6 +11,15 @@
       "examples": ["BTCRUSDPERP", "ETHRUSD"],
       "description": "Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)"
     },
+    "Asset": {
+      "title": "Asset",
+      "$id": "#Asset",
+      "x-parser-schema-id": "Asset",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+$",
+      "examples": ["BTCRUSDPERP", "ETHRUSD"],
+      "description": "Trading Asset (e.g., RUSD, WSTETH, BTC, ETH)"
+    },
     "Address": {
       "title": "Address",
       "$id": "#Address",
@@ -20,398 +29,71 @@
       "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"],
       "description": "Ethereum wallet address"
     },
-    "MarketSummary": {
-      "title": "MarketSummary",
-      "$id": "#MarketSummary",
-      "x-parser-schema-id": "MarketSummary",
-      "type": "object",
-      "required": [
-        "symbol",
-        "updatedAt",
-        "longOiQty",
-        "shortOiQty",
-        "oiQty",
-        "fundingRate",
-        "longFundingValue",
-        "shortFundingValue",
-        "fundingRateVelocity",
-        "volume24h"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "updatedAt": {
-          "type": "integer",
-          "description": "Time when the market summary was last calculated (milliseconds)",
-          "example": 1747927089946
-        },
-        "longOiQty": {
-          "type": "string",
-          "description": "Long open interest in lots",
-          "example": "154.741"
-        },
-        "shortOiQty": {
-          "type": "string",
-          "description": "Short open interest in lots",
-          "example": "154.706"
-        },
-        "oiQty": {
-          "type": "string",
-          "description": "Total open interest quantity",
-          "example": "154.741"
-        },
-        "fundingRate": {
-          "type": "string",
-          "description": "Current hourly funding rate",
-          "example": "-0.000509373441021089"
-        },
-        "longFundingValue": {
-          "type": "string",
-          "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
-          "example": "412142.26"
-        },
-        "shortFundingValue": {
-          "type": "string",
-          "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
-          "example": "412142.26"
-        },
-        "fundingRateVelocity": {
-          "type": "string",
-          "description": "Funding rate velocity",
-          "example": "-0.00000006243"
-        },
-        "volume24h": {
-          "type": "string",
-          "example": "917833.49891"
-        },
-        "pxChange24h": {
-          "type": "string",
-          "example": "92.6272285500004"
-        },
-        "throttledOraclePrice": {
-          "type": "string",
-          "description": "Last oracle price, at the moment of the last market summary update",
-          "example": "2666.48162040777"
-        },
-        "throttledPoolPrice": {
-          "type": "string",
-          "description": "Last pool price, at the moment of the last market summary update",
-          "example": "2666.48166680625"
-        },
-        "pricesUpdatedAt": {
-          "type": "integer",
-          "description": "Timestamp of the last price update (milliseconds)",
-          "example": 1747927089597
-        }
-      },
-      "additionalProperties": true
+    "UnsignedDecimal": {
+      "title": "UnsignedDecimal",
+      "$id": "#UnsignedDecimal",
+      "x-parser-schema-id": "UnsignedDecimal",
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$",
+      "examples": ["1.0", "0.001", "154.741"],
+      "description": "Non-negative decimal string"
     },
-    "Position": {
-      "title": "Position",
-      "$id": "#Position",
-      "x-parser-schema-id": "Position",
-      "type": "object",
-      "required": [
-        "exchangeId",
-        "symbol",
-        "accountId",
-        "qty",
-        "side",
-        "avgEntryPrice",
-        "avgEntryFundingValue",
-        "lastTradeSequenceNumber"
-      ],
-      "properties": {
-        "exchangeId": {
-          "type": "integer",
-          "example": 1
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "qty": {
-          "type": "string",
-          "example": "1.5"
-        },
-        "side": {
-          "$ref": "#/definitions/Side"
-        },
-        "avgEntryPrice": {
-          "type": "string",
-          "example": "43000.00"
-        },
-        "avgEntryFundingValue": {
-          "type": "string",
-          "description": "Average of funding values at the entry times of currently open exposure, which serves as a baseline from which to compute the accrued funding in the position: units x (fundingValue - avgEntryFundingValue)",
-          "example": "100.25"
-        },
-        "lastTradeSequenceNumber": {
-          "type": "integer",
-          "description": "Sequence number of last execution taken into account for the position.",
-          "example": 152954
-        }
-      },
-      "additionalProperties": true
+    "SignedDecimal": {
+      "title": "SignedDecimal",
+      "$id": "#Decimal",
+      "x-parser-schema-id": "SignedDecimal",
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$",
+      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75"],
+      "description": "Decimal string"
     },
-    "Order": {
-      "title": "Order",
-      "$id": "#Order",
-      "x-parser-schema-id": "Order",
-      "type": "object",
-      "required": [
-        "exchangeId",
-        "symbol",
-        "accountId",
-        "orderId",
-        "side",
-        "limitPx",
-        "orderType",
-        "status",
-        "createdAt",
-        "lastUpdateAt"
-      ],
-      "properties": {
-        "exchangeId": {
-          "type": "integer",
-          "example": 1
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "orderId": {
-          "type": "string",
-          "example": "123456789-123123123"
-        },
-        "qty": {
-          "type": "string",
-          "example": "1.0"
-        },
-        "execQty": {
-          "type": "string",
-          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
-          "example": "0.5"
-        },
-        "side": {
-          "$ref": "#/definitions/Side"
-        },
-        "limitPx": {
-          "type": "string",
-          "example": "43000.00"
-        },
-        "orderType": {
-          "$ref": "#/definitions/OrderType"
-        },
-        "triggerPx": {
-          "type": "string",
-          "description": "Price at which TP/SL orders will be triggered, should not be set for other order types.",
-          "example": "50000.0"
-        },
-        "timeInForce": {
-          "$ref": "#/definitions/TimeInForce",
-          "description": "Order time in force, exclusively used for LIMIT orders",
-          "example": "GTC"
-        },
-        "reduceOnly": {
-          "type": "boolean",
-          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
-          "example": false
-        },
-        "status": {
-          "$ref": "#/definitions/OrderStatus"
-        },
-        "createdAt": {
-          "type": "integer",
-          "description": "Creation timestamp (milliseconds)",
-          "example": 1747927089946
-        },
-        "lastUpdateAt": {
-          "type": "integer",
-          "description": "Last update timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      },
-      "additionalProperties": true
+    "PriceValue": {
+      "title": "PriceValue",
+      "$id": "#PriceValue",
+      "x-parser-schema-id": "PriceValue",
+      "$ref": "#/definitions/SignedDecimal",
+      "description": "Price value as a signed decimal string"
     },
-    "AccountBalance": {
-      "title": "AccountBalance",
-      "$id": "#AccountBalance",
-      "x-parser-schema-id": "AccountBalance",
-      "type": "object",
-      "required": [
-        "accountId",
-        "asset",
-        "realBalance"
-      ],
-      "properties": {
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "asset": {
-          "type": "string",
-          "example": "WSTETH"
-        },
-        "realBalance": {
-          "type": "string",
-          "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
-          "example": "1.25"
-        }
-      },
-      "additionalProperties": true
+    "Qty": {
+      "title": "Qty",
+      "$id": "#Qty",
+      "x-parser-schema-id": "Qty",
+      "$ref": "#/definitions/UnsignedDecimal",
+      "description": "Quantity value as an unsigned decimal string"
     },
-    "PerpExecution": {
-      "title": "PerpExecution",
-      "$id": "#PerpExecution",
-      "x-parser-schema-id": "PerpExecution",
-      "type": "object",
-      "required": [
-        "exchangeId",
-        "symbol",
-        "accountId",
-        "qty",
-        "side",
-        "fee",
-        "price",
-        "type",
-        "timestamp",
-        "sequenceNumber"
-      ],
-      "properties": {
-        "exchangeId": {
-          "type": "integer",
-          "example": 1
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "qty": {
-          "type": "string",
-          "example": "1.0"
-        },
-        "side": {
-          "$ref": "#/definitions/Side"
-        },
-        "price": {
-          "type": "string",
-          "example": "43000.00"
-        },
-        "fee": {
-          "type": "string",
-          "example": "0.50"
-        },
-        "type": {
-          "$ref": "#/definitions/ExecutionType"
-        },
-        "timestamp": {
-          "type": "integer",
-          "description": "Execution timestamp (milliseconds)",
-          "example": 1747927089946
-        },
-        "sequenceNumber": {
-          "type": "integer",
-          "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
-          "example": 152954
-        }
-      },
-      "additionalProperties": true
+    "UnsignedInteger": {
+      "title": "UnsignedInteger",
+      "$id": "#UnsignedInteger",
+      "x-parser-schema-id": "UnsignedInteger",
+      "type": "integer",
+      "minimum": 0,
+      "examples": [1747927089946, 1756733379000],
+      "description": "Unsigned integer"
     },
-    "SpotExecution": {
-      "title": "SpotExecution",
-      "$id": "#SpotExecution",
-      "x-parser-schema-id": "SpotExecution",
-      "type": "object",
-      "required": [
-        "exchangeId",
-        "symbol",
-        "accountId",
-        "side",
-        "qty",
-        "fee",
-        "type",
-        "timestamp"
+    "RequestErrorCode": {
+      "title": "RequestErrorCode",
+      "$id": "#RequestErrorCode",
+      "x-parser-schema-id": "RequestErrorCode",
+      "type": "string",
+      "enum": [
+        "SYMBOL_NOT_FOUND",
+        "NO_ACCOUNTS_FOUND",
+        "NO_PRICES_FOUND_FOR_SYMBOL",
+        "INPUT_VALIDATION_ERROR",
+        "CREATE_ORDER_OTHER_ERROR",
+        "CANCEL_ORDER_OTHER_ERROR"
       ],
-      "properties": {
-        "exchangeId": {
-          "type": "integer",
-          "example": 1
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "side": {
-          "$ref": "#/definitions/Side"
-        },
-        "qty": {
-          "type": "string",
-          "example": "1.0"
-        },
-        "price": {
-          "type": "string",
-          "example": "43000.00"
-        },
-        "fee": {
-          "type": "string",
-          "example": "0.0"
-        },
-        "type": {
-          "$ref": "#/definitions/ExecutionType"
-        },
-        "timestamp": {
-          "type": "integer",
-          "description": "Execution timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      },
-      "additionalProperties": true
+      "description": "Standardized error codes for API responses"
     },
-    "Price": {
-      "title": "Price",
-      "$id": "#Price",
-      "x-parser-schema-id": "Price",
-      "type": "object",
-      "required": [
-        "symbol",
-        "updatedAt",
-        "oraclePrice"
+    "ServerErrorCode": {
+      "title": "ServerErrorCode",
+      "$id": "#ServerErrorCode",
+      "x-parser-schema-id": "ServerErrorCode",
+      "type": "string",
+      "enum": [
+        "INTERNAL_SERVER_ERROR"
       ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "oraclePrice": {
-          "type": "string",
-          "description": "Price given by the Stork feeds, used both as the peg price for prices on Reya, as well as Mark Prices. The Stork price feed is usually the perp prices across three major CEXs",
-          "example": "43000.00"
-        },
-        "poolPrice": {
-          "type": "string",
-          "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
-          "example": "42999.50"
-        },
-        "updatedAt": {
-          "type": "integer",
-          "description": "Last update timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      },
-      "additionalProperties": true
+      "description": "Standardized error codes for API responses"
     },
     "Side": {
       "title": "Side",
@@ -420,6 +102,24 @@
       "type": "string",
       "enum": ["B", "A"],
       "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
+    },
+    "TimeInForce": {
+      "title": "TimeInForce",
+      "$id": "#TimeInForce",
+      "x-parser-schema-id": "TimeInForce",
+      "type": "string",
+      "enum": ["IOC", "GTC"],
+      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
+      "example": "GTC"
+    },
+    "OrderType": {
+      "title": "OrderType",
+      "$id": "#OrderType",
+      "x-parser-schema-id": "OrderType",
+      "type": "string",
+      "enum": ["LIMIT", "TP", "SL"],
+      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
+      "example": "TP"
     },
     "ExecutionType": {
       "title": "ExecutionType",
@@ -444,401 +144,6 @@
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
-    },
-    "MarketDefinition": {
-      "title": "MarketDefinition",
-      "$id": "#MarketDefinition",
-      "x-parser-schema-id": "MarketDefinition",
-      "type": "object",
-      "required": [
-        "symbol",
-        "marketId",
-        "minOrderQty",
-        "qtyStepSize",
-        "tickSize",
-        "liquidationMarginParameter",
-        "initialMarginParameter",
-        "maxLeverage",
-        "oiCap"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "marketId": {
-          "type": "integer",
-          "description": "Numerical identifier for each market, only needed to generate signatures",
-          "example": 1
-        },
-        "minOrderQty": {
-          "type": "string",
-          "example": "0.001"
-        },
-        "qtyStepSize": {
-          "type": "string",
-          "description": "Minimum size increment",
-          "example": "0.001"
-        },
-        "tickSize": {
-          "type": "string",
-          "description": "Minimum price increment",
-          "example": "0.01"
-        },
-        "liquidationMarginParameter": {
-          "type": "string",
-          "description": "Minimum percentage of notional that needs to be covered to avoid liquidation procedures for a given market; below this value, your account is subject to liquidation procedures. When cross margining, all requirements across markets are covered by the same balance, and all positions are subject to liquidations.",
-          "example": "0.05"
-        },
-        "initialMarginParameter": {
-          "type": "string",
-          "description": "Minimum percentage of notional that needs to be covered post trade; if the account does not satisfy this requirement, trades will not get executed.",
-          "example": "0.04"
-        },
-        "maxLeverage": {
-          "type": "integer",
-          "description": "Maximum leverage allowed",
-          "example": 40
-        },
-        "oiCap": {
-          "type": "string",
-          "description": "Maximum one-sided open interest in units for a given market.",
-          "example": "10000"
-        }
-      },
-      "additionalProperties": true
-    },
-    "Account": {
-      "title": "Account",
-      "$id": "#Account",
-      "x-parser-schema-id": "Account",
-      "type": "object",
-      "required": [
-        "accountId",
-        "name",
-        "lastUpdateAt"
-      ],
-      "properties": {
-        "accountId": {
-          "type": "integer",
-          "example": 12345
-        },
-        "name": {
-          "type": "string",
-          "example": "Margin Account 1"
-        },
-        "lastUpdateAt": {
-          "type": "integer",
-          "description": "Last update timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      },
-      "additionalProperties": true
-    },
-    "AssetDefinition": {
-      "title": "AssetDefinition",
-      "$id": "#AssetDefinition",
-      "x-parser-schema-id": "AssetDefinition",
-      "type": "object",
-      "required": [
-        "asset",
-        "spotMarketSymbol",
-        "priceHaircut",
-        "liquidationDiscount",
-        "timestamp"
-      ],
-      "properties": {
-        "asset": {
-          "type": "string",
-          "example": "WSTETH"
-        },
-        "spotMarketSymbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "priceHaircut": {
-          "type": "string",
-          "description": "Notional discount to the value of a collateral when used to satisfy the margin requirements; it does not imply any token conversion, but is rather an accounting adjustment.",
-          "example": "0.05"
-        },
-        "liquidationDiscount": {
-          "type": "string",
-          "description": "Discount in the token price when liquidating collateral.",
-          "example": "0.03"
-        },
-        "timestamp": {
-          "type": "integer",
-          "description": "Configuration timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      },
-      "additionalProperties": true
-    },
-    "CandleHistoryData": {
-      "title": "CandleHistoryData",
-      "$id": "#CandleHistoryData",
-      "x-parser-schema-id": "CandleHistoryData",
-      "type": "object",
-      "required": [
-        "t",
-        "o",
-        "h",
-        "l",
-        "c"
-      ],
-      "properties": {
-        "t": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          },
-          "description": "Array of timestamps (seconds)",
-          "example": [1747804140, 1747804200, 1747804260]
-        },
-        "o": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Array of opening prices",
-          "example": ["2557.997", "2555.386", "2560.118"]
-        },
-        "h": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Array of high prices",
-          "example": ["2558.000", "2560.699", "2560.729"]
-        },
-        "l": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Array of low prices",
-          "example": ["2554.637", "2553.436", "2559.368"]
-        },
-        "c": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Array of closing prices",
-          "example": ["2555.387", "2560.118", "2560.439"]
-        }
-      },
-      "additionalProperties": true
-    },
-    "FeeTierParameters": {
-      "title": "FeeTierParameters",
-      "$id": "#FeeTierParameters",
-      "x-parser-schema-id": "FeeTierParameters",
-      "type": "object",
-      "required": [
-        "tierId",
-        "takerFee",
-        "makerFee",
-        "volume14d",
-        "tierType"
-      ],
-      "properties": {
-        "tierId": {
-          "type": "integer",
-          "example": 1
-        },
-        "takerFee": {
-          "type": "string",
-          "description": "Taker fee rate (fee will be qty * takerFee)",
-          "example": "0.0004"
-        },
-        "makerFee": {
-          "type": "string",
-          "description": "Maker fee rate (fee will be qty * makerFee)",
-          "example": "0.0002"
-        },
-        "volume14d": {
-          "type": "string",
-          "description": "14-day volume level required this fee tier to be applied to a wallet",
-          "example": "10000.0"
-        },
-        "tierType": {
-          "$ref": "#/definitions/TierType"
-        }
-      },
-      "additionalProperties": true
-    },
-    "GlobalFeeParameters": {
-      "title": "GlobalFeeParameters",
-      "$id": "#GlobalFeeParameters",
-      "x-parser-schema-id": "GlobalFeeParameters",
-      "type": "object",
-      "required": [
-        "ogDiscount",
-        "refereeDiscount",
-        "referrerRebate",
-        "affiliateReferrerRebate"
-      ],
-      "properties": {
-        "ogDiscount": {
-          "type": "string",
-          "description": "OG user discount",
-          "example": "0.3"
-        },
-        "refereeDiscount": {
-          "type": "string",
-          "description": "Referee discount",
-          "example": "0.1"
-        },
-        "referrerRebate": {
-          "type": "string",
-          "description": "Referrer rebate",
-          "example": "0.1"
-        },
-        "affiliateReferrerRebate": {
-          "type": "string",
-          "description": "Affiliate referrer rebate",
-          "example": "0.15"
-        }
-      },
-      "additionalProperties": true
-    },
-    "LiquidityParameters": {
-      "title": "LiquidityParameters",
-      "$id": "#LiquidityParameters",
-      "x-parser-schema-id": "LiquidityParameters",
-      "type": "object",
-      "required": [
-        "symbol",
-        "depth",
-        "velocityMultiplier"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "depth": {
-          "type": "string",
-          "description": "Parameter determining the liquidity distribution along the AMM pricing curve, in particular expanding or contracting the max exposure parameter that would otherwise be determined by the capital available.",
-          "example": "1000.0"
-        },
-        "velocityMultiplier": {
-          "type": "string",
-          "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
-          "example": "1.5"
-        }
-      },
-      "additionalProperties": true
-    },
-    "WalletConfiguration": {
-      "title": "WalletConfiguration",
-      "$id": "#WalletConfiguration",
-      "x-parser-schema-id": "WalletConfiguration",
-      "type": "object",
-      "required": [
-        "feeTierId",
-        "ogStatus",
-        "affiliateStatus",
-        "refereeStatus"
-      ],
-      "properties": {
-        "feeTierId": {
-          "type": "integer",
-          "description": "Fee tier identifier",
-          "example": 1
-        },
-        "ogStatus": {
-          "type": "boolean",
-          "description": "OG status",
-          "example": true
-        },
-        "affiliateStatus": {
-          "type": "boolean",
-          "description": "Affiliate status",
-          "example": false
-        },
-        "refereeStatus": {
-          "type": "boolean",
-          "description": "Referee status",
-          "example": false
-        }
-      },
-      "additionalProperties": true
-    },
-    "PerpExecutionList": {
-      "title": "PerpExecutionList",
-      "$id": "#PerpExecutionList",
-      "x-parser-schema-id": "PerpExecutionList",
-      "type": "object",
-      "required": [
-        "data",
-        "meta"
-      ],
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PerpExecution"
-          }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        }
-      },
-      "additionalProperties": true
-    },
-    "SpotExecutionList": {
-      "title": "SpotExecutionList",
-      "$id": "#SpotExecutionList",
-      "x-parser-schema-id": "SpotExecutionList",
-      "type": "object",
-      "required": [
-        "data",
-        "meta"
-      ],
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SpotExecution"
-          }
-        },
-        "meta": {
-          "$ref": "#/definitions/PaginationMeta"
-        }
-      },
-      "additionalProperties": true
-    },
-    "PaginationMeta": {
-      "title": "PaginationMeta",
-      "$id": "#PaginationMeta",
-      "x-parser-schema-id": "PaginationMeta",
-      "type": "object",
-      "required": [
-        "limit",
-        "count"
-      ],
-      "properties": {
-        "limit": {
-          "type": "integer",
-          "description": "Number of items requested",
-          "example": 100
-        },
-        "count": {
-          "type": "integer",
-          "description": "Number of items returned",
-          "example": 50
-        },
-        "endTime": {
-          "type": "integer",
-          "description": "Timestamp of last result, in milliseconds",
-          "example": 1756733679000
-        },
-        "startTime": {
-          "type": "integer",
-          "description": "Timestamp of first result, in milliseconds",
-          "example": 1756733579000
-        }
-      },
-      "additionalProperties": true
     },
     "RequestError": {
       "title": "RequestError",
@@ -882,69 +187,794 @@
       },
       "additionalProperties": true
     },
-    "RequestErrorCode": {
-      "title": "RequestErrorCode",
-      "$id": "#RequestErrorCode",
-      "x-parser-schema-id": "RequestErrorCode",
-      "type": "string",
-      "enum": [
-        "SYMBOL_NOT_FOUND",
-        "NO_ACCOUNTS_FOUND",
-        "NO_PRICES_FOUND_FOR_SYMBOL",
-        "INPUT_VALIDATION_ERROR",
-        "CREATE_ORDER_OTHER_ERROR",
-        "CANCEL_ORDER_OTHER_ERROR"
-      ],
-      "description": "Standardized error codes for API responses"
-    },
-    "ServerErrorCode": {
-      "title": "ServerErrorCode",
-      "$id": "#ServerErrorCode",
-      "x-parser-schema-id": "ServerErrorCode",
-      "type": "string",
-      "enum": [
-        "INTERNAL_SERVER_ERROR"
-      ],
-      "description": "Standardized error codes for API responses"
-    },
-    "SymbolMarketId": {
-      "title": "SymbolMarketId",
-      "$id": "#SymbolMarketId",
-      "x-parser-schema-id": "SymbolMarketId",
+    "MarketSummary": {
+      "title": "MarketSummary",
+      "$id": "#MarketSummary",
+      "x-parser-schema-id": "MarketSummary",
       "type": "object",
       "required": [
         "symbol",
-        "marketId"
+        "updatedAt",
+        "longOiQty",
+        "shortOiQty",
+        "oiQty",
+        "fundingRate",
+        "longFundingValue",
+        "shortFundingValue",
+        "fundingRateVelocity",
+        "volume24h"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Time when the market summary was last calculated (milliseconds)",
+          "example": 1747927089946
+        },
+        "longOiQty": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Long open interest in lots",
+          "example": "154.741"
+        },
+        "shortOiQty": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Short open interest in lots",
+          "example": "154.706"
+        },
+        "oiQty": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Total open interest quantity",
+          "example": "154.741"
+        },
+        "fundingRate": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Current hourly funding rate",
+          "example": "-0.000509373441021089"
+        },
+        "longFundingValue": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
+          "example": "412142.26"
+        },
+        "shortFundingValue": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
+          "example": "412142.26"
+        },
+        "fundingRateVelocity": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Funding rate velocity",
+          "example": "-0.00000006243"
+        },
+        "volume24h": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "example": "917833.49891"
+        },
+        "pxChange24h": {
+          "$ref": "#/definitions/SignedDecimal",
+          "example": "92.6272285500004"
+        },
+        "throttledOraclePrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Last oracle price, at the moment of the last market summary update",
+          "example": "2666.48162040777"
+        },
+        "throttledPoolPrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Last pool price, at the moment of the last market summary update",
+          "example": "2666.48166680625"
+        },
+        "pricesUpdatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Timestamp of the last price update (milliseconds)",
+          "example": 1747927089597
+        }
+      },
+      "additionalProperties": true
+    },
+    "Position": {
+      "title": "Position",
+      "$id": "#Position",
+      "x-parser-schema-id": "Position",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "accountId",
+        "qty",
+        "side",
+        "avgEntryPrice",
+        "avgEntryFundingValue",
+        "lastTradeSequenceNumber"
+      ],
+      "properties": {
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "example": "1.5"
+        },
+        "side": {
+          "$ref": "#/definitions/Side"
+        },
+        "avgEntryPrice": {
+          "$ref": "#/definitions/SignedDecimal",
+          "example": "43000.00"
+        },
+        "avgEntryFundingValue": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Average of funding values at the entry times of currently open exposure, which serves as a baseline from which to compute the accrued funding in the position: units x (fundingValue - avgEntryFundingValue)",
+          "example": "100.25"
+        },
+        "lastTradeSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Sequence number of last execution taken into account for the position.",
+          "example": 152954
+        }
+      },
+      "additionalProperties": true
+    },
+    "Order": {
+      "title": "Order",
+      "$id": "#Order",
+      "x-parser-schema-id": "Order",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "accountId",
+        "orderId",
+        "side",
+        "limitPx",
+        "orderType",
+        "status",
+        "createdAt",
+        "lastUpdateAt"
+      ],
+      "properties": {
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "orderId": {
+          "type": "string",
+          "example": "123456789-123123123"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "example": "1.0"
+        },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
+          "example": "0.5"
+        },
+        "side": {
+          "$ref": "#/definitions/Side"
+        },
+        "limitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "example": "43000.00"
+        },
+        "orderType": {
+          "$ref": "#/definitions/OrderType"
+        },
+        "triggerPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Price at which TP/SL orders will be triggered, should not be set for other order types.",
+          "example": "50000.0"
+        },
+        "timeInForce": {
+          "$ref": "#/definitions/TimeInForce",
+          "description": "Order time in force, exclusively used for LIMIT orders",
+          "example": "GTC"
+        },
+        "reduceOnly": {
+          "type": "boolean",
+          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "example": false
+        },
+        "status": {
+          "$ref": "#/definitions/OrderStatus"
+        },
+        "createdAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Creation timestamp (milliseconds)",
+          "example": 1747927089946
+        },
+        "lastUpdateAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Last update timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
+    "AccountBalance": {
+      "title": "AccountBalance",
+      "$id": "#AccountBalance",
+      "x-parser-schema-id": "AccountBalance",
+      "type": "object",
+      "required": [
+        "accountId",
+        "asset",
+        "realBalance"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "WSTETH"
+        },
+        "realBalance": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
+          "example": "1.25"
+        }
+      },
+      "additionalProperties": true
+    },
+    "PerpExecutionList": {
+      "title": "PerpExecutionList",
+      "$id": "#PerpExecutionList",
+      "x-parser-schema-id": "PerpExecutionList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PerpExecution"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
+    "PerpExecution": {
+      "title": "PerpExecution",
+      "$id": "#PerpExecution",
+      "x-parser-schema-id": "PerpExecution",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "accountId",
+        "qty",
+        "side",
+        "fee",
+        "price",
+        "type",
+        "timestamp",
+        "sequenceNumber"
+      ],
+      "properties": {
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "example": "1.0"
+        },
+        "side": {
+          "$ref": "#/definitions/Side"
+        },
+        "price": {
+          "$ref": "#/definitions/PriceValue",
+          "example": "43000.00"
+        },
+        "fee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "example": "0.50"
+        },
+        "type": {
+          "$ref": "#/definitions/ExecutionType"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Execution timestamp (milliseconds)",
+          "example": 1747927089946
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
+          "example": 152954
+        }
+      },
+      "additionalProperties": true
+    },
+    "SpotExecutionList": {
+      "title": "SpotExecutionList",
+      "$id": "#SpotExecutionList",
+      "x-parser-schema-id": "SpotExecutionList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SpotExecution"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
+    "SpotExecution": {
+      "title": "SpotExecution",
+      "$id": "#SpotExecution",
+      "x-parser-schema-id": "SpotExecution",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "accountId",
+        "side",
+        "qty",
+        "fee",
+        "type",
+        "timestamp"
+      ],
+      "properties": {
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "side": {
+          "$ref": "#/definitions/Side"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "example": "1.0"
+        },
+        "price": {
+          "$ref": "#/definitions/PriceValue",
+          "example": "43000.00"
+        },
+        "fee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "example": "0.0"
+        },
+        "type": {
+          "$ref": "#/definitions/ExecutionType"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Execution timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
+    "Price": {
+      "title": "Price",
+      "$id": "#Price",
+      "x-parser-schema-id": "Price",
+      "type": "object",
+      "required": [
+        "symbol",
+        "updatedAt",
+        "oraclePrice"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "oraclePrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Price given by the Stork feeds, used both as the peg price for prices on Reya, as well as Mark Prices. The Stork price feed is usually the perp prices across three major CEXs",
+          "example": "43000.00"
+        },
+        "poolPrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
+          "example": "42999.50"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Last update timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "MarketDefinition": {
+      "title": "MarketDefinition",
+      "$id": "#MarketDefinition",
+      "x-parser-schema-id": "MarketDefinition",
+      "type": "object",
+      "required": [
+        "symbol",
+        "marketId",
+        "minOrderQty",
+        "qtyStepSize",
+        "tickSize",
+        "liquidationMarginParameter",
+        "initialMarginParameter",
+        "maxLeverage",
+        "oiCap"
       ],
       "properties": {
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
         "marketId": {
-          "type": "integer",
-          "description": "Market identifier",
-          "example": 2
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Numerical identifier for each market, only needed to generate signatures",
+          "example": 1
+        },
+        "minOrderQty": {
+          "$ref": "#/definitions/Qty",
+          "example": "0.001"
+        },
+        "qtyStepSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum size increment",
+          "example": "0.001"
+        },
+        "tickSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum price increment",
+          "example": "0.01"
+        },
+        "liquidationMarginParameter": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum percentage of notional that needs to be covered to avoid liquidation procedures for a given market; below this value, your account is subject to liquidation procedures. When cross margining, all requirements across markets are covered by the same balance, and all positions are subject to liquidations.",
+          "example": "0.05"
+        },
+        "initialMarginParameter": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum percentage of notional that needs to be covered post trade; if the account does not satisfy this requirement, trades will not get executed.",
+          "example": "0.04"
+        },
+        "maxLeverage": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maximum leverage allowed",
+          "example": 40
+        },
+        "oiCap": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Maximum one-sided open interest in units for a given market.",
+          "example": "10000"
         }
       },
       "additionalProperties": true
     },
-    "TimeInForce": {
-      "title": "TimeInForce",
-      "$id": "#TimeInForce",
-      "x-parser-schema-id": "TimeInForce",
-      "type": "string",
-      "enum": ["IOC", "GTC"],
-      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
-      "example": "GTC"
+    "Account": {
+      "title": "Account",
+      "$id": "#Account",
+      "x-parser-schema-id": "Account",
+      "type": "object",
+      "required": [
+        "accountId",
+        "name",
+        "lastUpdateAt"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "name": {
+          "type": "string",
+          "example": "Margin Account 1"
+        },
+        "lastUpdateAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Last update timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
     },
-    "OrderType": {
-      "title": "OrderType",
-      "$id": "#OrderType",
-      "x-parser-schema-id": "OrderType",
-      "type": "string",
-      "enum": ["LIMIT", "TP", "SL"],
-      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
-      "example": "TP"
+    "AssetDefinition": {
+      "title": "AssetDefinition",
+      "$id": "#AssetDefinition",
+      "x-parser-schema-id": "AssetDefinition",
+      "type": "object",
+      "required": [
+        "asset",
+        "spotMarketSymbol",
+        "priceHaircut",
+        "liquidationDiscount",
+        "timestamp"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "WSTETH"
+        },
+        "spotMarketSymbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "priceHaircut": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Notional discount to the value of a collateral when used to satisfy the margin requirements; it does not imply any token conversion, but is rather an accounting adjustment.",
+          "example": "0.05"
+        },
+        "liquidationDiscount": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Discount in the token price when liquidating collateral.",
+          "example": "0.03"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Configuration timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
+    "CandleHistoryData": {
+      "title": "CandleHistoryData",
+      "$id": "#CandleHistoryData",
+      "x-parser-schema-id": "CandleHistoryData",
+      "type": "object",
+      "required": [
+        "t",
+        "o",
+        "h",
+        "l",
+        "c"
+      ],
+      "properties": {
+        "t": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnsignedInteger"
+          },
+          "description": "Array of timestamps (seconds)",
+          "example": [1747804140, 1747804200, 1747804260]
+        },
+        "o": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignedDecimal"
+          },
+          "description": "Array of opening prices",
+          "example": ["2557.997", "2555.386", "2560.118"]
+        },
+        "h": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignedDecimal"
+          },
+          "description": "Array of high prices",
+          "example": ["2558.000", "2560.699", "2560.729"]
+        },
+        "l": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignedDecimal"
+          },
+          "description": "Array of low prices",
+          "example": ["2554.637", "2553.436", "2559.368"]
+        },
+        "c": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignedDecimal"
+          },
+          "description": "Array of closing prices",
+          "example": ["2555.387", "2560.118", "2560.439"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "FeeTierParameters": {
+      "title": "FeeTierParameters",
+      "$id": "#FeeTierParameters",
+      "x-parser-schema-id": "FeeTierParameters",
+      "type": "object",
+      "required": [
+        "tierId",
+        "takerFee",
+        "makerFee",
+        "volume14d",
+        "tierType"
+      ],
+      "properties": {
+        "tierId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 1
+        },
+        "takerFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker fee rate (fee will be qty * takerFee)",
+          "example": "0.0004"
+        },
+        "makerFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Maker fee rate (fee will be qty * makerFee)",
+          "example": "0.0002"
+        },
+        "volume14d": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "14-day volume level required this fee tier to be applied to a wallet",
+          "example": "10000.0"
+        },
+        "tierType": {
+          "$ref": "#/definitions/TierType"
+        }
+      },
+      "additionalProperties": true
+    },
+    "GlobalFeeParameters": {
+      "title": "GlobalFeeParameters",
+      "$id": "#GlobalFeeParameters",
+      "x-parser-schema-id": "GlobalFeeParameters",
+      "type": "object",
+      "required": [
+        "ogDiscount",
+        "refereeDiscount",
+        "referrerRebate",
+        "affiliateReferrerRebate"
+      ],
+      "properties": {
+        "ogDiscount": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "OG user discount",
+          "example": "0.3"
+        },
+        "refereeDiscount": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Referee discount",
+          "example": "0.1"
+        },
+        "referrerRebate": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Referrer rebate",
+          "example": "0.1"
+        },
+        "affiliateReferrerRebate": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Affiliate referrer rebate",
+          "example": "0.15"
+        }
+      },
+      "additionalProperties": true
+    },
+    "LiquidityParameters": {
+      "title": "LiquidityParameters",
+      "$id": "#LiquidityParameters",
+      "x-parser-schema-id": "LiquidityParameters",
+      "type": "object",
+      "required": [
+        "symbol",
+        "depth",
+        "velocityMultiplier"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "depth": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Parameter determining the liquidity distribution along the AMM pricing curve, in particular expanding or contracting the max exposure parameter that would otherwise be determined by the capital available.",
+          "example": "1000.0"
+        },
+        "velocityMultiplier": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
+          "example": "1.5"
+        }
+      },
+      "additionalProperties": true
+    },
+    "WalletConfiguration": {
+      "title": "WalletConfiguration",
+      "$id": "#WalletConfiguration",
+      "x-parser-schema-id": "WalletConfiguration",
+      "type": "object",
+      "required": [
+        "feeTierId",
+        "ogStatus",
+        "affiliateStatus",
+        "refereeStatus"
+      ],
+      "properties": {
+        "feeTierId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Fee tier identifier",
+          "example": 1
+        },
+        "ogStatus": {
+          "type": "boolean",
+          "description": "OG status",
+          "example": true
+        },
+        "affiliateStatus": {
+          "type": "boolean",
+          "description": "Affiliate status",
+          "example": false
+        },
+        "refereeStatus": {
+          "type": "boolean",
+          "description": "Referee status",
+          "example": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "PaginationMeta": {
+      "title": "PaginationMeta",
+      "$id": "#PaginationMeta",
+      "x-parser-schema-id": "PaginationMeta",
+      "type": "object",
+      "required": [
+        "limit",
+        "count"
+      ],
+      "properties": {
+        "limit": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items requested",
+          "example": 100
+        },
+        "count": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items returned",
+          "example": 50
+        },
+        "endTime": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Timestamp of last result, in milliseconds",
+          "example": 1756733679000
+        },
+        "startTime": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Timestamp of first result, in milliseconds",
+          "example": 1756733579000
+        }
+      },
+      "additionalProperties": true
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
@@ -963,14 +993,14 @@
       ],
       "properties": {
         "exchangeId": {
-          "type": "integer",
+          "$ref": "#/definitions/UnsignedInteger",
           "example": 1
         },
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
         "accountId": {
-          "type": "integer",
+          "$ref": "#/definitions/UnsignedInteger",
           "example": 12345
         },
         "isBuy": {
@@ -979,11 +1009,11 @@
           "example": true
         },
         "limitPx": {
-          "type": "string",
+          "$ref": "#/definitions/SignedDecimal",
           "example": "50000.0"
         },
         "qty": {
-          "type": "string",
+          "$ref": "#/definitions/Qty",
           "example": "0.1"
         },
         "orderType": {
@@ -996,7 +1026,7 @@
           "example": "GTC"
         },
         "triggerPx": {
-          "type": "string",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Trigger price, only for TP/SL orders",
           "example": "50000.0"
         },
@@ -1019,7 +1049,7 @@
           "$ref": "#/definitions/Address"
         },
         "expiresAfter": {
-          "type": "integer",
+          "$ref": "#/definitions/UnsignedInteger",
           "description": "Expiration timestamp (exclusively for IOC orders). The order will only be filled before this timestamp.",
           "example": 1676923200
         }
