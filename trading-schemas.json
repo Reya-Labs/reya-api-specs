@@ -17,8 +17,7 @@
       "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "ETHRUSD"],
-      "description": "Trading Asset (e.g., RUSD, WSTETH, BTC, ETH)"
+      "examples": ["BTCRUSDPERP", "ETHRUSD"]
     },
     "Address": {
       "title": "Address",
@@ -26,8 +25,7 @@
       "x-parser-schema-id": "Address",
       "type": "string",
       "pattern": "^0x[a-fA-F0-9]{40}$",
-      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"],
-      "description": "Ethereum wallet address"
+      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"]
     },
     "UnsignedDecimal": {
       "title": "UnsignedDecimal",
@@ -35,8 +33,7 @@
       "x-parser-schema-id": "UnsignedDecimal",
       "type": "string",
       "pattern": "^\\d+(\\.\\d+)?$",
-      "examples": ["1.0", "0.001", "154.741"],
-      "description": "Non-negative decimal string"
+      "examples": ["1.0", "0.001", "154.741"]
     },
     "SignedDecimal": {
       "title": "SignedDecimal",
@@ -44,22 +41,19 @@
       "x-parser-schema-id": "SignedDecimal",
       "type": "string",
       "pattern": "^-?\\d+(\\.\\d+)?$",
-      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75"],
-      "description": "Decimal string"
+      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75"]
     },
     "PriceValue": {
       "title": "PriceValue",
       "$id": "#PriceValue",
       "x-parser-schema-id": "PriceValue",
-      "$ref": "#/definitions/SignedDecimal",
-      "description": "Price value as a signed decimal string"
+      "$ref": "#/definitions/SignedDecimal"
     },
     "Qty": {
       "title": "Qty",
       "$id": "#Qty",
       "x-parser-schema-id": "Qty",
-      "$ref": "#/definitions/UnsignedDecimal",
-      "description": "Quantity value as an unsigned decimal string"
+      "$ref": "#/definitions/UnsignedDecimal"
     },
     "UnsignedInteger": {
       "title": "UnsignedInteger",
@@ -67,8 +61,7 @@
       "x-parser-schema-id": "UnsignedInteger",
       "type": "integer",
       "minimum": 0,
-      "examples": [1747927089946, 1756733379000],
-      "description": "Unsigned integer"
+      "examples": [1747927089946, 1756733379000]
     },
     "RequestErrorCode": {
       "title": "RequestErrorCode",
