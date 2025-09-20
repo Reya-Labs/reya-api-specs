@@ -70,8 +70,7 @@ channels:
     description: Real-time updates for a specific market's summary
     parameters:
       symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+        $ref: '#/components/parameters/Symbol'
     messages:
       marketSummaryUpdate:
         $ref: '#/components/messages/MarketSummaryUpdate'
@@ -81,8 +80,7 @@ channels:
     description: Real-time perpetual executions for a specific market
     parameters:
       symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+        $ref: '#/components/parameters/Symbol'
     messages:
       marketPerpExecutionUpdate:
         $ref: '#/components/messages/MarketPerpExecutionUpdate'
@@ -92,8 +90,7 @@ channels:
     description: Real-time position updates for a wallet
     parameters:
       address:
-        description: Ethereum wallet address
-        location: $message.payload#/address
+        $ref: '#/components/parameters/Address'
     messages:
       positionUpdate:
         $ref: '#/components/messages/PositionUpdate'
@@ -103,8 +100,7 @@ channels:
     description: Real-time order change updates for wallet
     parameters:
       address:
-        description: Ethereum wallet address
-        location: $message.payload#/address
+        $ref: '#/components/parameters/Address'
     messages:
       orderChangeUpdate:
         $ref: '#/components/messages/OrderChangeUpdate'
@@ -114,8 +110,7 @@ channels:
     description: Real-time perpetual execution updates for a wallet
     parameters:
       address:
-        description: Ethereum wallet address
-        location: $message.payload#/address
+        $ref: '#/components/parameters/Address'
     messages:
       walletPerpExecutionUpdate:
         $ref: '#/components/messages/WalletPerpExecutionUpdate'
@@ -132,8 +127,7 @@ channels:
     description: Real-time price updates for a specific symbol
     parameters:
       symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+        $ref: '#/components/parameters/Symbol'
     messages:
       priceUpdate:
         $ref: '#/components/messages/PriceUpdate'
@@ -269,63 +263,63 @@ components:
       title: Markets Summary Update
       summary: Real-time update containing all market summaries
       payload:
-        $ref: '#/components/schemas/MarketsSummaryUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     MarketSummaryUpdate:
       name: marketSummaryUpdate
       title: Market Summary Update
       summary: Real-time update for a specific market summary
       payload:
-        $ref: '#/components/schemas/MarketSummaryUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     PositionUpdate:
       name: positionUpdate
       title: Position Update
       summary: Real-time position update for a wallet
       payload:
-        $ref: '#/components/schemas/PositionUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     OrderChangeUpdate:
       name: orderChangeUpdate
       title: Order Change Update
       summary: Real-time order change update for a wallet
       payload:
-        $ref: '#/components/schemas/OrderChangeUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     MarketPerpExecutionUpdate:
       name: marketPerpExecutionUpdate
       title: Market Perpetual Execution Update
       summary: Real-time perpetual execution update for market
       payload:
-        $ref: '#/components/schemas/MarketPerpExecutionUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     WalletPerpExecutionUpdate:
       name: walletPerpExecutionUpdate
       title: Wallet Perpetual Execution Update
       summary: Real-time perpetual execution update for wallet
       payload:
-        $ref: '#/components/schemas/WalletPerpExecutionUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     PricesUpdate:
       name: pricesUpdate
       title: Prices Update
       summary: Real-time price updates for all symbols
       payload:
-        $ref: '#/components/schemas/PricesUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     PriceUpdate:
       name: priceUpdate
       title: Price Update
       summary: Real-time price update for a specific symbol
       payload:
-        $ref: '#/components/schemas/PriceUpdatePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     PingMessage:
       name: ping
       title: Ping Message
       summary: Ping message to check connection
       payload:
-        $ref: '#/components/schemas/PingMessagePayload'
+        $ref: '#/components/schemas/ChannelDataPayload'
 
     PongMessage:
       name: pong
@@ -373,10 +367,12 @@ components:
     Symbol:
       description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
       location: $message.payload#/symbol
+      examples: ["BTCRUSDPERP", "ETHRUSD"]
 
     Address:
       description: Ethereum wallet address
       location: $message.payload#/address
+      examples: ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"]
 
   schemas:
     # Common message type enums
@@ -441,35 +437,50 @@ components:
         - /v2/prices
       description: Channel for all prices updates
 
+    # Channel patterns using external schema references
     MarketSummaryChannelPattern:
       type: string
       pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
       description: Channel pattern for specific market summary updates
+      examples: ["/v2/market/BTCRUSDPERP/summary", "/v2/market/ETHRUSD/summary"]
 
     MarketPerpExecutionsChannelPattern:
       type: string
       pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
       description: Channel pattern for market perpetual executions
+      examples: ["/v2/market/BTCRUSDPERP/perpExecutions"]
+
+    WalletChannelPatternBase:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/.*$'
+      description: Base pattern for wallet channels
 
     WalletPositionsChannelPattern:
-      type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
-      description: Channel pattern for wallet positions updates
+      allOf:
+        - $ref: '#/components/schemas/WalletChannelPatternBase'
+        - type: string
+          pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
+          description: Channel pattern for wallet positions updates
 
     WalletOrderChangesChannelPattern:
-      type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$'
-      description: Channel pattern for wallet order changes
+      allOf:
+        - $ref: '#/components/schemas/WalletChannelPatternBase'
+        - type: string
+          pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/orderChanges$'
+          description: Channel pattern for wallet order changes
 
     WalletPerpExecutionsChannelPattern:
-      type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
-      description: Channel pattern for wallet perpetual executions
+      allOf:
+        - $ref: '#/components/schemas/WalletChannelPatternBase'
+        - type: string
+          pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
+          description: Channel pattern for wallet perpetual executions
 
     PriceChannelPattern:
       type: string
       pattern: '^/v2/prices/[A-Za-z0-9]+$'
       description: Channel pattern for specific price updates
+      examples: ["/v2/prices/BTCRUSDPERP", "/v2/prices/ETHRUSD"]
 
     BaseUpdateEnvelope:
       type: object
@@ -486,175 +497,86 @@ components:
           description: Update timestamp (milliseconds)
           example: 1747927089946
 
-    MarketsSummaryUpdateBody:
+    # Generic base schemas to eliminate redundancy
+    ChannelUpdateBase:
       type: object
-      title: MarketsSummaryUpdateBody
       additionalProperties: false
       required:
         - channel
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/MarketsSummaryChannel'
+          type: string
+          description: Channel identifier
         data:
-          type: array
-          title: MarketSummaryList
-          items:
-            $ref: './trading-schemas.json#/definitions/MarketSummary'
+          description: Update data payload
 
-    MarketSummaryUpdateBody:
+    # Data type references - reusable data structures
+    MarketSummaryArray:
+      type: array
+      title: MarketSummaryList
+      items:
+        $ref: './trading-schemas.json#/definitions/MarketSummary'
+
+    MarketSummaryObject:
+      $ref: './trading-schemas.json#/definitions/MarketSummary'
+
+    PositionArray:
+      type: array
+      title: PositionList
+      items:
+        $ref: './trading-schemas.json#/definitions/Position'
+
+    OrderArray:
+      type: array
+      title: OrderList
+      items:
+        $ref: './trading-schemas.json#/definitions/Order'
+
+    PerpExecutionArray:
+      type: array
+      title: PerpExecutionList
+      items:
+        $ref: './trading-schemas.json#/definitions/PerpExecution'
+
+    PriceArray:
+      type: array
+      title: PriceList
+      items:
+        $ref: './trading-schemas.json#/definitions/Price'
+
+    PriceObject:
+      $ref: './trading-schemas.json#/definitions/Price'
+
+    ChannelDataPayload:
+      title: Channel Data Update Payload
       type: object
-      title: MarketSummaryUpdateBody
       additionalProperties: false
       required:
+        - type
+        - timestamp
         - channel
         - data
       properties:
+        type:
+          $ref: '#/components/schemas/ChannelDataMessageType'
+        timestamp:
+          type: number
+          description: Update timestamp (milliseconds)
+          example: 1747927089946
         channel:
-          $ref: '#/components/schemas/MarketSummaryChannelPattern'
+          type: string
+          description: Channel identifier
         data:
-          $ref: './trading-schemas.json#/definitions/MarketSummary'
-
-    PositionUpdateBody:
-      type: object
-      title: PositionUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletPositionsChannelPattern'
-        data:
-          type: array
-          title: PositionList
-          items:
-            $ref: './trading-schemas.json#/definitions/Position'
-
-    OrderChangeUpdateBody:
-      type: object
-      title: OrderChangeUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletOrderChangesChannelPattern'
-        data:
-          type: array
-          title: OrderList
-          items:
-            $ref: './trading-schemas.json#/definitions/Order'
-
-    MarketPerpExecutionUpdateBody:
-      type: object
-      title: MarketPerpExecutionUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/MarketPerpExecutionsChannelPattern'
-        data:
-          type: array
-          title: PerpExecutionList
-          items:
-            $ref: './trading-schemas.json#/definitions/PerpExecution'
-
-    WalletPerpExecutionUpdateBody:
-      type: object
-      title: WalletPerpExecutionUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletPerpExecutionsChannelPattern'
-        data:
-          type: array
-          title: WalletPerpExecutionList
-          items:
-            $ref: './trading-schemas.json#/definitions/PerpExecution'
-
-    PricesUpdateBody:
-      type: object
-      title: PricesUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/PricesChannel'
-        data:
-          type: array
-          title: PriceList
-          items:
-            $ref: './trading-schemas.json#/definitions/Price'
-
-    PriceUpdateBody:
-      type: object
-      title: PriceUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/PriceChannelPattern'
-        data:
-          $ref: './trading-schemas.json#/definitions/Price'
-
-    MarketsSummaryUpdatePayload:
-      title: MarketsSummaryUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketsSummaryUpdateBody'
-
-    MarketSummaryUpdatePayload:
-      title: MarketSummaryUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketSummaryUpdateBody'
-
-    PositionUpdatePayload:
-      title: PositionUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PositionUpdateBody'
-
-    OrderChangeUpdatePayload:
-      title: OrderChangeUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/OrderChangeUpdateBody'
-
-    MarketPerpExecutionUpdatePayload:
-      title: MarketPerpExecutionUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketPerpExecutionUpdateBody'
-
-    WalletPerpExecutionUpdatePayload:
-      title: WalletPerpExecutionUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
-
-    PricesUpdatePayload:
-      title: PricesUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PricesUpdateBody'
-
-    PriceUpdatePayload:
-      title: PriceUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PriceUpdateBody'
+          description: Update data payload (varies by channel)
+          oneOf:
+            - $ref: '#/components/schemas/MarketSummaryArray'
+            - $ref: '#/components/schemas/MarketSummaryObject'
+            - $ref: '#/components/schemas/PositionArray'
+            - $ref: '#/components/schemas/OrderArray'
+            - $ref: '#/components/schemas/PerpExecutionArray'
+            - $ref: '#/components/schemas/PriceArray'
+            - $ref: '#/components/schemas/PriceObject'
 
     PingMessagePayload:
       type: object
