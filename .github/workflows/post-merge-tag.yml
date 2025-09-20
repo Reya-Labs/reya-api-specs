@@ -165,9 +165,7 @@ jobs:
             if (automaticReleaseNotes) {
               releaseBody += `\n\n---\n\n${automaticReleaseNotes}`;
             }
-            
-            releaseBody += `\n\n---\n\n🤖 *This release was automatically created after merging changes to main branch.*`;
-            
+                        
             const { data: release } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
