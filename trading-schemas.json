@@ -17,8 +17,7 @@
       "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "ETHRUSD"],
-      "description": "Trading Asset (e.g., RUSD, WSTETH, BTC, ETH)"
+      "examples": ["BTCRUSDPERP", "ETHRUSD"]
     },
     "Address": {
       "title": "Address",
@@ -26,8 +25,160 @@
       "x-parser-schema-id": "Address",
       "type": "string",
       "pattern": "^0x[a-fA-F0-9]{40}$",
-      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"],
-      "description": "Ethereum wallet address"
+      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"]
+    },
+    "UnsignedDecimal": {
+      "title": "UnsignedDecimal",
+      "$id": "#UnsignedDecimal",
+      "x-parser-schema-id": "UnsignedDecimal",
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$",
+      "examples": ["1.0", "0.001", "154.741"]
+    },
+    "SignedDecimal": {
+      "title": "SignedDecimal",
+      "$id": "#Decimal",
+      "x-parser-schema-id": "SignedDecimal",
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$",
+      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75"]
+    },
+    "PriceValue": {
+      "title": "PriceValue",
+      "$id": "#PriceValue",
+      "x-parser-schema-id": "PriceValue",
+      "$ref": "#/definitions/SignedDecimal"
+    },
+    "Qty": {
+      "title": "Qty",
+      "$id": "#Qty",
+      "x-parser-schema-id": "Qty",
+      "$ref": "#/definitions/UnsignedDecimal"
+    },
+    "UnsignedInteger": {
+      "title": "UnsignedInteger",
+      "$id": "#UnsignedInteger",
+      "x-parser-schema-id": "UnsignedInteger",
+      "type": "integer",
+      "minimum": 0,
+      "examples": [1747927089946, 1756733379000]
+    },
+    "RequestErrorCode": {
+      "title": "RequestErrorCode",
+      "$id": "#RequestErrorCode",
+      "x-parser-schema-id": "RequestErrorCode",
+      "type": "string",
+      "enum": [
+        "SYMBOL_NOT_FOUND",
+        "NO_ACCOUNTS_FOUND",
+        "NO_PRICES_FOUND_FOR_SYMBOL",
+        "INPUT_VALIDATION_ERROR",
+        "CREATE_ORDER_OTHER_ERROR",
+        "CANCEL_ORDER_OTHER_ERROR"
+      ],
+      "description": "Standardized error codes for API responses"
+    },
+    "ServerErrorCode": {
+      "title": "ServerErrorCode",
+      "$id": "#ServerErrorCode",
+      "x-parser-schema-id": "ServerErrorCode",
+      "type": "string",
+      "enum": [
+        "INTERNAL_SERVER_ERROR"
+      ],
+      "description": "Standardized error codes for API responses"
+    },
+    "Side": {
+      "title": "Side",
+      "$id": "#Side",
+      "x-parser-schema-id": "Side",
+      "type": "string",
+      "enum": ["B", "A"],
+      "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
+    },
+    "TimeInForce": {
+      "title": "TimeInForce",
+      "$id": "#TimeInForce",
+      "x-parser-schema-id": "TimeInForce",
+      "type": "string",
+      "enum": ["IOC", "GTC"],
+      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
+      "example": "GTC"
+    },
+    "OrderType": {
+      "title": "OrderType",
+      "$id": "#OrderType",
+      "x-parser-schema-id": "OrderType",
+      "type": "string",
+      "enum": ["LIMIT", "TP", "SL"],
+      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
+      "example": "TP"
+    },
+    "ExecutionType": {
+      "title": "ExecutionType",
+      "$id": "#ExecutionType",
+      "x-parser-schema-id": "ExecutionType",
+      "type": "string",
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
+      "description": "Type of execution"
+    },
+    "OrderStatus": {
+      "title": "OrderStatus",
+      "$id": "#OrderStatus",
+      "x-parser-schema-id": "OrderStatus",
+      "type": "string",
+      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
+      "description": "Order status"
+    },
+    "TierType": {
+      "title": "TierType",
+      "$id": "#TierType",
+      "x-parser-schema-id": "TierType",
+      "type": "string",
+      "enum": ["REGULAR", "VIP"],
+      "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
+    },
+    "RequestError": {
+      "title": "RequestError",
+      "$id": "#RequestError",
+      "x-parser-schema-id": "RequestError",
+      "type": "object",
+      "required": [
+        "error",
+        "message"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/RequestErrorCode"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message",
+          "example": "Invalid symbol format"
+        }
+      },
+      "additionalProperties": true
+    },
+    "ServerError": {
+      "title": "ServerError",
+      "$id": "#ServerError",
+      "x-parser-schema-id": "ServerError",
+      "type": "object",
+      "required": [
+        "error",
+        "message"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/ServerErrorCode"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message",
+          "example": "Invalid symbol format"
+        }
+      },
+      "additionalProperties": true
     },
     "UnsignedDecimal": {
       "title": "UnsignedDecimal",
@@ -513,6 +664,28 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
+        }
+      },
+      "additionalProperties": true
+    },
+    "SpotExecutionList": {
+      "title": "SpotExecutionList",
+      "$id": "#SpotExecutionList",
+      "x-parser-schema-id": "SpotExecutionList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SpotExecution"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
