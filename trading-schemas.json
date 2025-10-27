@@ -460,6 +460,7 @@
         "symbol",
         "accountId",
         "qty",
+        "execQty",
         "side",
         "fee",
         "price",
@@ -481,7 +482,13 @@
         },
         "qty": {
           "$ref": "#/definitions/Qty",
+          "description": "Original order quantity",
           "example": "1.0"
+        },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Executed quantity for this specific execution (may be less than qty for partial fills)",
+          "example": "0.5"
         },
         "side": {
           "$ref": "#/definitions/Side"
@@ -543,6 +550,7 @@
         "accountId",
         "side",
         "qty",
+        "execQty",
         "fee",
         "type",
         "timestamp"
@@ -564,7 +572,13 @@
         },
         "qty": {
           "$ref": "#/definitions/Qty",
+          "description": "Original order quantity",
           "example": "1.0"
+        },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Executed quantity for this specific execution (may be less than qty for partial fills)",
+          "example": "0.5"
         },
         "price": {
           "$ref": "#/definitions/PriceValue",
