@@ -127,8 +127,8 @@
       "$id": "#OrderStatus",
       "x-parser-schema-id": "OrderStatus",
       "type": "string",
-      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
-      "description": "Order status"
+      "enum": ["OPEN", "FILLED", "PARTIALLY_FILLED", "CANCELLED", "REJECTED"],
+      "description": "Order status. PARTIALLY_FILLED indicates an order that has been partially executed with remaining quantity still in the order book (GTC orders only)."
     },
     "TierType": {
       "title": "TierType",
