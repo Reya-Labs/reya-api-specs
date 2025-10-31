@@ -1108,6 +1108,10 @@
           "type": "integer",
           "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to use their own unique identifier for the order being cancelled.",
           "example": "123456789"
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order. Used to route cancellation requests to the appropriate system (matching engine for spot orders, database for conditional orders). If not provided, assumes conditional order for backwards compatibility."
         }
       },
       "additionalProperties": true
