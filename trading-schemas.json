@@ -1045,6 +1045,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Expiration timestamp (exclusively for IOC orders). The order will only be filled before this timestamp.",
           "example": 1676923200
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
+          "example": "123456789"
         }
       },
       "additionalProperties": true
@@ -1061,10 +1066,20 @@
         "status": {
           "$ref": "#/definitions/OrderStatus"
         },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
+          "example": "0.5"
+        },
         "orderId": {
           "type": "string",
           "description": "Created order ID (currently generated for all order types except IOC)",
           "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
         }
       },
       "additionalProperties": true
@@ -1088,6 +1103,15 @@
           "type": "string",
           "description": "See signatures section for more details on how to generate.",
           "example": "0x5678..."
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to use their own unique identifier for the order being cancelled.",
+          "example": "123456789"
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order. Used to route cancellation requests to the appropriate system (matching engine for spot orders, database for conditional orders). If not provided, assumes conditional order for backwards compatibility."
         }
       },
       "additionalProperties": true
@@ -1109,6 +1133,59 @@
           "type": "string",
           "description": "Cancelled order ID",
           "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
+        }
+      },
+      "additionalProperties": true
+    },
+    "MassCancelRequest": {
+      "title": "MassCancelRequest",
+      "$id": "#MassCancelRequest",
+      "x-parser-schema-id": "MassCancelRequest",
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID to cancel orders for. If not specified, cancels orders for all accounts.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Symbol to cancel orders for. If not specified, cancels orders for all symbols."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Request to cancel all orders matching the specified filters"
+    },
+    "MassCancelResponse": {
+      "title": "MassCancelResponse",
+      "$id": "#MassCancelResponse",
+      "x-parser-schema-id": "MassCancelResponse",
+      "type": "object",
+      "required": [
+        "cancelledCount"
+      ],
+      "properties": {
+        "cancelledCount": {
+          "type": "integer",
+          "description": "Number of orders cancelled",
+          "example": 5
+        },
+        "cancelledOrderIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of cancelled order IDs",
+          "example": [
+            "123456",
+            "123457",
+            "123458"
+          ]
         }
       },
       "additionalProperties": true

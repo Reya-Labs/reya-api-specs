@@ -485,6 +485,31 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /cancelAll:
+    post:
+      summary: Cancel all orders
+      description: Cancel all orders matching the specified filters (mass cancel)
+      operationId: cancelAll
+      tags:
+        - Order Entry
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MassCancelRequest'
+      responses:
+        '200':
+          description: Mass cancel response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MassCancelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   parameters:
     SymbolParam:
@@ -595,6 +620,12 @@ components:
 
     CancelOrderResponse:
       $ref: './trading-schemas.json#/definitions/CancelOrderResponse'
+
+    MassCancelRequest:
+      $ref: './trading-schemas.json#/definitions/MassCancelRequest'
+
+    MassCancelResponse:
+      $ref: './trading-schemas.json#/definitions/MassCancelResponse'
 
   responses:
     BadRequest:
