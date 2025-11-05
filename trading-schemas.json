@@ -1090,7 +1090,6 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
-        "orderId",
         "signature"
       ],
       "properties": {
