@@ -1108,7 +1108,7 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
-        "signature",
+        "signature"
       ],
       "properties": {
         "orderId": {
@@ -1123,7 +1123,7 @@
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Account ID that owns the order. Required for spot market orders (matching engine). Used for authorization.",
+          "description": "Account ID that owns the order. Required for spot markets.",
           "example": 12345
         },
         "symbol": {
