@@ -120,6 +120,17 @@ channels:
       walletPerpExecutionUpdate:
         $ref: '#/components/messages/WalletPerpExecutionUpdate'
 
+  walletSpotExecutions:
+    address: /v2/wallet/{address}/spotExecutions
+    description: Real-time spot execution updates for a wallet
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      walletSpotExecutionUpdate:
+        $ref: '#/components/messages/WalletSpotExecutionUpdate'
+
   walletAccountBalances:
     address: /v2/wallet/{address}/accountBalances
     description: Real-time account balance updates for a wallet
@@ -257,6 +268,14 @@ operations:
       - $ref: '#/channels/walletPerpExecutions/messages/walletPerpExecutionUpdate'
     summary: Receive perpetual execution updates for wallet
 
+  receiveWalletSpotExecutions:
+    action: receive
+    channel:
+      $ref: '#/channels/walletSpotExecutions'
+    messages:
+      - $ref: '#/channels/walletSpotExecutions/messages/walletSpotExecutionUpdate'
+    summary: Receive spot execution updates for wallet
+
   receiveWalletAccountBalances:
     action: receive
     channel:
@@ -324,6 +343,13 @@ components:
       summary: Real-time perpetual execution update for wallet
       payload:
         $ref: '#/components/schemas/WalletPerpExecutionUpdatePayload'
+
+    WalletSpotExecutionUpdate:
+      name: walletSpotExecutionUpdate
+      title: Wallet Spot Execution Update
+      summary: Real-time spot execution update for wallet
+      payload:
+        $ref: '#/components/schemas/WalletSpotExecutionUpdatePayload'
 
     AccountBalanceUpdate:
       name: accountBalanceUpdate
@@ -492,6 +518,11 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
       description: Channel pattern for wallet perpetual executions
 
+    WalletSpotExecutionsChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotExecutions$'
+      description: Channel pattern for wallet spot executions
+
     WalletAccountBalancesChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
@@ -610,6 +641,22 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
 
+    WalletSpotExecutionUpdateBody:
+      type: object
+      title: WalletSpotExecutionUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletSpotExecutionsChannelPattern'
+        data:
+          type: array
+          title: WalletSpotExecutionList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotExecution'
+
     AccountBalanceUpdateBody:
       type: object
       title: AccountBalanceUpdateBody
@@ -690,6 +737,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
+
+    WalletSpotExecutionUpdatePayload:
+      title: WalletSpotExecutionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/WalletSpotExecutionUpdateBody'
 
     AccountBalanceUpdatePayload:
       title: AccountBalanceUpdatePayload
