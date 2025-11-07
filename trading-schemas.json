@@ -541,6 +541,9 @@
         "exchangeId",
         "symbol",
         "accountId",
+        "makerAccountId",
+        "orderId",
+        "makerOrderId",
         "side",
         "qty",
         "fee",
@@ -558,6 +561,21 @@
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
           "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "orderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Order ID for the taker",
+          "example": 100001
+        },
+        "makerOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Order ID for the maker",
+          "example": 100002
         },
         "side": {
           "$ref": "#/definitions/Side"

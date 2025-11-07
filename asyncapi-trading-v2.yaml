@@ -120,6 +120,17 @@ channels:
       walletPerpExecutionUpdate:
         $ref: '#/components/messages/WalletPerpExecutionUpdate'
 
+  walletAccountBalances:
+    address: /v2/wallet/{address}/accountBalances
+    description: Real-time account balance updates for a wallet
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      accountBalanceUpdate:
+        $ref: '#/components/messages/AccountBalanceUpdate'
+
   prices:
     address: /v2/prices
     description: Real-time price updates for all symbols
@@ -306,6 +317,13 @@ components:
       payload:
         $ref: '#/components/schemas/WalletPerpExecutionUpdatePayload'
 
+    AccountBalanceUpdate:
+      name: accountBalanceUpdate
+      title: Account Balance Update
+      summary: Real-time account balance update for wallet
+      payload:
+        $ref: '#/components/schemas/AccountBalanceUpdatePayload'
+
     PricesUpdate:
       name: pricesUpdate
       title: Prices Update
@@ -466,6 +484,11 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
       description: Channel pattern for wallet perpetual executions
 
+    WalletAccountBalancesChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
+      description: Channel pattern for wallet account balances
+
     PriceChannelPattern:
       type: string
       pattern: '^/v2/prices/[A-Za-z0-9]+$'
@@ -579,6 +602,22 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
 
+    AccountBalanceUpdateBody:
+      type: object
+      title: AccountBalanceUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletAccountBalancesChannelPattern'
+        data:
+          type: array
+          title: AccountBalanceList
+          items:
+            $ref: './trading-schemas.json#/definitions/AccountBalance'
+
     PricesUpdateBody:
       type: object
       title: PricesUpdateBody
@@ -643,6 +682,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
+
+    AccountBalanceUpdatePayload:
+      title: AccountBalanceUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/AccountBalanceUpdateBody'
 
     PricesUpdatePayload:
       title: PricesUpdatePayload
