@@ -1108,27 +1108,32 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
-        "signature"
+        "signature",
       ],
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Order ID to cancel",
-          "example": "123456789-123123123"
+          "description": "Internal matching engine order ID to cancel. Provide either orderId OR clientOrderId, not both. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID for tracking and correlation. Provide either orderId OR clientOrderId, not both. This is the same clientOrderId provided in CreateOrderRequest.",
+          "example": "123456789"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID that owns the order. Required for spot market orders (matching engine). Used for authorization.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
         },
         "signature": {
           "type": "string",
           "description": "See signatures section for more details on how to generate.",
           "example": "0x5678..."
-        },
-        "clientOrderId": {
-          "type": "integer",
-          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to use their own unique identifier for the order being cancelled.",
-          "example": "123456789"
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol",
-          "description": "Market symbol for the order. Used to route cancellation requests to the appropriate system (matching engine for spot orders, database for conditional orders). If not provided, assumes conditional order for backwards compatibility."
         }
       },
       "additionalProperties": true
