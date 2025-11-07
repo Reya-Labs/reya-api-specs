@@ -1169,12 +1169,12 @@
       "$id": "#MassCancelRequest",
       "x-parser-schema-id": "MassCancelRequest",
       "type": "object",
+      "required": [
+        "signature",
+        "nonce",
+        "accountId"
+      ],
       "properties": {
-        "required": [
-          "signature",
-          "nonce",
-          "accountId"
-        ],
         "signature": {
           "type": "string",
           "description": "See signatures and nonces section for more details on how to generate.",

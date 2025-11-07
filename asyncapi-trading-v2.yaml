@@ -843,6 +843,7 @@ components:
           type: object
           title: SubscriptionContents
           description: Optional initial data for the subscription
+          additionalProperties: true
       required:
         - type
         - channel
