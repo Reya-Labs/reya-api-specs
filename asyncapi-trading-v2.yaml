@@ -257,6 +257,14 @@ operations:
       - $ref: '#/channels/walletPerpExecutions/messages/walletPerpExecutionUpdate'
     summary: Receive perpetual execution updates for wallet
 
+  receiveWalletAccountBalances:
+    action: receive
+    channel:
+      $ref: '#/channels/walletAccountBalances'
+    messages:
+      - $ref: '#/channels/walletAccountBalances/messages/accountBalanceUpdate'
+    summary: Receive account balance updates for wallet
+
   receivePrices:
     action: receive
     channel:
