@@ -1104,7 +1104,7 @@
           "example": 1676923200
         },
         "clientOrderId": {
-          "type": "integer",
+          "$ref": "#/definitions/UnsignedInteger",
           "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
           "example": "123456789"
         }
@@ -1134,7 +1134,7 @@
           "example": "123456789-123123123"
         },
         "clientOrderId": {
-          "type": "integer",
+          "$ref": "#/definitions/UnsignedInteger",
           "description": "Client-provided order ID echoed back from the request",
           "example": "123456789"
         }
@@ -1156,7 +1156,7 @@
           "example": "490346525705109504"
         },
         "clientOrderId": {
-          "type": "integer",
+          "$ref": "#/definitions/UnsignedInteger",
           "description": "Client-provided order ID for tracking and correlation. Provide either orderId OR clientOrderId, not both. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
