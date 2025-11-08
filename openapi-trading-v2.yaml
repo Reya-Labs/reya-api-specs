@@ -72,6 +72,26 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /spotMarketDefinitions:
+    get:
+      summary: Get spot market definitions
+      operationId: getSpotMarketDefinitions
+      tags:
+        - Reference Data
+      responses:
+        '200':
+          description: List of spot market definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpotMarketDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /assetDefinitions:
     get:
       summary: Get asset definitions
