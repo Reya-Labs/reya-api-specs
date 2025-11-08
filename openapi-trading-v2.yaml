@@ -587,6 +587,9 @@ components:
     MarketDefinition:
       $ref: './trading-schemas.json#/definitions/MarketDefinition'
 
+    SpotMarketDefinition:
+      $ref: './trading-schemas.json#/definitions/SpotMarketDefinition'
+
     AssetDefinition:
       $ref: './trading-schemas.json#/definitions/AssetDefinition'
 
