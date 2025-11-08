@@ -698,6 +698,45 @@
       },
       "additionalProperties": true
     },
+    "SpotMarketDefinition": {
+      "title": "SpotMarketDefinition",
+      "$id": "#SpotMarketDefinition",
+      "x-parser-schema-id": "SpotMarketDefinition",
+      "type": "object",
+      "required": [
+        "symbol",
+        "marketId",
+        "minOrderQty",
+        "qtyStepSize",
+        "tickSize"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "marketId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Numerical identifier for each spot market",
+          "example": 1
+        },
+        "minOrderQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Minimum order quantity (base asset)",
+          "example": "0.001"
+        },
+        "qtyStepSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum size increment (base asset)",
+          "example": "0.001"
+        },
+        "tickSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum price increment",
+          "example": "0.01"
+        }
+      },
+      "additionalProperties": true
+    },
     "Account": {
       "title": "Account",
       "$id": "#Account",
