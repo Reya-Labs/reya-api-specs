@@ -357,7 +357,12 @@
         },
         "execQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
+          "description": "Executed quantity in the current order update.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total Executed quantity accross all fills where the order is involved.",
           "example": "0.5"
         },
         "side": {
@@ -1125,7 +1130,12 @@
         },
         "execQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
+          "description": "Executed quantity in the current order update.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total Executed quantity accross all fills where the order is involved.",
           "example": "0.5"
         },
         "orderId": {
@@ -1211,7 +1221,8 @@
       "required": [
         "signature",
         "nonce",
-        "accountId"
+        "accountId",
+        "symbol"
       ],
       "properties": {
         "signature": {
@@ -1223,9 +1234,6 @@
           "type": "string",
           "description": "See signatures and nonces section for more details.",
           "example": "1234567890"
-        },
-        "signerWallet": {
-          "$ref": "#/definitions/Address"
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -1245,6 +1253,9 @@
       "$id": "#MassCancelResponse",
       "x-parser-schema-id": "MassCancelResponse",
       "type": "object",
+      "required": [
+        "success"
+      ],
       "properties": {
         "success": {
           "type": "boolean",
