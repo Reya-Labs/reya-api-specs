@@ -1254,12 +1254,12 @@
       "x-parser-schema-id": "MassCancelResponse",
       "type": "object",
       "required": [
-        "success"
+        "cancelledCount"
       ],
       "properties": {
-        "success": {
-          "type": "boolean",
-          "description": "Whether the mass cancel was successful",
+        "cancelledCount": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of orders that were cancelled",
           "example": true
         }
       },
