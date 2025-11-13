@@ -32,16 +32,16 @@
       "$id": "#UnsignedDecimal",
       "x-parser-schema-id": "UnsignedDecimal",
       "type": "string",
-      "pattern": "^\\d+(\\.\\d+)?$",
-      "examples": ["1.0", "0.001", "154.741"]
+      "pattern": "^\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
+      "examples": ["1.0", "0.001", "154.741", "1.2345e10", "6.789e-5"]
     },
     "SignedDecimal": {
       "title": "SignedDecimal",
       "$id": "#Decimal",
       "x-parser-schema-id": "SignedDecimal",
       "type": "string",
-      "pattern": "^-?\\d+(\\.\\d+)?$",
-      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75"]
+      "pattern": "^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
+      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75", "-1.12628295e-9", "3.14159e+8"]
     },
     "PriceValue": {
       "title": "PriceValue",
