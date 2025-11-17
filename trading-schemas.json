@@ -357,7 +357,12 @@
         },
         "execQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
+          "description": "Executed quantity in the current order update.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total Executed quantity accross all fills where the order is involved.",
           "example": "0.5"
         },
         "side": {
@@ -541,6 +546,9 @@
         "exchangeId",
         "symbol",
         "accountId",
+        "makerAccountId",
+        "orderId",
+        "makerOrderId",
         "side",
         "qty",
         "fee",
@@ -558,6 +566,21 @@
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
           "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "orderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Order ID for the taker",
+          "example": 100001
+        },
+        "makerOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Order ID for the maker",
+          "example": 100002
         },
         "side": {
           "$ref": "#/definitions/Side"
@@ -676,6 +699,45 @@
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Maximum one-sided open interest in units for a given market.",
           "example": "10000"
+        }
+      },
+      "additionalProperties": true
+    },
+    "SpotMarketDefinition": {
+      "title": "SpotMarketDefinition",
+      "$id": "#SpotMarketDefinition",
+      "x-parser-schema-id": "SpotMarketDefinition",
+      "type": "object",
+      "required": [
+        "symbol",
+        "marketId",
+        "minOrderQty",
+        "qtyStepSize",
+        "tickSize"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "marketId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Numerical identifier for each spot market",
+          "example": 1
+        },
+        "minOrderQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Minimum order quantity (base asset)",
+          "example": "0.001"
+        },
+        "qtyStepSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum size increment (base asset)",
+          "example": "0.001"
+        },
+        "tickSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum price increment",
+          "example": "0.01"
         }
       },
       "additionalProperties": true
@@ -1045,6 +1107,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Expiration timestamp (exclusively for IOC orders). The order will only be filled before this timestamp.",
           "example": 1676923200
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
+          "example": "123456789"
         }
       },
       "additionalProperties": true
@@ -1061,10 +1128,25 @@
         "status": {
           "$ref": "#/definitions/OrderStatus"
         },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Executed quantity in the current order update.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "example": "0.5"
+        },
         "orderId": {
           "type": "string",
           "description": "Created order ID (currently generated for all order types except IOC)",
           "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
         }
       },
       "additionalProperties": true
@@ -1075,14 +1157,27 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
-        "orderId",
         "signature"
       ],
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Order ID to cancel",
-          "example": "123456789-123123123"
+          "description": "Internal matching engine order ID to cancel. Provide either orderId OR clientOrderId, not both. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID for tracking and correlation. Provide either orderId OR clientOrderId, not both. This is the same clientOrderId provided in CreateOrderRequest.",
+          "example": "123456789"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID that owns the order. Required for spot markets.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
         },
         "signature": {
           "type": "string",
@@ -1109,6 +1204,129 @@
           "type": "string",
           "description": "Cancelled order ID",
           "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
+        }
+      },
+      "additionalProperties": true
+    },
+    "MassCancelRequest": {
+      "title": "MassCancelRequest",
+      "$id": "#MassCancelRequest",
+      "x-parser-schema-id": "MassCancelRequest",
+      "type": "object",
+      "required": [
+        "signature",
+        "nonce",
+        "accountId",
+        "symbol"
+      ],
+      "properties": {
+        "signature": {
+          "type": "string",
+          "description": "See signatures and nonces section for more details on how to generate.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "See signatures and nonces section for more details.",
+          "example": "1234567890"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID to cancel orders for. If not specified, cancels orders for all accounts.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Symbol to cancel orders for. If not specified, cancels orders for all symbols."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Request to cancel all orders matching the specified filters"
+    },
+    "MassCancelResponse": {
+      "title": "MassCancelResponse",
+      "$id": "#MassCancelResponse",
+      "x-parser-schema-id": "MassCancelResponse",
+      "type": "object",
+      "required": [
+        "cancelledCount"
+      ],
+      "properties": {
+        "cancelledCount": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of orders that were cancelled",
+          "example": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "Level": {
+      "title": "Level",
+      "$id": "#Level",
+      "x-parser-schema-id": "Level",
+      "type": "object",
+      "required": [
+        "px",
+        "qty"
+      ],
+      "properties": {
+        "px": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Price level",
+          "example": "0.1668"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Aggregated quantity at this price level",
+          "example": "4418.7970"
+        }
+      },
+      "additionalProperties": true
+    },
+    "Depth": {
+      "title": "Depth",
+      "$id": "#Depth",
+      "x-parser-schema-id": "Depth",
+      "type": "object",
+      "required": [
+        "symbol",
+        "type",
+        "bids",
+        "asks",
+        "updatedAt"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["snapshot", "update"],
+          "description": "Message type: snapshot (full book) or update (single level change)"
+        },
+        "bids": {
+          "type": "array",
+          "description": "Bid side levels aggregated by price, sorted descending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "asks": {
+          "type": "array",
+          "description": "Ask side levels aggregated by price, sorted ascending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Snapshot generation timestamp (milliseconds)",
+          "example": 1747927809946
         }
       },
       "additionalProperties": true
