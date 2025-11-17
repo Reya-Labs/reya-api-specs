@@ -138,6 +138,14 @@
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
     },
+    "DepthType": {
+      "title": "DepthType",
+      "$id": "#DepthType",
+      "x-parser-schema-id": "DepthType",
+      "type": "string",
+      "enum": ["SNAPSHOT", "UPDATE"],
+      "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
+    },
     "RequestError": {
       "title": "RequestError",
       "$id": "#RequestError",
@@ -1305,9 +1313,7 @@
           "$ref": "#/definitions/Symbol"
         },
         "type": {
-          "type": "string",
-          "enum": ["snapshot", "update"],
-          "description": "Message type: snapshot (full book) or update (single level change)"
+          "$ref": "#/definitions/DepthType"
         },
         "bids": {
           "type": "array",
