@@ -275,6 +275,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /market/{symbol}/depth:
+    get:
+      summary: Get market depth snapshot
+      description: Returns an L2 order book snapshot with aggregated price levels for the specified market.
+      operationId: getMarketDepth
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+      responses:
+        '200':
+          description: Depth snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Depth'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /candleHistory/{symbol}/{resolution}:
     get:
       summary: Get historical candles
@@ -649,6 +672,9 @@ components:
 
     MassCancelResponse:
       $ref: './trading-schemas.json#/definitions/MassCancelResponse'
+
+    Depth:
+      $ref: './trading-schemas.json#/definitions/Depth'
 
   responses:
     BadRequest:

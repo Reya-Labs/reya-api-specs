@@ -87,6 +87,17 @@ channels:
       marketPerpExecutionUpdate:
         $ref: '#/components/messages/MarketPerpExecutionUpdate'
 
+  marketDepth:
+    address: /v2/market/{symbol}/depth
+    description: Real-time L2 order book depth snapshots for a specific market
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+        location: $message.payload#/symbol
+    messages:
+      marketDepthUpdate:
+        $ref: '#/components/messages/MarketDepthUpdate'
+
   walletPositions:
     address: /v2/wallet/{address}/positions
     description: Real-time position updates for a wallet
@@ -244,6 +255,14 @@ operations:
       - $ref: '#/channels/marketPerpExecutions/messages/marketPerpExecutionUpdate'
     summary: Receive perpetual execution updates for market
 
+  receiveMarketDepth:
+    action: receive
+    channel:
+      $ref: '#/channels/marketDepth'
+    messages:
+      - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
+    summary: Receive L2 depth snapshots for specific market
+
   receiveWalletPositions:
     action: receive
     channel:
@@ -336,6 +355,13 @@ components:
       summary: Real-time perpetual execution update for market
       payload:
         $ref: '#/components/schemas/MarketPerpExecutionUpdatePayload'
+
+    MarketDepthUpdate:
+      name: marketDepthUpdate
+      title: Market Depth Update
+      summary: Real-time L2 order book snapshot for a specific market
+      payload:
+        $ref: '#/components/schemas/MarketDepthUpdatePayload'
 
     WalletPerpExecutionUpdate:
       name: walletPerpExecutionUpdate
@@ -503,6 +529,11 @@ components:
       pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
       description: Channel pattern for market perpetual executions
 
+    MarketDepthChannelPattern:
+      type: string
+      pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
+      description: Channel pattern for market depth snapshots
+
     WalletPositionsChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
@@ -625,6 +656,19 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
 
+    MarketDepthUpdateBody:
+      type: object
+      title: MarketDepthUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketDepthChannelPattern'
+        data:
+          $ref: './trading-schemas.json#/definitions/Depth'
+
     WalletPerpExecutionUpdateBody:
       type: object
       title: WalletPerpExecutionUpdateBody
@@ -731,6 +775,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketPerpExecutionUpdateBody'
+
+    MarketDepthUpdatePayload:
+      title: MarketDepthUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketDepthUpdateBody'
 
     WalletPerpExecutionUpdatePayload:
       title: WalletPerpExecutionUpdatePayload

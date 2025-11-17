@@ -1264,6 +1264,72 @@
         }
       },
       "additionalProperties": true
+    },
+    "Level": {
+      "title": "Level",
+      "$id": "#Level",
+      "x-parser-schema-id": "Level",
+      "type": "object",
+      "required": [
+        "px",
+        "qty"
+      ],
+      "properties": {
+        "px": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Price level",
+          "example": "0.1668"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Aggregated quantity at this price level",
+          "example": "4418.7970"
+        }
+      },
+      "additionalProperties": true
+    },
+    "Depth": {
+      "title": "Depth",
+      "$id": "#Depth",
+      "x-parser-schema-id": "Depth",
+      "type": "object",
+      "required": [
+        "symbol",
+        "type",
+        "bids",
+        "asks",
+        "updatedAt"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["snapshot", "update"],
+          "description": "Message type: snapshot (full book) or update (single level change)"
+        },
+        "bids": {
+          "type": "array",
+          "description": "Bid side levels aggregated by price, sorted descending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "asks": {
+          "type": "array",
+          "description": "Ask side levels aggregated by price, sorted ascending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Snapshot generation timestamp (milliseconds)",
+          "example": 1747927809946
+        }
+      },
+      "additionalProperties": true
     }
   }
 }
