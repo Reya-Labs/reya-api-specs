@@ -1191,6 +1191,11 @@
           "type": "string",
           "description": "See signatures section for more details on how to generate.",
           "example": "0x5678..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "See signatures and nonces section for more details.",
+          "example": "1234567890"
         }
       },
       "additionalProperties": true
@@ -1233,6 +1238,15 @@
         "symbol"
       ],
       "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID to cancel orders for. If not specified, cancels orders for all accounts.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Symbol to cancel orders for. If not specified, cancels orders for all symbols."
+        },
         "signature": {
           "type": "string",
           "description": "See signatures and nonces section for more details on how to generate.",
@@ -1242,15 +1256,6 @@
           "type": "string",
           "description": "See signatures and nonces section for more details.",
           "example": "1234567890"
-        },
-        "accountId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Account ID to cancel orders for. If not specified, cancels orders for all accounts.",
-          "example": 12345
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol",
-          "description": "Symbol to cancel orders for. If not specified, cancels orders for all symbols."
         }
       },
       "additionalProperties": true,
