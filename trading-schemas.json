@@ -8,8 +8,8 @@
       "x-parser-schema-id": "Symbol",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "ETHRUSD"],
-      "description": "Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)"
+      "examples": ["BTCRUSDPERP", "WETHRUSD"],
+      "description": "Trading symbol (e.g., BTCRUSDPERP, WETHRUSD)"
     },
     "Asset": {
       "title": "Asset",
@@ -17,7 +17,7 @@
       "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "ETHRUSD"]
+      "examples": ["BTCRUSDPERP", "WETHRUSD"]
     },
     "Address": {
       "title": "Address",
@@ -1113,7 +1113,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for IOC orders). The order will only be filled before this timestamp.",
+          "description": "Expiration timestamp (exclusively for PERP IOC orders and all SPOT orders). The order will only be filled before this timestamp.",
           "example": 1676923200
         },
         "clientOrderId": {
@@ -1196,6 +1196,11 @@
           "type": "string",
           "description": "See signatures and nonces section for more details.",
           "example": "1234567890"
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Expiration timestamp (exclusively for SPOT orders).",
+          "example": 1676923200
         }
       },
       "additionalProperties": true
@@ -1256,6 +1261,11 @@
           "type": "string",
           "description": "See signatures and nonces section for more details.",
           "example": "1234567890"
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Expiration timestamp (exclusively for SPOT orders).",
+          "example": 1676923200
         }
       },
       "additionalProperties": true,
