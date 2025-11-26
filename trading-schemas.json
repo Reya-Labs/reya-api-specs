@@ -719,6 +719,8 @@
       "required": [
         "symbol",
         "marketId",
+        "baseAsset",
+        "quoteAsset",
         "minOrderQty",
         "qtyStepSize",
         "tickSize"
@@ -731,6 +733,16 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Numerical identifier for each spot market",
           "example": 1
+        },
+        "baseAsset": {
+          "type": "string",
+          "description": "Base asset symbol",
+          "example": "ETH"
+        },
+        "quoteAsset": {
+          "type": "string",
+          "description": "Quote asset symbol",
+          "example": "RUSD"
         },
         "minOrderQty": {
           "$ref": "#/definitions/Qty",
