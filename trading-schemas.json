@@ -557,9 +557,10 @@
         "makerAccountId",
         "orderId",
         "makerOrderId",
-        "side",
         "qty",
+        "side",
         "fee",
+        "price",
         "type",
         "timestamp"
       ],
