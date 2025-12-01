@@ -98,6 +98,17 @@ channels:
       marketDepthUpdate:
         $ref: '#/components/messages/MarketDepthUpdate'
 
+  marketSpotExecutions:
+    address: /v2/market/{symbol}/spotExecutions
+    description: Real-time spot executions for a specific market
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., ETHRUSD, BTCRUSD)
+        location: $message.payload#/symbol
+    messages:
+      marketSpotExecutionUpdate:
+        $ref: '#/components/messages/MarketSpotExecutionUpdate'
+
   walletPositions:
     address: /v2/wallet/{address}/positions
     description: Real-time position updates for a wallet
@@ -263,6 +274,14 @@ operations:
       - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
     summary: Receive L2 depth snapshots for specific market
 
+  receiveMarketSpotExecutions:
+    action: receive
+    channel:
+      $ref: '#/channels/marketSpotExecutions'
+    messages:
+      - $ref: '#/channels/marketSpotExecutions/messages/marketSpotExecutionUpdate'
+    summary: Receive spot execution updates for market
+
   receiveWalletPositions:
     action: receive
     channel:
@@ -362,6 +381,13 @@ components:
       summary: Real-time L2 order book snapshot for a specific market
       payload:
         $ref: '#/components/schemas/MarketDepthUpdatePayload'
+
+    MarketSpotExecutionUpdate:
+      name: marketSpotExecutionUpdate
+      title: Market Spot Execution Update
+      summary: Real-time spot execution update for market
+      payload:
+        $ref: '#/components/schemas/MarketSpotExecutionUpdatePayload'
 
     WalletPerpExecutionUpdate:
       name: walletPerpExecutionUpdate
@@ -534,6 +560,11 @@ components:
       pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
       description: Channel pattern for market depth snapshots
 
+    MarketSpotExecutionsChannelPattern:
+      type: string
+      pattern: '^/v2/market/[A-Za-z0-9]+/spotExecutions$'
+      description: Channel pattern for market spot executions
+
     WalletPositionsChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
@@ -669,6 +700,22 @@ components:
         data:
           $ref: './trading-schemas.json#/definitions/Depth'
 
+    MarketSpotExecutionUpdateBody:
+      type: object
+      title: MarketSpotExecutionUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketSpotExecutionsChannelPattern'
+        data:
+          type: array
+          title: SpotExecutionList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotExecution'
+
     WalletPerpExecutionUpdateBody:
       type: object
       title: WalletPerpExecutionUpdateBody
@@ -781,6 +828,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketDepthUpdateBody'
+
+    MarketSpotExecutionUpdatePayload:
+      title: MarketSpotExecutionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketSpotExecutionUpdateBody'
 
     WalletPerpExecutionUpdatePayload:
       title: WalletPerpExecutionUpdatePayload

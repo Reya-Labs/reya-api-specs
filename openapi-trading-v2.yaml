@@ -296,6 +296,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /market/{symbol}/spotExecutions:
+    get:
+      summary: Get spot executions for market
+      description: Returns up to 100 spot executions for a given market.
+      operationId: getMarketSpotExecutions
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+      responses:
+        '200':
+          description: List of spot executions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotExecutionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /candleHistory/{symbol}/{resolution}:
     get:
       summary: Get historical candles
