@@ -582,14 +582,14 @@
           "example": 67890
         },
         "orderId": {
-          "$ref": "#/definitions/UnsignedInteger",
+          "type": "string",
           "description": "Order ID for the taker",
-          "example": 100001
+          "example": "63552420354981888"
         },
         "makerOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
+          "type": "string",
           "description": "Order ID for the maker",
-          "example": 100002
+          "example": "63552420037263360"
         },
         "side": {
           "$ref": "#/definitions/Side"
