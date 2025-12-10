@@ -122,6 +122,14 @@
       "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
       "description": "Type of execution"
     },
+    "AccountType": {
+      "title": "AccountType",
+      "$id": "#AccountType",
+      "x-parser-schema-id": "AccountType",
+      "type": "string",
+      "enum": ["MAINPERP", "SUBPERP", "SPOT"],
+      "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
+    },
     "OrderStatus": {
       "title": "OrderStatus",
       "$id": "#OrderStatus",
@@ -694,6 +702,7 @@
       "required": [
         "accountId",
         "name",
+        "type",
         "lastUpdateAt"
       ],
       "properties": {
@@ -704,6 +713,9 @@
         "name": {
           "type": "string",
           "example": "Margin Account 1"
+        },
+        "type": {
+          "$ref": "#/definitions/AccountType"
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
