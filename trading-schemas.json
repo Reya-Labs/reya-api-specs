@@ -717,7 +717,8 @@
         "spotMarketSymbol",
         "priceHaircut",
         "liquidationDiscount",
-        "timestamp"
+        "timestamp",
+        "depositsEnabled"
       ],
       "properties": {
         "asset": {
@@ -741,6 +742,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Configuration timestamp (milliseconds)",
           "example": 1747927089946
+        },
+        "depositsEnabled": {
+          "type": "boolean",
+          "description": "Whether deposits are enabled for this asset",
+          "example": true
         }
       },
       "additionalProperties": true
