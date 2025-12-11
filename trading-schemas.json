@@ -126,6 +126,14 @@
       "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
       "description": "Type of execution"
     },
+    "AccountType": {
+      "title": "AccountType",
+      "$id": "#AccountType",
+      "x-parser-schema-id": "AccountType",
+      "type": "string",
+      "enum": ["MAINPERP", "SUBPERP", "SPOT"],
+      "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
+    },
     "OrderStatus": {
       "title": "OrderStatus",
       "$id": "#OrderStatus",
@@ -426,7 +434,8 @@
       "required": [
         "accountId",
         "asset",
-        "realBalance"
+        "realBalance",
+        "balance_DEPRECATED"
       ],
       "properties": {
         "accountId": {
@@ -440,6 +449,11 @@
         "realBalance": {
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
+          "example": "1.25"
+        },
+        "balance_DEPRECATED": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Sum of account net deposits (transfers, deposits and withdrawals). This field is deprecated and will be removed in a future release",
           "example": "1.25"
         }
       },
@@ -775,6 +789,7 @@
       "required": [
         "accountId",
         "name",
+        "type",
         "lastUpdateAt"
       ],
       "properties": {
@@ -785,6 +800,9 @@
         "name": {
           "type": "string",
           "example": "Margin Account 1"
+        },
+        "type": {
+          "$ref": "#/definitions/AccountType"
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -804,7 +822,8 @@
         "spotMarketSymbol",
         "priceHaircut",
         "liquidationDiscount",
-        "timestamp"
+        "timestamp",
+        "depositsEnabled"
       ],
       "properties": {
         "asset": {
@@ -828,6 +847,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Configuration timestamp (milliseconds)",
           "example": 1747927089946
+        },
+        "depositsEnabled": {
+          "type": "boolean",
+          "description": "Whether deposits are enabled for this asset",
+          "example": true
         }
       },
       "additionalProperties": true
