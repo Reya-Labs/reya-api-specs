@@ -571,7 +571,6 @@
       "x-parser-schema-id": "SpotExecution",
       "type": "object",
       "required": [
-        "exchangeId",
         "symbol",
         "accountId",
         "makerAccountId",
