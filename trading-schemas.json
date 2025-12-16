@@ -574,8 +574,6 @@
         "symbol",
         "accountId",
         "makerAccountId",
-        "orderId",
-        "makerOrderId",
         "qty",
         "side",
         "fee",
