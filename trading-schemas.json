@@ -1280,7 +1280,6 @@
         "signature",
         "nonce",
         "accountId",
-        "symbol",
         "expiresAfter"
       ],
       "properties": {
