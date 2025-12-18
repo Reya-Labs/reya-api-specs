@@ -822,7 +822,9 @@
         "priceHaircut",
         "liquidationDiscount",
         "timestamp",
-        "depositsEnabled"
+        "status",
+        "decimals",
+        "displayDecimals"
       ],
       "properties": {
         "asset": {
@@ -847,10 +849,21 @@
           "description": "Configuration timestamp (milliseconds)",
           "example": 1747927089946
         },
-        "depositsEnabled": {
-          "type": "boolean",
-          "description": "Whether deposits are enabled for this asset",
-          "example": true
+        "status": {
+          "type": "string",
+          "enum": ["ENABLED", "WITHDRAWAL_ONLY"],
+          "description": "Status of asset (ENABLED = deposits and withdrawals allowed, WITHDRAWAL_ONLY = only withdrawals allowed)",
+          "example": "ENABLED"
+        },
+        "decimals": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of decimal places for record keeping amounts of this asset (e.g. 18 for ETH, 6 for RUSD)",
+          "example": 18
+        },
+        "displayDecimals": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of decimal places shown for display purposes in frontends",
+          "example": 4
         }
       },
       "additionalProperties": true
