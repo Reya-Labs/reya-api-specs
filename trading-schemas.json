@@ -822,7 +822,7 @@
         "priceHaircut",
         "liquidationDiscount",
         "timestamp",
-        "depositsEnabled"
+        "status"
       ],
       "properties": {
         "asset": {
@@ -847,10 +847,10 @@
           "description": "Configuration timestamp (milliseconds)",
           "example": 1747927089946
         },
-        "depositsEnabled": {
-          "type": "boolean",
-          "description": "Whether deposits are enabled for this asset",
-          "example": true
+        "status": {
+          "type": "string",
+          "description": "Status of asset. Possible values: enabled, withdrawal_only.",
+          "example": "enabled"
         }
       },
       "additionalProperties": true
