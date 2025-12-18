@@ -1285,7 +1285,7 @@
       "properties": {
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Account ID to cancel orders for. If not specified, cancels orders for all accounts.",
+          "description": "Account ID to cancel orders for.",
           "example": 12345
         },
         "symbol": {
@@ -1304,7 +1304,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for SPOT orders). In seconds since epoch.",
+          "description": "Expiration timestamp. In seconds since epoch.",
           "example": 1676923200
         }
       },
