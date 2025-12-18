@@ -822,7 +822,9 @@
         "priceHaircut",
         "liquidationDiscount",
         "timestamp",
-        "status"
+        "status",
+        "decimals",
+        "displayDecimals"
       ],
       "properties": {
         "asset": {
@@ -851,6 +853,16 @@
           "type": "string",
           "description": "Status of asset. Possible values: enabled, withdrawal_only.",
           "example": "enabled"
+        },
+        "decimals": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of decimal places for record keeping amounts of this asset",
+          "example": 18
+        },
+        "displayDecimals": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of decimal places shown for display purposes in frontends",
+          "example": 4
         }
       },
       "additionalProperties": true
