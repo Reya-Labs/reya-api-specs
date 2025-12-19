@@ -8,6 +8,7 @@ on:
       - 'openapi-trading-v2.yaml'
       - 'asyncapi-trading-v2.yaml'
       - 'trading-schemas.json'
+  workflow_dispatch:
 
 permissions:
   contents: write
