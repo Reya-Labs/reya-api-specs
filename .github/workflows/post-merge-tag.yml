@@ -9,10 +9,13 @@ on:
       - 'asyncapi-trading-v2.yaml'
       - 'trading-schemas.json'
 
+permissions:
+  contents: write
+
 jobs:
   version-tag:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
