@@ -8,8 +8,8 @@
       "x-parser-schema-id": "Symbol",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "ETHRUSD"],
-      "description": "Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)"
+      "examples": ["BTCRUSDPERP", "WETHRUSD"],
+      "description": "Trading symbol (e.g., BTCRUSDPERP, WETHRUSD)"
     },
     "Asset": {
       "title": "Asset",
@@ -17,7 +17,7 @@
       "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "ETHRUSD"]
+      "examples": ["BTCRUSDPERP", "WETHRUSD"]
     },
     "Address": {
       "title": "Address",
@@ -74,7 +74,13 @@
         "NO_PRICES_FOUND_FOR_SYMBOL",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
-        "CANCEL_ORDER_OTHER_ERROR"
+        "CANCEL_ORDER_OTHER_ERROR",
+        "ORDER_DEADLINE_PASSED_ERROR",
+        "ORDER_DEADLINE_TOO_HIGH_ERROR",
+        "INVALID_NONCE_ERROR",
+        "UNAVAILABLE_MATCHING_ENGINE_ERROR",
+        "UNAUTHORIZED_SIGNATURE_ERROR",
+        "NUMERIC_OVERFLOW_ERROR"
       ],
       "description": "Standardized error codes for API responses"
     },
@@ -122,6 +128,14 @@
       "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
       "description": "Type of execution"
     },
+    "AccountType": {
+      "title": "AccountType",
+      "$id": "#AccountType",
+      "x-parser-schema-id": "AccountType",
+      "type": "string",
+      "enum": ["MAINPERP", "SUBPERP", "SPOT"],
+      "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
+    },
     "OrderStatus": {
       "title": "OrderStatus",
       "$id": "#OrderStatus",
@@ -137,6 +151,14 @@
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
+    },
+    "DepthType": {
+      "title": "DepthType",
+      "$id": "#DepthType",
+      "x-parser-schema-id": "DepthType",
+      "type": "string",
+      "enum": ["SNAPSHOT", "UPDATE"],
+      "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
     },
     "RequestError": {
       "title": "RequestError",
@@ -357,7 +379,12 @@
         },
         "execQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Executed quantity. Example: I request 1.0 BTCRUSDPERP and the order is filled with 0.2 BTCRUSDPERP, qty will stay at 1.0 and execQty will be 0.2.",
+          "description": "Executed quantity in the current order update.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total Executed quantity accross all fills where the order is involved.",
           "example": "0.5"
         },
         "side": {
@@ -409,7 +436,8 @@
       "required": [
         "accountId",
         "asset",
-        "realBalance"
+        "realBalance",
+        "balance_DEPRECATED"
       ],
       "properties": {
         "accountId": {
@@ -423,6 +451,11 @@
         "realBalance": {
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
+          "example": "1.25"
+        },
+        "balance_DEPRECATED": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Sum of account net deposits (transfers, deposits and withdrawals). This field is deprecated and will be removed in a future release",
           "example": "1.25"
         }
       },
@@ -538,12 +571,13 @@
       "x-parser-schema-id": "SpotExecution",
       "type": "object",
       "required": [
-        "exchangeId",
         "symbol",
         "accountId",
-        "side",
+        "makerAccountId",
         "qty",
+        "side",
         "fee",
+        "price",
         "type",
         "timestamp"
       ],
@@ -558,6 +592,21 @@
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
           "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Order ID for the taker",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker",
+          "example": "63552420037263360"
         },
         "side": {
           "$ref": "#/definitions/Side"
@@ -680,6 +729,57 @@
       },
       "additionalProperties": true
     },
+    "SpotMarketDefinition": {
+      "title": "SpotMarketDefinition",
+      "$id": "#SpotMarketDefinition",
+      "x-parser-schema-id": "SpotMarketDefinition",
+      "type": "object",
+      "required": [
+        "symbol",
+        "marketId",
+        "baseAsset",
+        "quoteAsset",
+        "minOrderQty",
+        "qtyStepSize",
+        "tickSize"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "marketId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Numerical identifier for each spot market",
+          "example": 1
+        },
+        "baseAsset": {
+          "type": "string",
+          "description": "Base asset symbol",
+          "example": "ETH"
+        },
+        "quoteAsset": {
+          "type": "string",
+          "description": "Quote asset symbol",
+          "example": "RUSD"
+        },
+        "minOrderQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Minimum order quantity (base asset)",
+          "example": "0.001"
+        },
+        "qtyStepSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum size increment (base asset)",
+          "example": "0.001"
+        },
+        "tickSize": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Minimum price increment",
+          "example": "0.01"
+        }
+      },
+      "additionalProperties": true
+    },
     "Account": {
       "title": "Account",
       "$id": "#Account",
@@ -688,6 +788,7 @@
       "required": [
         "accountId",
         "name",
+        "type",
         "lastUpdateAt"
       ],
       "properties": {
@@ -698,6 +799,9 @@
         "name": {
           "type": "string",
           "example": "Margin Account 1"
+        },
+        "type": {
+          "$ref": "#/definitions/AccountType"
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -717,7 +821,10 @@
         "spotMarketSymbol",
         "priceHaircut",
         "liquidationDiscount",
-        "timestamp"
+        "timestamp",
+        "status",
+        "decimals",
+        "displayDecimals"
       ],
       "properties": {
         "asset": {
@@ -741,6 +848,22 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Configuration timestamp (milliseconds)",
           "example": 1747927089946
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ENABLED", "WITHDRAWAL_ONLY"],
+          "description": "Status of asset (ENABLED = deposits and withdrawals allowed, WITHDRAWAL_ONLY = only withdrawals allowed)",
+          "example": "ENABLED"
+        },
+        "decimals": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of decimal places for record keeping amounts of this asset (e.g. 18 for ETH, 6 for RUSD)",
+          "example": 18
+        },
+        "displayDecimals": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of decimal places shown for display purposes in frontends",
+          "example": 4
         }
       },
       "additionalProperties": true
@@ -1043,8 +1166,13 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for IOC orders). The order will only be filled before this timestamp.",
+          "description": "Expiration timestamp (exclusively for PERP IOC orders and all SPOT orders). In seconds since epoch. The order will only be filled before this timestamp.",
           "example": 1676923200
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
+          "example": "123456789"
         }
       },
       "additionalProperties": true
@@ -1061,10 +1189,25 @@
         "status": {
           "$ref": "#/definitions/OrderStatus"
         },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Executed quantity in the current order update.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "example": "0.5"
+        },
         "orderId": {
           "type": "string",
           "description": "Created order ID (currently generated for all order types except IOC)",
           "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
         }
       },
       "additionalProperties": true
@@ -1075,19 +1218,42 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
-        "orderId",
         "signature"
       ],
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Order ID to cancel",
-          "example": "123456789-123123123"
+          "description": "Internal matching engine order ID to cancel. Provide either orderId OR clientOrderId, not both. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID for tracking and correlation. Provide either orderId OR clientOrderId, not both. This is the same clientOrderId provided in CreateOrderRequest.",
+          "example": "123456789"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID that owns the order. Required for spot markets.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
         },
         "signature": {
           "type": "string",
           "description": "See signatures section for more details on how to generate.",
           "example": "0x5678..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "See signatures and nonces section for more details. Compulsory for spot orders.",
+          "example": "1234567890"
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Expiration timestamp (exclusively for SPOT orders). In seconds since epoch.",
+          "example": 1676923200
         }
       },
       "additionalProperties": true
@@ -1109,6 +1275,132 @@
           "type": "string",
           "description": "Cancelled order ID",
           "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "type": "integer",
+          "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
+        }
+      },
+      "additionalProperties": true
+    },
+    "MassCancelRequest": {
+      "title": "MassCancelRequest",
+      "$id": "#MassCancelRequest",
+      "x-parser-schema-id": "MassCancelRequest",
+      "type": "object",
+      "required": [
+        "signature",
+        "nonce",
+        "accountId",
+        "expiresAfter"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID to cancel orders for.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Symbol to cancel orders for. If not specified, cancels orders for all symbols."
+        },
+        "signature": {
+          "type": "string",
+          "description": "See signatures and nonces section for more details on how to generate.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "See signatures and nonces section for more details.",
+          "example": "1234567890"
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Expiration timestamp. In seconds since epoch.",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true,
+      "description": "Request to cancel all orders matching the specified filters"
+    },
+    "MassCancelResponse": {
+      "title": "MassCancelResponse",
+      "$id": "#MassCancelResponse",
+      "x-parser-schema-id": "MassCancelResponse",
+      "type": "object",
+      "required": [
+        "cancelledCount"
+      ],
+      "properties": {
+        "cancelledCount": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of orders that were cancelled",
+          "example": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "Level": {
+      "title": "Level",
+      "$id": "#Level",
+      "x-parser-schema-id": "Level",
+      "type": "object",
+      "required": [
+        "px",
+        "qty"
+      ],
+      "properties": {
+        "px": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Price level",
+          "example": "0.1668"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Aggregated quantity at this price level",
+          "example": "4418.7970"
+        }
+      },
+      "additionalProperties": true
+    },
+    "Depth": {
+      "title": "Depth",
+      "$id": "#Depth",
+      "x-parser-schema-id": "Depth",
+      "type": "object",
+      "required": [
+        "symbol",
+        "type",
+        "bids",
+        "asks",
+        "updatedAt"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "type": {
+          "$ref": "#/definitions/DepthType"
+        },
+        "bids": {
+          "type": "array",
+          "description": "Bid side levels aggregated by price, sorted descending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "asks": {
+          "type": "array",
+          "description": "Ask side levels aggregated by price, sorted ascending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Snapshot generation timestamp (milliseconds)",
+          "example": 1747927809946
         }
       },
       "additionalProperties": true

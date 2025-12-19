@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.0.7
+  version: 2.1.0
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -87,6 +87,28 @@ channels:
       marketPerpExecutionUpdate:
         $ref: '#/components/messages/MarketPerpExecutionUpdate'
 
+  marketDepth:
+    address: /v2/market/{symbol}/depth
+    description: Real-time L2 order book depth snapshots for a specific market
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+        location: $message.payload#/symbol
+    messages:
+      marketDepthUpdate:
+        $ref: '#/components/messages/MarketDepthUpdate'
+
+  marketSpotExecutions:
+    address: /v2/market/{symbol}/spotExecutions
+    description: Real-time spot executions for a specific market
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., ETHRUSD, BTCRUSD)
+        location: $message.payload#/symbol
+    messages:
+      marketSpotExecutionUpdate:
+        $ref: '#/components/messages/MarketSpotExecutionUpdate'
+
   walletPositions:
     address: /v2/wallet/{address}/positions
     description: Real-time position updates for a wallet
@@ -119,6 +141,28 @@ channels:
     messages:
       walletPerpExecutionUpdate:
         $ref: '#/components/messages/WalletPerpExecutionUpdate'
+
+  walletSpotExecutions:
+    address: /v2/wallet/{address}/spotExecutions
+    description: Real-time spot execution updates for a wallet
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      walletSpotExecutionUpdate:
+        $ref: '#/components/messages/WalletSpotExecutionUpdate'
+
+  walletAccountBalances:
+    address: /v2/wallet/{address}/accountBalances
+    description: Real-time account balance updates for a wallet
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      accountBalanceUpdate:
+        $ref: '#/components/messages/AccountBalanceUpdate'
 
   prices:
     address: /v2/prices
@@ -222,6 +266,22 @@ operations:
       - $ref: '#/channels/marketPerpExecutions/messages/marketPerpExecutionUpdate'
     summary: Receive perpetual execution updates for market
 
+  receiveMarketDepth:
+    action: receive
+    channel:
+      $ref: '#/channels/marketDepth'
+    messages:
+      - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
+    summary: Receive L2 depth snapshots for specific market
+
+  receiveMarketSpotExecutions:
+    action: receive
+    channel:
+      $ref: '#/channels/marketSpotExecutions'
+    messages:
+      - $ref: '#/channels/marketSpotExecutions/messages/marketSpotExecutionUpdate'
+    summary: Receive spot execution updates for market
+
   receiveWalletPositions:
     action: receive
     channel:
@@ -245,6 +305,22 @@ operations:
     messages:
       - $ref: '#/channels/walletPerpExecutions/messages/walletPerpExecutionUpdate'
     summary: Receive perpetual execution updates for wallet
+
+  receiveWalletSpotExecutions:
+    action: receive
+    channel:
+      $ref: '#/channels/walletSpotExecutions'
+    messages:
+      - $ref: '#/channels/walletSpotExecutions/messages/walletSpotExecutionUpdate'
+    summary: Receive spot execution updates for wallet
+
+  receiveWalletAccountBalances:
+    action: receive
+    channel:
+      $ref: '#/channels/walletAccountBalances'
+    messages:
+      - $ref: '#/channels/walletAccountBalances/messages/accountBalanceUpdate'
+    summary: Receive account balance updates for wallet
 
   receivePrices:
     action: receive
@@ -299,12 +375,40 @@ components:
       payload:
         $ref: '#/components/schemas/MarketPerpExecutionUpdatePayload'
 
+    MarketDepthUpdate:
+      name: marketDepthUpdate
+      title: Market Depth Update
+      summary: Real-time L2 order book snapshot for a specific market
+      payload:
+        $ref: '#/components/schemas/MarketDepthUpdatePayload'
+
+    MarketSpotExecutionUpdate:
+      name: marketSpotExecutionUpdate
+      title: Market Spot Execution Update
+      summary: Real-time spot execution update for market
+      payload:
+        $ref: '#/components/schemas/MarketSpotExecutionUpdatePayload'
+
     WalletPerpExecutionUpdate:
       name: walletPerpExecutionUpdate
       title: Wallet Perpetual Execution Update
       summary: Real-time perpetual execution update for wallet
       payload:
         $ref: '#/components/schemas/WalletPerpExecutionUpdatePayload'
+
+    WalletSpotExecutionUpdate:
+      name: walletSpotExecutionUpdate
+      title: Wallet Spot Execution Update
+      summary: Real-time spot execution update for wallet
+      payload:
+        $ref: '#/components/schemas/WalletSpotExecutionUpdatePayload'
+
+    AccountBalanceUpdate:
+      name: accountBalanceUpdate
+      title: Account Balance Update
+      summary: Real-time account balance update for wallet
+      payload:
+        $ref: '#/components/schemas/AccountBalanceUpdatePayload'
 
     PricesUpdate:
       name: pricesUpdate
@@ -451,6 +555,16 @@ components:
       pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
       description: Channel pattern for market perpetual executions
 
+    MarketDepthChannelPattern:
+      type: string
+      pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
+      description: Channel pattern for market depth snapshots
+
+    MarketSpotExecutionsChannelPattern:
+      type: string
+      pattern: '^/v2/market/[A-Za-z0-9]+/spotExecutions$'
+      description: Channel pattern for market spot executions
+
     WalletPositionsChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positions$'
@@ -465,6 +579,16 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/perpExecutions$'
       description: Channel pattern for wallet perpetual executions
+
+    WalletSpotExecutionsChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotExecutions$'
+      description: Channel pattern for wallet spot executions
+
+    WalletAccountBalancesChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
+      description: Channel pattern for wallet account balances
 
     PriceChannelPattern:
       type: string
@@ -563,6 +687,35 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
 
+    MarketDepthUpdateBody:
+      type: object
+      title: MarketDepthUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketDepthChannelPattern'
+        data:
+          $ref: './trading-schemas.json#/definitions/Depth'
+
+    MarketSpotExecutionUpdateBody:
+      type: object
+      title: MarketSpotExecutionUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketSpotExecutionsChannelPattern'
+        data:
+          type: array
+          title: SpotExecutionList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotExecution'
+
     WalletPerpExecutionUpdateBody:
       type: object
       title: WalletPerpExecutionUpdateBody
@@ -578,6 +731,38 @@ components:
           title: WalletPerpExecutionList
           items:
             $ref: './trading-schemas.json#/definitions/PerpExecution'
+
+    WalletSpotExecutionUpdateBody:
+      type: object
+      title: WalletSpotExecutionUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletSpotExecutionsChannelPattern'
+        data:
+          type: array
+          title: WalletSpotExecutionList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotExecution'
+
+    AccountBalanceUpdateBody:
+      type: object
+      title: AccountBalanceUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletAccountBalancesChannelPattern'
+        data:
+          type: array
+          title: AccountBalanceList
+          items:
+            $ref: './trading-schemas.json#/definitions/AccountBalance'
 
     PricesUpdateBody:
       type: object
@@ -638,11 +823,35 @@ components:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketPerpExecutionUpdateBody'
 
+    MarketDepthUpdatePayload:
+      title: MarketDepthUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketDepthUpdateBody'
+
+    MarketSpotExecutionUpdatePayload:
+      title: MarketSpotExecutionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketSpotExecutionUpdateBody'
+
     WalletPerpExecutionUpdatePayload:
       title: WalletPerpExecutionUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletPerpExecutionUpdateBody'
+
+    WalletSpotExecutionUpdatePayload:
+      title: WalletSpotExecutionUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/WalletSpotExecutionUpdateBody'
+
+    AccountBalanceUpdatePayload:
+      title: AccountBalanceUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/AccountBalanceUpdateBody'
 
     PricesUpdatePayload:
       title: PricesUpdatePayload
@@ -737,6 +946,7 @@ components:
           type: object
           title: SubscriptionContents
           description: Optional initial data for the subscription
+          additionalProperties: true
       required:
         - type
         - channel

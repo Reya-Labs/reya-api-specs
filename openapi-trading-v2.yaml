@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.0.7
+  version: 2.1.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -67,6 +67,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MarketDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /spotMarketDefinitions:
+    get:
+      summary: Get spot market definitions
+      operationId: getSpotMarketDefinitions
+      tags:
+        - Reference Data
+      responses:
+        '200':
+          description: List of spot market definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpotMarketDefinition'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -250,6 +270,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PerpExecutionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /market/{symbol}/depth:
+    get:
+      summary: Get market depth snapshot
+      description: Returns an L2 order book snapshot with aggregated price levels for the specified market.
+      operationId: getMarketDepth
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+      responses:
+        '200':
+          description: Depth snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Depth'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /market/{symbol}/spotExecutions:
+    get:
+      summary: Get spot executions for market
+      description: Returns up to 100 spot executions for a given market.
+      operationId: getMarketSpotExecutions
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+      responses:
+        '200':
+          description: List of spot executions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotExecutionList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -485,6 +549,31 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /cancelAll:
+    post:
+      summary: Cancel all orders
+      description: Cancel all orders matching the specified filters (mass cancel)
+      operationId: cancelAll
+      tags:
+        - Order Entry
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MassCancelRequest'
+      responses:
+        '200':
+          description: Mass cancel response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MassCancelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   parameters:
     SymbolParam:
@@ -542,6 +631,9 @@ components:
     MarketDefinition:
       $ref: './trading-schemas.json#/definitions/MarketDefinition'
 
+    SpotMarketDefinition:
+      $ref: './trading-schemas.json#/definitions/SpotMarketDefinition'
+
     AssetDefinition:
       $ref: './trading-schemas.json#/definitions/AssetDefinition'
 
@@ -595,6 +687,15 @@ components:
 
     CancelOrderResponse:
       $ref: './trading-schemas.json#/definitions/CancelOrderResponse'
+
+    MassCancelRequest:
+      $ref: './trading-schemas.json#/definitions/MassCancelRequest'
+
+    MassCancelResponse:
+      $ref: './trading-schemas.json#/definitions/MassCancelResponse'
+
+    Depth:
+      $ref: './trading-schemas.json#/definitions/Depth'
 
   responses:
     BadRequest:
