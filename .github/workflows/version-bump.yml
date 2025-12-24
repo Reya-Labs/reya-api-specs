@@ -7,6 +7,10 @@ on:
       - 'asyncapi-trading-v2.yaml'
       - 'trading-schemas.json'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   version-bump:
     name: Version Bump for API Specs
