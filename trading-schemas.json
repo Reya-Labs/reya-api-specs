@@ -788,8 +788,7 @@
       "required": [
         "accountId",
         "name",
-        "type",
-        "lastUpdateAt"
+        "type"
       ],
       "properties": {
         "accountId": {
@@ -802,11 +801,6 @@
         },
         "type": {
           "$ref": "#/definitions/AccountType"
-        },
-        "lastUpdateAt": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Last update timestamp (milliseconds)",
-          "example": 1747927089946
         }
       },
       "additionalProperties": true
@@ -821,7 +815,6 @@
         "spotMarketSymbol",
         "priceHaircut",
         "liquidationDiscount",
-        "timestamp",
         "status",
         "decimals",
         "displayDecimals"
@@ -843,11 +836,6 @@
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Discount in the token price when liquidating collateral.",
           "example": "0.03"
-        },
-        "timestamp": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Configuration timestamp (milliseconds)",
-          "example": 1747927089946
         },
         "status": {
           "type": "string",
