@@ -683,7 +683,7 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
       "accountId": 12345,
       "asset": "WSTETH",
       "realBalance": "1.25",
-      "balance_DEPRECATED": "1.25"
+      "balanceDEPRECATED": "1.25"
     }
   ]
 }
@@ -695,7 +695,7 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
 - `accountId` (integer): Account identifier
 - `asset` (string): Asset symbol (e.g., WSTETH, RUSD)
 - `realBalance` (string): Sum of account net deposits and realized PnL from closed positions
-- `balance_DEPRECATED` (string): Sum of account net deposits only (deprecated, will be removed)
+- `balanceDEPRECATED` (string): Sum of account net deposits only (deprecated, will be removed)
 
 </details>
 
