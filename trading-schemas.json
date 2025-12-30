@@ -812,7 +812,6 @@
       "type": "object",
       "required": [
         "asset",
-        "spotMarketSymbol",
         "priceHaircut",
         "liquidationDiscount",
         "status",
