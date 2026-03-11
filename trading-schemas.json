@@ -449,12 +449,12 @@
           "example": "WSTETH"
         },
         "realBalance": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Sum of account net deposits (transfers, deposits and withdrawals) and realized pnl from closed positions. Realized pnl only applies to RUSD given it is the only settlement asset",
           "example": "1.25"
         },
         "balanceDEPRECATED": {
-          "$ref": "#/definitions/UnsignedDecimal",
+          "$ref": "#/definitions/SignedDecimal",
           "description": "Sum of account net deposits (transfers, deposits and withdrawals). This field is deprecated and will be removed in a future release",
           "example": "1.25"
         }
