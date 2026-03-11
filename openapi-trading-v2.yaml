@@ -319,6 +319,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /market/{symbol}/spotTradeBusts:
+    get:
+      summary: Get spot trade busts for market
+      description: Returns up to 100 spot trade busts (failed spot fills) for a given market.
+      operationId: getMarketSpotTradeBusts
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+      responses:
+        '200':
+          description: List of spot trade busts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotTradeBustList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /candleHistory/{symbol}/{resolution}:
     get:
       summary: Get historical candles
@@ -359,6 +382,29 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /wallet/{address}/spotTradeBusts:
+    get:
+      summary: Get wallet spot trade busts
+      description: Returns up to 100 spot trade busts (failed spot fills) for a given wallet.
+      operationId: getWalletSpotTradeBusts
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+      responses:
+        '200':
+          description: List of spot trade busts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotTradeBustList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -669,6 +715,9 @@ components:
 
     SpotExecutionList:
       $ref: './trading-schemas.json#/definitions/SpotExecutionList'
+
+    SpotTradeBustList:
+      $ref: './trading-schemas.json#/definitions/SpotTradeBustList'
 
     Price:
       $ref: './trading-schemas.json#/definitions/Price'

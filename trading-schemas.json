@@ -634,6 +634,87 @@
       },
       "additionalProperties": true
     },
+    "SpotTradeBustList": {
+      "title": "SpotTradeBustList",
+      "$id": "#SpotTradeBustList",
+      "x-parser-schema-id": "SpotTradeBustList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SpotTradeBust"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
+    "SpotTradeBust": {
+      "title": "SpotTradeBust",
+      "$id": "#SpotTradeBust",
+      "x-parser-schema-id": "SpotTradeBust",
+      "type": "object",
+      "required": [
+        "symbol",
+        "accountId",
+        "counterpartyAccountId",
+        "qty",
+        "side",
+        "price",
+        "reason",
+        "timestamp",
+        "transactionHash"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "counterpartyAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Counterparty account ID",
+          "example": 67890
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Failed base quantity",
+          "example": "1.0"
+        },
+        "side": {
+          "$ref": "#/definitions/Side"
+        },
+        "price": {
+          "$ref": "#/definitions/PriceValue",
+          "example": "43000.00"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Hex-encoded revert reason bytes",
+          "example": "08c379a0..."
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Block timestamp (milliseconds)",
+          "example": 1747927089946
+        },
+        "transactionHash": {
+          "type": "string",
+          "description": "Transaction hash",
+          "example": "0xabc..."
+        }
+      },
+      "additionalProperties": true
+    },
     "Price": {
       "title": "Price",
       "$id": "#Price",
