@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.1.4
+  version: 2.1.5
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -152,6 +152,28 @@ channels:
     messages:
       walletSpotExecutionUpdate:
         $ref: '#/components/messages/WalletSpotExecutionUpdate'
+
+  marketSpotTradeBusts:
+    address: /v2/market/{symbol}/spotTradeBusts
+    description: Real-time spot trade busts (failed spot fills) for a specific market
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., ETHRUSD, BTCRUSD)
+        location: $message.payload#/symbol
+    messages:
+      marketSpotTradeBustUpdate:
+        $ref: '#/components/messages/MarketSpotTradeBustUpdate'
+
+  walletSpotTradeBusts:
+    address: /v2/wallet/{address}/spotTradeBusts
+    description: Real-time spot trade bust updates for a wallet
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      walletSpotTradeBustUpdate:
+        $ref: '#/components/messages/WalletSpotTradeBustUpdate'
 
   walletAccountBalances:
     address: /v2/wallet/{address}/accountBalances
@@ -314,6 +336,22 @@ operations:
       - $ref: '#/channels/walletSpotExecutions/messages/walletSpotExecutionUpdate'
     summary: Receive spot execution updates for wallet
 
+  receiveMarketSpotTradeBusts:
+    action: receive
+    channel:
+      $ref: '#/channels/marketSpotTradeBusts'
+    messages:
+      - $ref: '#/channels/marketSpotTradeBusts/messages/marketSpotTradeBustUpdate'
+    summary: Receive spot trade bust updates for market
+
+  receiveWalletSpotTradeBusts:
+    action: receive
+    channel:
+      $ref: '#/channels/walletSpotTradeBusts'
+    messages:
+      - $ref: '#/channels/walletSpotTradeBusts/messages/walletSpotTradeBustUpdate'
+    summary: Receive spot trade bust updates for wallet
+
   receiveWalletAccountBalances:
     action: receive
     channel:
@@ -402,6 +440,20 @@ components:
       summary: Real-time spot execution update for wallet
       payload:
         $ref: '#/components/schemas/WalletSpotExecutionUpdatePayload'
+
+    MarketSpotTradeBustUpdate:
+      name: marketSpotTradeBustUpdate
+      title: Market Spot Trade Bust Update
+      summary: Real-time spot trade bust update for market
+      payload:
+        $ref: '#/components/schemas/MarketSpotTradeBustUpdatePayload'
+
+    WalletSpotTradeBustUpdate:
+      name: walletSpotTradeBustUpdate
+      title: Wallet Spot Trade Bust Update
+      summary: Real-time spot trade bust update for wallet
+      payload:
+        $ref: '#/components/schemas/WalletSpotTradeBustUpdatePayload'
 
     AccountBalanceUpdate:
       name: accountBalanceUpdate
@@ -585,6 +637,16 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotExecutions$'
       description: Channel pattern for wallet spot executions
 
+    MarketSpotTradeBustsChannelPattern:
+      type: string
+      pattern: '^/v2/market/[A-Za-z0-9]+/spotTradeBusts$'
+      description: Channel pattern for market spot trade busts
+
+    WalletSpotTradeBustsChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotTradeBusts$'
+      description: Channel pattern for wallet spot trade busts
+
     WalletAccountBalancesChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
@@ -748,6 +810,38 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/SpotExecution'
 
+    MarketSpotTradeBustUpdateBody:
+      type: object
+      title: MarketSpotTradeBustUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketSpotTradeBustsChannelPattern'
+        data:
+          type: array
+          title: SpotTradeBustList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotTradeBust'
+
+    WalletSpotTradeBustUpdateBody:
+      type: object
+      title: WalletSpotTradeBustUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletSpotTradeBustsChannelPattern'
+        data:
+          type: array
+          title: WalletSpotTradeBustList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotTradeBust'
+
     AccountBalanceUpdateBody:
       type: object
       title: AccountBalanceUpdateBody
@@ -846,6 +940,18 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletSpotExecutionUpdateBody'
+
+    MarketSpotTradeBustUpdatePayload:
+      title: MarketSpotTradeBustUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketSpotTradeBustUpdateBody'
+
+    WalletSpotTradeBustUpdatePayload:
+      title: WalletSpotTradeBustUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/WalletSpotTradeBustUpdateBody'
 
     AccountBalanceUpdatePayload:
       title: AccountBalanceUpdatePayload
