@@ -634,10 +634,10 @@
       },
       "additionalProperties": true
     },
-    "SpotTradeBustList": {
-      "title": "SpotTradeBustList",
-      "$id": "#SpotTradeBustList",
-      "x-parser-schema-id": "SpotTradeBustList",
+    "SpotExecutionBustList": {
+      "title": "SpotExecutionBustList",
+      "$id": "#SpotExecutionBustList",
+      "x-parser-schema-id": "SpotExecutionBustList",
       "type": "object",
       "required": [
         "data",
@@ -647,7 +647,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SpotTradeBust"
+            "$ref": "#/definitions/SpotExecutionBust"
           }
         },
         "meta": {
@@ -656,21 +656,22 @@
       },
       "additionalProperties": true
     },
-    "SpotTradeBust": {
-      "title": "SpotTradeBust",
-      "$id": "#SpotTradeBust",
-      "x-parser-schema-id": "SpotTradeBust",
+    "SpotExecutionBust": {
+      "title": "SpotExecutionBust",
+      "$id": "#SpotExecutionBust",
+      "x-parser-schema-id": "SpotExecutionBust",
       "type": "object",
       "required": [
         "symbol",
         "accountId",
-        "counterpartyAccountId",
+        "makerAccountId",
+        "orderId",
+        "makerOrderId",
         "qty",
         "side",
         "price",
         "reason",
-        "timestamp",
-        "transactionHash"
+        "timestamp"
       ],
       "properties": {
         "symbol": {
@@ -680,10 +681,24 @@
           "$ref": "#/definitions/UnsignedInteger",
           "example": 12345
         },
-        "counterpartyAccountId": {
+        "exchangeId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Counterparty account ID",
+          "example": 1
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
           "example": 67890
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Order ID for the taker",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker",
+          "example": "63552420037263360"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
@@ -706,11 +721,6 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Block timestamp (milliseconds)",
           "example": 1747927089946
-        },
-        "transactionHash": {
-          "type": "string",
-          "description": "Transaction hash",
-          "example": "0xabc..."
         }
       },
       "additionalProperties": true
