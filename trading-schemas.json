@@ -289,6 +289,43 @@
       },
       "additionalProperties": true
     },
+    "SpotMarketSummary": {
+      "title": "SpotMarketSummary",
+      "$id": "#SpotMarketSummary",
+      "x-parser-schema-id": "SpotMarketSummary",
+      "type": "object",
+      "required": [
+        "symbol",
+        "updatedAt",
+        "volume24h"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Time when the spot market summary was last calculated (milliseconds)",
+          "example": 1747927089946
+        },
+        "volume24h": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "24-hour trading volume in USD",
+          "example": "917833.49891"
+        },
+        "pxChange24h": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Absolute 24-hour price change",
+          "example": "92.6272285500004"
+        },
+        "oraclePrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Current oracle price",
+          "example": "2666.48162040777"
+        }
+      },
+      "additionalProperties": true
+    },
     "Position": {
       "title": "Position",
       "$id": "#Position",

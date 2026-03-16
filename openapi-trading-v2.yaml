@@ -92,6 +92,48 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /spotMarkets/summary:
+    get:
+      summary: Get spot market summaries
+      description: Statistics and throttled market data for all spot markets. Recalculated every 0.5s
+      operationId: getSpotMarketsSummary
+      tags:
+        - Market Data
+      responses:
+        '200':
+          description: List of spot market summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpotMarketSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /spotMarket/{symbol}/summary:
+    get:
+      summary: Get spot market summary
+      description: Statistics and throttled market data for a specific spot market. Recalculated every 0.5s
+      operationId: getSpotMarketSummary
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+      responses:
+        '200':
+          description: Spot market summary data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotMarketSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /assetDefinitions:
     get:
       summary: Get asset definitions
@@ -697,6 +739,9 @@ components:
 
     MarketSummary:
       $ref: './trading-schemas.json#/definitions/MarketSummary'
+
+    SpotMarketSummary:
+      $ref: './trading-schemas.json#/definitions/SpotMarketSummary'
 
     Position:
       $ref: './trading-schemas.json#/definitions/Position'
