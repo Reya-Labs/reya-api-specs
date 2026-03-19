@@ -76,6 +76,24 @@ channels:
       marketSummaryUpdate:
         $ref: '#/components/messages/MarketSummaryUpdate'
 
+  spotMarketsSummary:
+    address: /v2/spotMarkets/summary
+    description: Real-time updates for all spot market summaries
+    messages:
+      spotMarketsSummaryUpdate:
+        $ref: '#/components/messages/SpotMarketsSummaryUpdate'
+
+  spotMarketSummary:
+    address: /v2/spotMarket/{symbol}/summary
+    description: Real-time updates for a specific spot market's summary
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., WETHRUSD)
+        location: $message.payload#/symbol
+    messages:
+      spotMarketSummaryUpdate:
+        $ref: '#/components/messages/SpotMarketSummaryUpdate'
+
   marketPerpExecutions:
     address: /v2/market/{symbol}/perpExecutions
     description: Real-time perpetual executions for a specific market
@@ -280,6 +298,22 @@ operations:
       - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
     summary: Receive specific market summary updates
 
+  receiveSpotMarketsSummary:
+    action: receive
+    channel:
+      $ref: '#/channels/spotMarketsSummary'
+    messages:
+      - $ref: '#/channels/spotMarketsSummary/messages/spotMarketsSummaryUpdate'
+    summary: Receive all spot market summary updates
+
+  receiveSpotMarketSummary:
+    action: receive
+    channel:
+      $ref: '#/channels/spotMarketSummary'
+    messages:
+      - $ref: '#/channels/spotMarketSummary/messages/spotMarketSummaryUpdate'
+    summary: Receive specific spot market summary updates
+
   receiveMarketPerpExecutions:
     action: receive
     channel:
@@ -391,6 +425,20 @@ components:
       summary: Real-time update for a specific market summary
       payload:
         $ref: '#/components/schemas/MarketSummaryUpdatePayload'
+
+    SpotMarketsSummaryUpdate:
+      name: spotMarketsSummaryUpdate
+      title: Spot Markets Summary Update
+      summary: Real-time update containing all spot market summaries
+      payload:
+        $ref: '#/components/schemas/SpotMarketsSummaryUpdatePayload'
+
+    SpotMarketSummaryUpdate:
+      name: spotMarketSummaryUpdate
+      title: Spot Market Summary Update
+      summary: Real-time update for a specific spot market summary
+      payload:
+        $ref: '#/components/schemas/SpotMarketSummaryUpdatePayload'
 
     PositionUpdate:
       name: positionUpdate
@@ -602,6 +650,17 @@ components:
       pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
       description: Channel pattern for specific market summary updates
 
+    SpotMarketsSummaryChannel:
+      type: string
+      enum:
+        - /v2/spotMarkets/summary
+      description: Channel for all spot markets summary updates
+
+    SpotMarketSummaryChannelPattern:
+      type: string
+      pattern: '^/v2/spotMarket/[A-Za-z0-9]+/summary$'
+      description: Channel pattern for specific spot market summary updates
+
     MarketPerpExecutionsChannelPattern:
       type: string
       pattern: '^/v2/market/[A-Za-z0-9]+/perpExecutions$'
@@ -700,6 +759,35 @@ components:
           $ref: '#/components/schemas/MarketSummaryChannelPattern'
         data:
           $ref: './trading-schemas.json#/definitions/MarketSummary'
+
+    SpotMarketsSummaryUpdateBody:
+      type: object
+      title: SpotMarketsSummaryUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/SpotMarketsSummaryChannel'
+        data:
+          type: array
+          title: SpotMarketSummaryList
+          items:
+            $ref: './trading-schemas.json#/definitions/SpotMarketSummary'
+
+    SpotMarketSummaryUpdateBody:
+      type: object
+      title: SpotMarketSummaryUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/SpotMarketSummaryChannelPattern'
+        data:
+          $ref: './trading-schemas.json#/definitions/SpotMarketSummary'
 
     PositionUpdateBody:
       type: object
@@ -898,6 +986,18 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketSummaryUpdateBody'
+
+    SpotMarketsSummaryUpdatePayload:
+      title: SpotMarketsSummaryUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/SpotMarketsSummaryUpdateBody'
+
+    SpotMarketSummaryUpdatePayload:
+      title: SpotMarketSummaryUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/SpotMarketSummaryUpdateBody'
 
     PositionUpdatePayload:
       title: PositionUpdatePayload
