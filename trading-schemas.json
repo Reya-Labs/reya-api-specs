@@ -532,14 +532,10 @@
         "qty",
         "side",
         "fee",
-        "openingFee",
         "price",
         "type",
         "timestamp",
-        "sequenceNumber",
-        "realizedPnl",
-        "priceVariationPnl",
-        "fundingPnl"
+        "sequenceNumber"
       ],
       "properties": {
         "exchangeId": {
@@ -571,7 +567,7 @@
         },
         "openingFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the total fee in rUSD",
+          "description": "Opening fee portion of the total fee in rUSD. Absent for position-extending executions.",
           "example": "0.25"
         },
         "type": {
@@ -589,17 +585,17 @@
         },
         "realizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Zero for position-extending executions.",
+          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.",
           "example": "12.50"
         },
         "priceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from price movement in rUSD. Zero for position-extending executions.",
+          "description": "PnL component from price movement in rUSD. Absent for position-extending executions.",
           "example": "15.00"
         },
         "fundingPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from funding payments in rUSD. Zero for position-extending executions.",
+          "description": "PnL component from funding payments in rUSD. Absent for position-extending executions.",
           "example": "-2.50"
         }
       },
