@@ -562,7 +562,13 @@
         },
         "fee": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Total execution fee in rUSD",
           "example": "0.50"
+        },
+        "openingFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the total fee in rUSD. Absent for position-extending executions.",
+          "example": "0.25"
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -576,6 +582,21 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
+        },
+        "realizedPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.",
+          "example": "12.50"
+        },
+        "priceVariationPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "PnL component from price movement in rUSD. Absent for position-extending executions.",
+          "example": "15.00"
+        },
+        "fundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "PnL component from funding payments in rUSD. Absent for position-extending executions.",
+          "example": "-2.50"
         }
       },
       "additionalProperties": true
