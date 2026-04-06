@@ -39,9 +39,12 @@ The API uses a hierarchical channel structure with clear separation between diff
 1. **Market Data Channels**
    - `/v2/markets/summary` - Perp market summaries
    - `/v2/market/{symbol}/summary` - Individual perp market summary
+   - `/v2/spotMarkets/summary` - Spot market summaries
+   - `/v2/spotMarket/{symbol}/summary` - Individual spot market summary
    - `/v2/market/{symbol}/perpExecutions` - Market-specific perpetual executions
    - `/v2/market/{symbol}/depth` - L2 order book depth snapshots, only relevant for markets using the Reya Order Book instead of the AMM
    - `/v2/market/{symbol}/spotExecutions` - Market-specific spot executions
+   - `/v2/market/{symbol}/spotExecutionBusts` - Market-specific spot execution busts (failed spot fills)
    - `/v2/prices` - All symbol prices
    - `/v2/prices/{symbol}` - Individual symbol prices
 
@@ -50,6 +53,7 @@ The API uses a hierarchical channel structure with clear separation between diff
    - `/v2/wallet/{address}/orderChanges` - Order change updates
    - `/v2/wallet/{address}/perpExecutions` - Wallet-specific perpetual executions
    - `/v2/wallet/{address}/spotExecutions` - Wallet-specific spot executions
+   - `/v2/wallet/{address}/spotExecutionBusts` - Wallet-specific spot execution busts
    - `/v2/wallet/{address}/accountBalances` - Account balance updates
 
 ### Parameter Validation
@@ -210,6 +214,83 @@ Same as above - see `/v2/markets/summary` channel for complete field definitions
 
 </details>
 
+#### `/v2/spotMarkets/summary`
+**Purpose**: Real-time updates for all spot market summaries
+
+**Subscription**:
+```json
+{
+  "type": "subscribe",
+  "channel": "/v2/spotMarkets/summary"
+}
+```
+
+**Message Structure**:
+```json
+{
+  "type": "channel_data",
+  "timestamp": 1747927089946,
+  "channel": "/v2/spotMarkets/summary",
+  "data": [
+    {
+      "symbol": "WETHRUSD",
+      "updatedAt": 1747927089946,
+      "volume24h": "917833.49891",
+      "pxChange24h": "92.6272285500004",
+      "oraclePrice": "2666.48162040777"
+    }
+  ]
+}
+```
+
+<details>
+<summary><strong>Data Type - SpotMarketSummary</strong></summary>
+
+- `symbol` (string): Trading symbol
+- `updatedAt` (integer): Last calculation timestamp (milliseconds)
+- `volume24h` (string): 24-hour trading volume in USD
+- `pxChange24h` (string, optional): Absolute 24-hour price change
+- `oraclePrice` (string, optional): Current oracle price
+
+</details>
+
+#### `/v2/spotMarket/{symbol}/summary`
+**Purpose**: Real-time updates for a specific spot market's summary
+
+**Parameters**:
+- `symbol`: Trading symbol (e.g., `WETHRUSD`)
+
+**Subscription**:
+```json
+{
+  "type": "subscribe",
+  "channel": "/v2/spotMarket/WETHRUSD/summary"
+}
+```
+
+**Message Structure**:
+```json
+{
+  "type": "channel_data",
+  "timestamp": 1747927089946,
+  "channel": "/v2/spotMarket/WETHRUSD/summary",
+  "data": {
+    "symbol": "WETHRUSD",
+    "updatedAt": 1747927089946,
+    "volume24h": "917833.49891",
+    "pxChange24h": "92.6272285500004",
+    "oraclePrice": "2666.48162040777"
+  }
+}
+```
+
+<details>
+<summary><strong>Data Type - SpotMarketSummary</strong></summary>
+
+Same as above - see `/v2/spotMarkets/summary` channel for complete field definitions.
+
+</details>
+
 #### `/v2/market/{symbol}/perpExecutions`
 **Purpose**: Real-time perpetual executions for a specific market
 
@@ -255,11 +336,15 @@ Same as above - see `/v2/markets/summary` channel for complete field definitions
 - `accountId` (integer): Account identifier
 - `qty` (string): Execution quantity
 - `side` (Side): Execution side (B=Buy, A=Sell)
-- `fee` (string): Execution fee
+- `fee` (string): Total execution fee in rUSD
+- `openingFee` (string, optional): Opening fee portion of the total fee in rUSD. Absent for position-extending executions.
 - `price` (string): Execution price
 - `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL)
 - `timestamp` (integer): Execution timestamp (milliseconds)
 - `sequenceNumber` (integer): Global sequence number
+- `realizedPnl` (string, optional): Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.
+- `priceVariationPnl` (string, optional): PnL component from price movement in rUSD. Absent for position-extending executions.
+- `fundingPnl` (string, optional): PnL component from funding payments in rUSD. Absent for position-extending executions.
 
 </details>
 
@@ -448,6 +533,61 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 - `fee` (string): Execution fee
 - `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL)
 - `timestamp` (integer): Execution timestamp (milliseconds)
+
+</details>
+
+#### `/v2/market/{symbol}/spotExecutionBusts`
+**Purpose**: Real-time spot execution busts (failed spot fills) for a specific market
+
+**Parameters**:
+- `symbol`: Trading symbol (e.g., `ETHRUSD`, `BTCRUSD`)
+
+**Subscription**:
+```json
+{
+  "type": "subscribe",
+  "channel": "/v2/market/ETHRUSD/spotExecutionBusts"
+}
+```
+
+**Message Structure**:
+```json
+{
+  "type": "channel_data",
+  "timestamp": 1747927089946,
+  "channel": "/v2/market/ETHRUSD/spotExecutionBusts",
+  "data": [
+    {
+      "symbol": "ETHRUSD",
+      "accountId": 12345,
+      "exchangeId": 1,
+      "makerAccountId": 67890,
+      "orderId": "63552420354981888",
+      "makerOrderId": "63552420037263360",
+      "qty": "1.0",
+      "side": "B",
+      "price": "2500.00",
+      "reason": "08c379a0...",
+      "timestamp": 1747927089946
+    }
+  ]
+}
+```
+
+<details>
+<summary><strong>Data Type - SpotExecutionBust</strong></summary>
+
+- `symbol` (string): Trading symbol
+- `accountId` (integer): Account identifier (taker)
+- `exchangeId` (integer): Exchange identifier
+- `makerAccountId` (integer): Maker account ID (counterparty)
+- `orderId` (string): Order ID for the taker
+- `makerOrderId` (string): Order ID for the maker
+- `qty` (string): Failed base quantity
+- `side` (Side): Execution side (B=Buy, A=Sell)
+- `price` (string): Execution price
+- `reason` (string): Hex-encoded revert reason bytes
+- `timestamp` (integer): Block timestamp (milliseconds)
 
 </details>
 
@@ -655,6 +795,51 @@ Same as above - see `/v2/market/{symbol}/perpExecutions` channel for complete fi
 <summary><strong>Data Type - SpotExecution</strong></summary>
 
 Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete field definitions.
+
+</details>
+
+#### `/v2/wallet/{address}/spotExecutionBusts`
+**Purpose**: Real-time spot execution bust updates for a wallet
+
+**Parameters**:
+- `address`: Ethereum wallet address
+
+**Subscription**:
+```json
+{
+  "type": "subscribe",
+  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/spotExecutionBusts"
+}
+```
+
+**Message Structure**:
+```json
+{
+  "type": "channel_data",
+  "timestamp": 1747927089946,
+  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/spotExecutionBusts",
+  "data": [
+    {
+      "symbol": "ETHRUSD",
+      "accountId": 12345,
+      "exchangeId": 1,
+      "makerAccountId": 67890,
+      "orderId": "63552420354981888",
+      "makerOrderId": "63552420037263360",
+      "qty": "1.0",
+      "side": "B",
+      "price": "2500.00",
+      "reason": "08c379a0...",
+      "timestamp": 1747927089946
+    }
+  ]
+}
+```
+
+<details>
+<summary><strong>Data Type - SpotExecutionBust</strong></summary>
+
+Same as above - see `/v2/market/{symbol}/spotExecutionBusts` channel for complete field definitions.
 
 </details>
 
