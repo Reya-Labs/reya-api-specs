@@ -784,6 +784,99 @@
       },
       "additionalProperties": true
     },
+    "ExecutionBustList": {
+      "title": "ExecutionBustList",
+      "$id": "#ExecutionBustList",
+      "x-parser-schema-id": "ExecutionBustList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExecutionBust"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
+    "ExecutionBust": {
+      "title": "ExecutionBust",
+      "$id": "#ExecutionBust",
+      "x-parser-schema-id": "ExecutionBust",
+      "type": "object",
+      "required": [
+        "symbol",
+        "accountId",
+        "exchangeId",
+        "makerAccountId",
+        "orderId",
+        "makerOrderId",
+        "qty",
+        "side",
+        "price",
+        "reason",
+        "timestamp"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 12345
+        },
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "example": 1
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Order ID for the taker",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker",
+          "example": "63552420037263360"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Failed base quantity",
+          "example": "1.0"
+        },
+        "side": {
+          "$ref": "#/definitions/Side"
+        },
+        "price": {
+          "$ref": "#/definitions/PriceValue",
+          "example": "43000.00"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Hex-encoded revert reason bytes",
+          "example": "08c379a0..."
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Block timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
     "Price": {
       "title": "Price",
       "$id": "#Price",
