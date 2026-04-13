@@ -549,6 +549,21 @@
           "$ref": "#/definitions/UnsignedInteger",
           "example": 12345
         },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Order ID for the taker. Absent for legacy V2 executions.",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker. Absent for legacy V2 executions.",
+          "example": "63552420037263360"
+        },
         "qty": {
           "$ref": "#/definitions/Qty",
           "example": "1.0"
