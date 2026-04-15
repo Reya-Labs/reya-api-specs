@@ -125,7 +125,7 @@
       "$id": "#ExecutionType",
       "x-parser-schema-id": "ExecutionType",
       "type": "string",
-      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "DUST"],
       "description": "Type of execution"
     },
     "AccountType": {

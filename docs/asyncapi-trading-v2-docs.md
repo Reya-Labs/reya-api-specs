@@ -332,7 +332,7 @@ Same as above - see `/v2/spotMarkets/summary` channel for complete field definit
 - `fee` (string): Total execution fee in rUSD
 - `openingFee` (string, optional): Opening fee portion of the total fee in rUSD. Absent for position-extending executions.
 - `price` (string): Execution price
-- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL)
+- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL, DUST)
 - `timestamp` (integer): Execution timestamp (milliseconds)
 - `sequenceNumber` (integer): Global sequence number
 - `realizedPnl` (string, optional): Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.
@@ -524,7 +524,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 - `side` (Side): Execution side (B=Buy, A=Sell)
 - `price` (string): Execution price
 - `fee` (string): Execution fee
-- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL)
+- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL, DUST)
 - `timestamp` (integer): Execution timestamp (milliseconds)
 
 </details>
