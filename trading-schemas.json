@@ -510,10 +510,10 @@
       "required": [
         "exchangeId",
         "symbol",
-        "accountId",
+        "takerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -527,8 +527,9 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "makerAccountId": {
@@ -536,14 +537,14 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
-          "description": "Order ID for the taker. Absent for legacy V2 executions.",
+          "description": "Order ID for the taker. Absent for legacy V2 executions and omitted when not meaningful.",
           "example": "63552420354981888"
         },
         "makerOrderId": {
           "type": "string",
-          "description": "Order ID for the maker. Absent for legacy V2 executions.",
+          "description": "Order ID for the maker. Absent for legacy V2 executions and omitted when not meaningful.",
           "example": "63552420037263360"
         },
         "qty": {
@@ -551,21 +552,32 @@
           "example": "1.0"
         },
         "side": {
-          "$ref": "#/definitions/Side"
+          "$ref": "#/definitions/Side",
+          "description": "Execution side from the taker perspective for ORDER_MATCH executions."
         },
         "price": {
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Total execution fee in rUSD",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.50"
         },
-        "openingFee": {
+        "makerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the total fee in rUSD. Absent for position-extending executions.",
+          "description": "Signed maker fee impact in rUSD. Negative means rebate. Absent for legacy V2 executions.",
+          "example": "-0.10"
+        },
+        "takerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.",
           "example": "0.25"
+        },
+        "makerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and legacy V2 executions.",
+          "example": "-0.05"
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -580,20 +592,35 @@
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
         },
-        "realizedPnl": {
+        "takerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.",
+          "description": "Realized taker PnL from this execution in rUSD (takerPriceVariationPnl + takerFundingPnl). Absent for position-extending executions.",
           "example": "12.50"
         },
-        "priceVariationPnl": {
+        "makerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from price movement in rUSD. Absent for position-extending executions.",
+          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "-12.50"
+        },
+        "takerPriceVariationPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from price movement in rUSD. Absent for position-extending executions.",
           "example": "15.00"
         },
-        "fundingPnl": {
+        "makerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from funding payments in rUSD. Absent for position-extending executions.",
+          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "-15.00"
+        },
+        "takerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from funding payments in rUSD. Absent for position-extending executions.",
           "example": "-2.50"
+        },
+        "makerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "2.50"
         }
       },
       "additionalProperties": true
