@@ -133,17 +133,14 @@ All WebSocket messages follow a standardized envelope structure:
     {
       "symbol": "BTCRUSDPERP",
       "updatedAt": 1747927089946,
-      "longOiQty": "154.741",
-      "shortOiQty": "154.706",
       "oiQty": "154.741",
       "fundingRate": "-0.000509373441021089",
       "longFundingValue": "412142.26",
       "shortFundingValue": "412142.26",
-      "fundingRateVelocity": "-0.00000006243",
       "volume24h": "917833.49891",
       "pxChange24h": "92.6272285500004",
-      "throttledOraclePrice": "2666.48162040777",
-      "throttledPoolPrice": "2666.48166680625",
+      "throttledMarkPrice": "2666.48162040777",
+      "throttledMidPrice": "2666.48166680625",
       "pricesUpdatedAt": 1747927089597
     }
   ]
@@ -155,17 +152,14 @@ All WebSocket messages follow a standardized envelope structure:
 
 - `symbol` (string): Trading symbol
 - `updatedAt` (integer): Last calculation timestamp (milliseconds)
-- `longOiQty` (string): Long open interest in lots
-- `shortOiQty` (string): Short open interest in lots
 - `oiQty` (string): Total open interest quantity
 - `fundingRate` (string): Current hourly funding rate
 - `longFundingValue` (string): Current long funding value
 - `shortFundingValue` (string): Current short funding value
-- `fundingRateVelocity` (string): Funding rate velocity
 - `volume24h` (string): 24-hour trading volume
 - `pxChange24h` (string, optional): 24-hour price change
-- `throttledOraclePrice` (string, optional): Last oracle price at summary update
-- `throttledPoolPrice` (string, optional): Last pool price at summary update
+- `throttledMarkPrice` (string, optional): Last mark price at summary update
+- `throttledMidPrice` (string, optional): Last mid price at summary update
 - `pricesUpdatedAt` (integer, optional): Last price update timestamp
 
 </details>
@@ -193,17 +187,14 @@ All WebSocket messages follow a standardized envelope structure:
   "data": {
     "symbol": "BTCRUSDPERP",
     "updatedAt": 1747927089946,
-    "longOiQty": "154.741",
-    "shortOiQty": "154.706",
     "oiQty": "154.741",
     "fundingRate": "-0.000509373441021089",
     "longFundingValue": "412142.26",
     "shortFundingValue": "412142.26",
-    "fundingRateVelocity": "-0.00000006243",
     "volume24h": "917833.49891",
     "pxChange24h": "92.6272285500004",
-    "throttledOraclePrice": "2666.48162040777",
-    "throttledPoolPrice": "2666.48166680625",
+    "throttledMarkPrice": "2666.48162040777",
+    "throttledMidPrice": "2666.48166680625",
     "pricesUpdatedAt": 1747927089597
   }
 }

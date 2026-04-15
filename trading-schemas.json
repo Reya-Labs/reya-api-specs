@@ -210,13 +210,10 @@
       "required": [
         "symbol",
         "updatedAt",
-        "longOiQty",
-        "shortOiQty",
         "oiQty",
         "fundingRate",
         "longFundingValue",
         "shortFundingValue",
-        "fundingRateVelocity",
         "volume24h"
       ],
       "properties": {
@@ -227,16 +224,6 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Time when the market summary was last calculated (milliseconds)",
           "example": 1747927089946
-        },
-        "longOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Long open interest in lots",
-          "example": "154.741"
-        },
-        "shortOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Short open interest in lots",
-          "example": "154.706"
         },
         "oiQty": {
           "$ref": "#/definitions/UnsignedDecimal",
@@ -258,11 +245,6 @@
           "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
-        "fundingRateVelocity": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Funding rate velocity",
-          "example": "-0.00000006243"
-        },
         "volume24h": {
           "$ref": "#/definitions/UnsignedDecimal",
           "example": "917833.49891"
@@ -271,14 +253,14 @@
           "$ref": "#/definitions/SignedDecimal",
           "example": "92.6272285500004"
         },
-        "throttledOraclePrice": {
+        "throttledMarkPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last oracle price, at the moment of the last market summary update",
+          "description": "Last mark price, at the moment of the last market summary update",
           "example": "2666.48162040777"
         },
-        "throttledPoolPrice": {
+        "throttledMidPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last pool price, at the moment of the last market summary update",
+          "description": "Last mid price, at the moment of the last market summary update",
           "example": "2666.48166680625"
         },
         "pricesUpdatedAt": {
