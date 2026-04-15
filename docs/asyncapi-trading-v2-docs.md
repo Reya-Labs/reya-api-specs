@@ -139,7 +139,7 @@ All WebSocket messages follow a standardized envelope structure:
       "shortFundingValue": "412142.26",
       "volume24h": "917833.49891",
       "pxChange24h": "92.6272285500004",
-      "throttledMarkPrice": "2666.48162040777",
+      "markPrice": "2666.48162040777",
       "throttledMidPrice": "2666.48166680625",
       "pricesUpdatedAt": 1747927089597
     }
@@ -158,7 +158,7 @@ All WebSocket messages follow a standardized envelope structure:
 - `shortFundingValue` (string): Current short funding value
 - `volume24h` (string): 24-hour trading volume
 - `pxChange24h` (string, optional): 24-hour price change
-- `throttledMarkPrice` (string, optional): Last mark price at summary update
+- `markPrice` (string, optional): Last mark price at summary update
 - `throttledMidPrice` (string, optional): Last mid price at summary update
 - `pricesUpdatedAt` (integer, optional): Last price update timestamp
 
@@ -193,7 +193,7 @@ All WebSocket messages follow a standardized envelope structure:
     "shortFundingValue": "412142.26",
     "volume24h": "917833.49891",
     "pxChange24h": "92.6272285500004",
-    "throttledMarkPrice": "2666.48162040777",
+    "markPrice": "2666.48162040777",
     "throttledMidPrice": "2666.48166680625",
     "pricesUpdatedAt": 1747927089597
   }

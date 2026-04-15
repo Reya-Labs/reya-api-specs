@@ -253,7 +253,7 @@
           "$ref": "#/definitions/SignedDecimal",
           "example": "92.6272285500004"
         },
-        "throttledMarkPrice": {
+        "markPrice": {
           "$ref": "#/definitions/PriceValue",
           "description": "Last mark price, at the moment of the last market summary update",
           "example": "2666.48162040777"
