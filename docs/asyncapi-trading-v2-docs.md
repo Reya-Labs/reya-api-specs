@@ -579,7 +579,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 - `qty` (string): Failed base quantity
 - `side` (Side): Execution side (B=Buy, A=Sell)
 - `price` (string): Execution price
-- `reason` (string): Hex-encoded revert reason bytes
+- `reason` (string): Human Readable Reason String (decoded revert reason bytes)
 - `timestamp` (integer): Block timestamp (milliseconds)
 
 </details>
@@ -634,7 +634,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 - `qty` (string): Failed base quantity
 - `side` (Side): Execution side (B=Buy, A=Sell)
 - `price` (string): Execution price
-- `reason` (string): Hex-encoded revert reason bytes
+- `reason` (string): Human Readable Reason String (decoded revert reason bytes)
 - `timestamp` (integer): Block timestamp (milliseconds)
 
 </details>

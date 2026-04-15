@@ -770,7 +770,7 @@
         },
         "reason": {
           "type": "string",
-          "description": "Hex-encoded revert reason bytes",
+          "description": "Human Readable Reason String (decoded revert reason bytes)",
           "example": "08c379a0..."
         },
         "timestamp": {
@@ -863,7 +863,7 @@
         },
         "reason": {
           "type": "string",
-          "description": "Hex-encoded revert reason bytes",
+          "description": "Human Readable Reason String (decoded revert reason bytes)",
           "example": "08c379a0..."
         },
         "timestamp": {
