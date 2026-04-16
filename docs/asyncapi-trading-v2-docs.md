@@ -44,7 +44,6 @@ The API uses a hierarchical channel structure with clear separation between diff
    - `/v2/market/{symbol}/perpExecutions` - Market-specific perpetual executions
    - `/v2/market/{symbol}/depth` - L2 order book depth snapshots, only relevant for markets using the Reya Order Book instead of the AMM
    - `/v2/market/{symbol}/spotExecutions` - Market-specific spot executions
-   - `/v2/market/{symbol}/spotExecutionBusts` - Market-specific spot execution busts (failed spot fills)
    - `/v2/market/{symbol}/executionBusts` - Market-specific execution busts (failed fills, spot + perp)
    - `/v2/prices` - All symbol prices
    - `/v2/prices/{symbol}` - Individual symbol prices
@@ -54,7 +53,6 @@ The API uses a hierarchical channel structure with clear separation between diff
    - `/v2/wallet/{address}/orderChanges` - Order change updates
    - `/v2/wallet/{address}/perpExecutions` - Wallet-specific perpetual executions
    - `/v2/wallet/{address}/spotExecutions` - Wallet-specific spot executions
-   - `/v2/wallet/{address}/spotExecutionBusts` - Wallet-specific spot execution busts
    - `/v2/wallet/{address}/executionBusts` - Wallet-specific execution busts (failed fills, spot + perp)
    - `/v2/wallet/{address}/accountBalances` - Account balance updates
 
@@ -529,61 +527,6 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 
 </details>
 
-#### `/v2/market/{symbol}/spotExecutionBusts`
-**Purpose**: Real-time spot execution busts (failed spot fills) for a specific market
-
-**Parameters**:
-- `symbol`: Trading symbol (e.g., `ETHRUSD`, `BTCRUSD`)
-
-**Subscription**:
-```json
-{
-  "type": "subscribe",
-  "channel": "/v2/market/ETHRUSD/spotExecutionBusts"
-}
-```
-
-**Message Structure**:
-```json
-{
-  "type": "channel_data",
-  "timestamp": 1747927089946,
-  "channel": "/v2/market/ETHRUSD/spotExecutionBusts",
-  "data": [
-    {
-      "symbol": "ETHRUSD",
-      "accountId": 12345,
-      "exchangeId": 1,
-      "makerAccountId": 67890,
-      "orderId": "63552420354981888",
-      "makerOrderId": "63552420037263360",
-      "qty": "1.0",
-      "side": "B",
-      "price": "2500.00",
-      "reason": "08c379a0...",
-      "timestamp": 1747927089946
-    }
-  ]
-}
-```
-
-<details>
-<summary><strong>Data Type - SpotExecutionBust</strong></summary>
-
-- `symbol` (string): Trading symbol
-- `accountId` (integer): Account identifier (taker)
-- `exchangeId` (integer): Exchange identifier
-- `makerAccountId` (integer): Maker account ID (counterparty)
-- `orderId` (string): Order ID for the taker
-- `makerOrderId` (string): Order ID for the maker
-- `qty` (string): Failed base quantity
-- `side` (Side): Execution side (B=Buy, A=Sell)
-- `price` (string): Execution price
-- `reason` (string): Human Readable Reason String (decoded revert reason bytes)
-- `timestamp` (integer): Block timestamp (milliseconds)
-
-</details>
-
 #### `/v2/market/{symbol}/executionBusts`
 **Purpose**: Real-time execution busts (failed fills) for a specific market, covering both spot and perp
 
@@ -843,51 +786,6 @@ Same as above - see `/v2/market/{symbol}/perpExecutions` channel for complete fi
 <summary><strong>Data Type - SpotExecution</strong></summary>
 
 Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete field definitions.
-
-</details>
-
-#### `/v2/wallet/{address}/spotExecutionBusts`
-**Purpose**: Real-time spot execution bust updates for a wallet
-
-**Parameters**:
-- `address`: Ethereum wallet address
-
-**Subscription**:
-```json
-{
-  "type": "subscribe",
-  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/spotExecutionBusts"
-}
-```
-
-**Message Structure**:
-```json
-{
-  "type": "channel_data",
-  "timestamp": 1747927089946,
-  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/spotExecutionBusts",
-  "data": [
-    {
-      "symbol": "ETHRUSD",
-      "accountId": 12345,
-      "exchangeId": 1,
-      "makerAccountId": 67890,
-      "orderId": "63552420354981888",
-      "makerOrderId": "63552420037263360",
-      "qty": "1.0",
-      "side": "B",
-      "price": "2500.00",
-      "reason": "08c379a0...",
-      "timestamp": 1747927089946
-    }
-  ]
-}
-```
-
-<details>
-<summary><strong>Data Type - SpotExecutionBust</strong></summary>
-
-Same as above - see `/v2/market/{symbol}/spotExecutionBusts` channel for complete field definitions.
 
 </details>
 

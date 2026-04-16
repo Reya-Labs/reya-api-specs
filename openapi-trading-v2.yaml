@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.2.0
+  version: 2.3.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -363,29 +363,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /market/{symbol}/spotExecutionBusts:
-    get:
-      summary: Get spot execution busts for market
-      description: Returns up to 100 spot execution busts (failed spot fills) for a given market.
-      operationId: getMarketSpotExecutionBusts
-      tags:
-        - Market Data
-      parameters:
-        - $ref: '#/components/parameters/SymbolParam'
-        - $ref: '#/components/parameters/StartTimeParam'
-        - $ref: '#/components/parameters/EndTimeParam'
-      responses:
-        '200':
-          description: List of spot execution busts
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SpotExecutionBustList'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /market/{symbol}/executionBusts:
     get:
       summary: Get execution busts for market
@@ -451,29 +428,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Account'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /wallet/{address}/spotExecutionBusts:
-    get:
-      summary: Get wallet spot execution busts
-      description: Returns up to 100 spot execution busts (failed spot fills) for a given wallet.
-      operationId: getWalletSpotExecutionBusts
-      tags:
-        - Wallet Data
-      parameters:
-        - $ref: '#/components/parameters/AddressParam'
-        - $ref: '#/components/parameters/StartTimeParam'
-        - $ref: '#/components/parameters/EndTimeParam'
-      responses:
-        '200':
-          description: List of spot execution busts
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SpotExecutionBustList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -820,9 +774,6 @@ components:
 
     SpotExecutionList:
       $ref: './trading-schemas.json#/definitions/SpotExecutionList'
-
-    SpotExecutionBustList:
-      $ref: './trading-schemas.json#/definitions/SpotExecutionBustList'
 
     ExecutionBust:
       $ref: './trading-schemas.json#/definitions/ExecutionBust'
