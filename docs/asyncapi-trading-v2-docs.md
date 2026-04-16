@@ -306,14 +306,26 @@ Same as above - see `/v2/spotMarkets/summary` channel for complete field definit
     {
       "exchangeId": 1,
       "symbol": "BTCRUSDPERP",
-      "accountId": 12345,
+      "takerAccountId": 12345,
+      "makerAccountId": 67890,
+      "takerOrderId": "63552420354981888",
+      "makerOrderId": "63552420037263360",
       "qty": "1.0",
       "side": "B",
       "price": "43000.00",
-      "fee": "0.50",
+      "takerFee": "0.50",
+      "makerFee": "-0.10",
       "type": "ORDER_MATCH",
       "timestamp": 1747927089946,
-      "sequenceNumber": 152954
+      "sequenceNumber": 152954,
+      "takerOpeningFee": "0.25",
+      "makerOpeningFee": "-0.05",
+      "takerPriceVariationPnl": "15.00",
+      "makerPriceVariationPnl": "-15.00",
+      "takerFundingPnl": "-2.50",
+      "makerFundingPnl": "2.50",
+      "takerRealizedPnl": "12.50",
+      "makerRealizedPnl": "-12.50"
     }
   ]
 }
@@ -324,18 +336,26 @@ Same as above - see `/v2/spotMarkets/summary` channel for complete field definit
 
 - `exchangeId` (integer): Exchange identifier
 - `symbol` (string): Trading symbol
-- `accountId` (integer): Account identifier
+- `takerAccountId` (integer): Taker account identifier
+- `makerAccountId` (integer, optional): Maker account identifier (counterparty)
+- `takerOrderId` (string, optional): Taker order ID. Omitted for legacy V2 executions and when not meaningful.
+- `makerOrderId` (string, optional): Maker order ID. Omitted for legacy V2 executions and when not meaningful.
 - `qty` (string): Execution quantity
-- `side` (Side): Execution side (B=Buy, A=Sell)
-- `fee` (string): Total execution fee in rUSD
-- `openingFee` (string, optional): Opening fee portion of the total fee in rUSD. Absent for position-extending executions.
+- `side` (Side): Execution side from the taker perspective (B=Buy, A=Sell)
+- `takerFee` (string): Signed taker fee impact in rUSD
+- `makerFee` (string, optional): Signed maker fee impact in rUSD. Negative means rebate.
+- `takerOpeningFee` (string, optional): Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.
+- `makerOpeningFee` (string, optional): Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and legacy V2 executions.
 - `price` (string): Execution price
 - `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL, DUST)
 - `timestamp` (integer): Execution timestamp (milliseconds)
 - `sequenceNumber` (integer): Global sequence number
-- `realizedPnl` (string, optional): Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.
-- `priceVariationPnl` (string, optional): PnL component from price movement in rUSD. Absent for position-extending executions.
-- `fundingPnl` (string, optional): PnL component from funding payments in rUSD. Absent for position-extending executions.
+- `takerPriceVariationPnl` (string, optional): Taker PnL component from price movement in rUSD. Absent for position-extending executions.
+- `makerPriceVariationPnl` (string, optional): Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.
+- `takerFundingPnl` (string, optional): Taker PnL component from funding payments in rUSD. Absent for position-extending executions.
+- `makerFundingPnl` (string, optional): Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.
+- `takerRealizedPnl` (string, optional): Realized taker PnL in rUSD (`takerPriceVariationPnl + takerFundingPnl`). Absent for position-extending executions.
+- `makerRealizedPnl` (string, optional): Realized maker PnL in rUSD (`makerPriceVariationPnl + makerFundingPnl`). Absent when counterparty state is unavailable or the execution is position-extending.
 
 </details>
 
@@ -723,11 +743,12 @@ Same as above - see `/v2/prices` channel for complete field definitions.
     {
       "exchangeId": 1,
       "symbol": "BTCRUSDPERP",
-      "accountId": 12345,
+      "takerAccountId": 12345,
+      "makerAccountId": 67890,
       "qty": "1.0",
       "side": "B",
       "price": "43000.00",
-      "fee": "0.50",
+      "takerFee": "0.50",
       "type": "ORDER_MATCH",
       "timestamp": 1747927089946,
       "sequenceNumber": 152954
