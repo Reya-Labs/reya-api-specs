@@ -1258,7 +1258,7 @@
       "title": "CreateOrderRequest",
       "$id": "#CreateOrderRequest",
       "x-parser-schema-id": "CreateOrderRequest",
-      "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty`. Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `orderExpiry` (order lifetime — enforced on-chain at execution). Convention: if `orderExpiry > 0`, clients should ensure `deadline <= orderExpiry` to avoid signing a dead-on-arrival order. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty`. Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `expiresAfter` (order lifetime — enforced on-chain at execution). Convention: if `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -1340,9 +1340,9 @@
           "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine.",
           "example": 1676923200
         },
-        "orderExpiry": {
+        "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.orderExpiry` and enforced on-chain at execution. Optional; `0` (the default if omitted) means good-until-cancelled. When `orderExpiry > 0`, clients should ensure `deadline <= orderExpiry`.",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Optional; `0` (the default if omitted) means good-until-cancelled. When `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter`.",
           "example": 1676923200
         },
         "clientOrderId": {
