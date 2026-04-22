@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.1.9
+  version: 2.3.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -320,7 +320,9 @@ paths:
   /market/{symbol}/depth:
     get:
       summary: Get market depth snapshot
-      description: Returns an L2 order book snapshot with aggregated price levels for the specified market.
+      description: |
+        Returns an L2 order book snapshot with aggregated price levels for the specified market.
+        Supports both spot and perp markets.
       operationId: getMarketDepth
       tags:
         - Market Data
@@ -361,11 +363,13 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /market/{symbol}/spotExecutionBusts:
+  /market/{symbol}/executionBusts:
     get:
-      summary: Get spot execution busts for market
-      description: Returns up to 100 spot execution busts (failed spot fills) for a given market.
-      operationId: getMarketSpotExecutionBusts
+      summary: Get execution busts for market
+      description: |
+        Returns up to 100 execution busts (failed fills) for a given market, covering both spot and perp markets.
+        Clients can distinguish spot vs perp entries from the `symbol` suffix (`*RUSDPERP` for perp, `*RUSD` for spot).
+      operationId: getMarketExecutionBusts
       tags:
         - Market Data
       parameters:
@@ -374,11 +378,11 @@ paths:
         - $ref: '#/components/parameters/EndTimeParam'
       responses:
         '200':
-          description: List of spot execution busts
+          description: List of execution busts
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SpotExecutionBustList'
+                $ref: '#/components/schemas/ExecutionBustList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -429,11 +433,11 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /wallet/{address}/spotExecutionBusts:
+  /wallet/{address}/executionBusts:
     get:
-      summary: Get wallet spot execution busts
-      description: Returns up to 100 spot execution busts (failed spot fills) for a given wallet.
-      operationId: getWalletSpotExecutionBusts
+      summary: Get wallet execution busts
+      description: Returns up to 100 execution busts (failed fills) for a given wallet, covering both spot and perp markets.
+      operationId: getWalletExecutionBusts
       tags:
         - Wallet Data
       parameters:
@@ -442,11 +446,11 @@ paths:
         - $ref: '#/components/parameters/EndTimeParam'
       responses:
         '200':
-          description: List of spot execution busts
+          description: List of execution busts
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SpotExecutionBustList'
+                $ref: '#/components/schemas/ExecutionBustList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -590,7 +594,12 @@ paths:
   /createOrder:
     post:
       summary: Create order
-      description: Create a new order (IOC, GTC, SL, TP)
+      description: |
+        Create a new order (IOC, GTC, SL, TP). Supports both spot and perp markets.
+
+        For perp markets, routing between the matching engine and the conditional-order path is determined
+        server-side by `orderType` (LIMIT/TP/SL) and `timeInForce` (IOC/GTC). NOTE: this routing will be
+        revisited once SL/TP orders land as native types in the matching engine / reya-chain.
       operationId: createOrder
       tags:
         - Order Entry
@@ -615,7 +624,12 @@ paths:
   /cancelOrder:
     post:
       summary: Cancel order
-      description: Cancel an existing order
+      description: |
+        Cancel an existing order. Supports both spot and perp markets.
+
+        For perp markets, the presence of `nonce` distinguishes a matching-engine cancel (with nonce) from a
+        conditional-order cancel (TP/SL, without nonce). This distinction is also expected to change once
+        SL/TP becomes a native ME order type.
       operationId: cancelOrder
       tags:
         - Order Entry
@@ -640,7 +654,7 @@ paths:
   /cancelAll:
     post:
       summary: Cancel all orders
-      description: Cancel all orders matching the specified filters (mass cancel)
+      description: Cancel all orders matching the specified filters (mass cancel). Supports both spot and perp markets.
       operationId: cancelAll
       tags:
         - Order Entry
@@ -761,8 +775,11 @@ components:
     SpotExecutionList:
       $ref: './trading-schemas.json#/definitions/SpotExecutionList'
 
-    SpotExecutionBustList:
-      $ref: './trading-schemas.json#/definitions/SpotExecutionBustList'
+    ExecutionBust:
+      $ref: './trading-schemas.json#/definitions/ExecutionBust'
+
+    ExecutionBustList:
+      $ref: './trading-schemas.json#/definitions/ExecutionBustList'
 
     Price:
       $ref: './trading-schemas.json#/definitions/Price'

@@ -116,16 +116,16 @@
       "$id": "#OrderType",
       "x-parser-schema-id": "OrderType",
       "type": "string",
-      "enum": ["LIMIT", "TP", "SL"],
-      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
-      "example": "TP"
+      "enum": ["LIMIT", "STOP_LOSS", "TAKE_PROFIT"],
+      "description": "Order type aligned with the on-chain `OrderDetails.orderType` enum: LIMIT = limit order, STOP_LOSS = stop-loss trigger order, TAKE_PROFIT = take-profit trigger order.",
+      "example": "TAKE_PROFIT"
     },
     "ExecutionType": {
       "title": "ExecutionType",
       "$id": "#ExecutionType",
       "x-parser-schema-id": "ExecutionType",
       "type": "string",
-      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "DUST"],
       "description": "Type of execution"
     },
     "AccountType": {
@@ -210,13 +210,10 @@
       "required": [
         "symbol",
         "updatedAt",
-        "longOiQty",
-        "shortOiQty",
         "oiQty",
         "fundingRate",
         "longFundingValue",
         "shortFundingValue",
-        "fundingRateVelocity",
         "volume24h"
       ],
       "properties": {
@@ -227,16 +224,6 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Time when the market summary was last calculated (milliseconds)",
           "example": 1747927089946
-        },
-        "longOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Long open interest in lots",
-          "example": "154.741"
-        },
-        "shortOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Short open interest in lots",
-          "example": "154.706"
         },
         "oiQty": {
           "$ref": "#/definitions/UnsignedDecimal",
@@ -258,11 +245,6 @@
           "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
-        "fundingRateVelocity": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Funding rate velocity",
-          "example": "-0.00000006243"
-        },
         "volume24h": {
           "$ref": "#/definitions/UnsignedDecimal",
           "example": "917833.49891"
@@ -271,14 +253,14 @@
           "$ref": "#/definitions/SignedDecimal",
           "example": "92.6272285500004"
         },
-        "throttledOraclePrice": {
+        "markPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last oracle price, at the moment of the last market summary update",
+          "description": "Last mark price, at the moment of the last market summary update",
           "example": "2666.48162040777"
         },
-        "throttledPoolPrice": {
+        "throttledMidPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last pool price, at the moment of the last market summary update",
+          "description": "Last mid price, at the moment of the last market summary update",
           "example": "2666.48166680625"
         },
         "pricesUpdatedAt": {
@@ -528,10 +510,10 @@
       "required": [
         "exchangeId",
         "symbol",
-        "accountId",
+        "takerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -545,30 +527,57 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "takerOrderId": {
+          "type": "string",
+          "description": "Order ID for the taker. Absent for legacy V2 executions and omitted when not meaningful.",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker. Absent for legacy V2 executions and omitted when not meaningful.",
+          "example": "63552420037263360"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
           "example": "1.0"
         },
         "side": {
-          "$ref": "#/definitions/Side"
+          "$ref": "#/definitions/Side",
+          "description": "Execution side from the taker perspective for ORDER_MATCH executions."
         },
         "price": {
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Total execution fee in rUSD",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.50"
         },
-        "openingFee": {
+        "makerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the total fee in rUSD. Absent for position-extending executions.",
+          "description": "Signed maker fee impact in rUSD. Negative means rebate. Absent for legacy V2 executions.",
+          "example": "-0.10"
+        },
+        "takerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.",
           "example": "0.25"
+        },
+        "makerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and legacy V2 executions.",
+          "example": "-0.05"
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -583,20 +592,35 @@
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
         },
-        "realizedPnl": {
+        "takerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.",
+          "description": "Realized taker PnL from this execution in rUSD (takerPriceVariationPnl + takerFundingPnl). Absent for position-extending executions.",
           "example": "12.50"
         },
-        "priceVariationPnl": {
+        "makerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from price movement in rUSD. Absent for position-extending executions.",
+          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "-12.50"
+        },
+        "takerPriceVariationPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from price movement in rUSD. Absent for position-extending executions.",
           "example": "15.00"
         },
-        "fundingPnl": {
+        "makerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from funding payments in rUSD. Absent for position-extending executions.",
+          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "-15.00"
+        },
+        "takerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from funding payments in rUSD. Absent for position-extending executions.",
           "example": "-2.50"
+        },
+        "makerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "2.50"
         }
       },
       "additionalProperties": true
@@ -692,10 +716,10 @@
       },
       "additionalProperties": true
     },
-    "SpotExecutionBustList": {
-      "title": "SpotExecutionBustList",
-      "$id": "#SpotExecutionBustList",
-      "x-parser-schema-id": "SpotExecutionBustList",
+    "ExecutionBustList": {
+      "title": "ExecutionBustList",
+      "$id": "#ExecutionBustList",
+      "x-parser-schema-id": "ExecutionBustList",
       "type": "object",
       "required": [
         "data",
@@ -705,7 +729,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SpotExecutionBust"
+            "$ref": "#/definitions/ExecutionBust"
           }
         },
         "meta": {
@@ -714,10 +738,10 @@
       },
       "additionalProperties": true
     },
-    "SpotExecutionBust": {
-      "title": "SpotExecutionBust",
-      "$id": "#SpotExecutionBust",
-      "x-parser-schema-id": "SpotExecutionBust",
+    "ExecutionBust": {
+      "title": "ExecutionBust",
+      "$id": "#ExecutionBust",
+      "x-parser-schema-id": "ExecutionBust",
       "type": "object",
       "required": [
         "symbol",
@@ -734,7 +758,8 @@
       ],
       "properties": {
         "symbol": {
-          "$ref": "#/definitions/Symbol"
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -773,7 +798,7 @@
         },
         "reason": {
           "type": "string",
-          "description": "Hex-encoded revert reason bytes",
+          "description": "Human Readable Reason String (decoded revert reason bytes)",
           "example": "08c379a0..."
         },
         "timestamp": {
@@ -1233,82 +1258,97 @@
       "title": "CreateOrderRequest",
       "$id": "#CreateOrderRequest",
       "x-parser-schema-id": "CreateOrderRequest",
+      "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty`. Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `expiresAfter` (order lifetime — enforced on-chain at execution). Convention: if `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "exchangeId",
+        "symbol",
         "accountId",
         "isBuy",
         "limitPx",
         "orderType",
         "signature",
         "nonce",
-        "signerWallet"
+        "signerWallet",
+        "deadline"
       ],
       "properties": {
         "exchangeId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.exchangeId`.",
           "example": 1
         },
         "symbol": {
-          "$ref": "#/definitions/Symbol"
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. The server resolves this to the on-chain `OrderDetails.marketId`, which uses a unified namespace: perp market ids are raw core ids, spot market ids are `coreMarketId + 1e10`."
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.accountId`.",
           "example": 12345
         },
         "isBuy": {
           "type": "boolean",
-          "description": "Whether this is a buy order",
+          "description": "Whether this is a buy order. Combined with `qty`, determines the signed `OrderDetails.quantity` (int256): positive for buy/long, negative for sell/short.",
           "example": true
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Worst acceptable execution price. Maps to on-chain `OrderDetails.limitPrice` (uint256).",
           "example": "50000.0"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
+          "description": "Unsigned order quantity. Combined with `isBuy`, forms the signed `OrderDetails.quantity`.",
           "example": "0.1"
         },
         "orderType": {
           "$ref": "#/definitions/OrderType",
+          "description": "On-chain `OrderDetails.orderType`: LIMIT, STOP_LOSS, or TAKE_PROFIT.",
           "example": "LIMIT"
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "Order time in force, exclusively used for LIMIT orders",
+          "description": "Order time in force (exclusively used for LIMIT orders). Maps to on-chain `OrderDetails.timeInForce` (0 = GTC, 1 = IOC). This field is signed but not enforced on-chain.",
           "example": "GTC"
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Trigger price, only for TP/SL orders",
+          "description": "Trigger price, required and non-zero for STOP_LOSS/TAKE_PROFIT, must be zero/absent for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`.",
           "example": "50000.0"
         },
         "reduceOnly": {
           "type": "boolean",
-          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "description": "Reduce-only intent. Perp only; spot markets must set this to false. Maps to on-chain `OrderDetails.reduceOnly`.",
           "example": false
         },
         "signature": {
           "type": "string",
-          "description": "See signatures and nonces section for more details on how to generate.",
+          "description": "EIP-712 signature over the `Order(uint256 verifyingChainId, uint256 deadline, OrderDetails order)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "Order nonce, see signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. Maps to on-chain `OrderDetails.nonce`.",
           "example": "1234567890"
         },
         "signerWallet": {
-          "$ref": "#/definitions/Address"
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Maps to on-chain `OrderDetails.signer`."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine.",
+          "example": 1676923200
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for PERP IOC orders and all SPOT orders). In seconds since epoch. The order will only be filled before this timestamp.",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Optional; `0` (the default if omitted) means good-until-cancelled. When `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter`.",
           "example": 1676923200
         },
         "clientOrderId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
+          "description": "Client-provided order ID for tracking and correlation. Maps to on-chain `OrderDetails.clientOrderId` — signed as part of the EIP-712 payload but not enforced on-chain.",
           "example": "123456789"
         }
       },
@@ -1355,6 +1395,7 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
+        "symbol",
         "signature"
       ],
       "properties": {
@@ -1375,7 +1416,7 @@
         },
         "symbol": {
           "$ref": "#/definitions/Symbol",
-          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
+          "description": "Market symbol for the order."
         },
         "signature": {
           "type": "string",
@@ -1387,9 +1428,9 @@
           "description": "See signatures and nonces section for more details. Compulsory for spot orders.",
           "example": "1234567890"
         },
-        "expiresAfter": {
+        "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for SPOT orders). In seconds since epoch.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `OrderCancel` envelope and enforced by the API at entry. Compulsory for spot orders.",
           "example": 1676923200
         }
       },
@@ -1430,7 +1471,7 @@
         "signature",
         "nonce",
         "accountId",
-        "expiresAfter"
+        "deadline"
       ],
       "properties": {
         "accountId": {
@@ -1452,9 +1493,9 @@
           "description": "See signatures and nonces section for more details.",
           "example": "1234567890"
         },
-        "expiresAfter": {
+        "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp. In seconds since epoch.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `MassCancel` envelope and enforced by the API at entry.",
           "example": 1676923200
         }
       },

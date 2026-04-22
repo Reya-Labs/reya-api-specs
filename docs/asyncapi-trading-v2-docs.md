@@ -44,7 +44,7 @@ The API uses a hierarchical channel structure with clear separation between diff
    - `/v2/market/{symbol}/perpExecutions` - Market-specific perpetual executions
    - `/v2/market/{symbol}/depth` - L2 order book depth snapshots, only relevant for markets using the Reya Order Book instead of the AMM
    - `/v2/market/{symbol}/spotExecutions` - Market-specific spot executions
-   - `/v2/market/{symbol}/spotExecutionBusts` - Market-specific spot execution busts (failed spot fills)
+   - `/v2/market/{symbol}/executionBusts` - Market-specific execution busts (failed fills, spot + perp)
    - `/v2/prices` - All symbol prices
    - `/v2/prices/{symbol}` - Individual symbol prices
 
@@ -53,7 +53,7 @@ The API uses a hierarchical channel structure with clear separation between diff
    - `/v2/wallet/{address}/orderChanges` - Order change updates
    - `/v2/wallet/{address}/perpExecutions` - Wallet-specific perpetual executions
    - `/v2/wallet/{address}/spotExecutions` - Wallet-specific spot executions
-   - `/v2/wallet/{address}/spotExecutionBusts` - Wallet-specific spot execution busts
+   - `/v2/wallet/{address}/executionBusts` - Wallet-specific execution busts (failed fills, spot + perp)
    - `/v2/wallet/{address}/accountBalances` - Account balance updates
 
 ### Parameter Validation
@@ -131,17 +131,14 @@ All WebSocket messages follow a standardized envelope structure:
     {
       "symbol": "BTCRUSDPERP",
       "updatedAt": 1747927089946,
-      "longOiQty": "154.741",
-      "shortOiQty": "154.706",
       "oiQty": "154.741",
       "fundingRate": "-0.000509373441021089",
       "longFundingValue": "412142.26",
       "shortFundingValue": "412142.26",
-      "fundingRateVelocity": "-0.00000006243",
       "volume24h": "917833.49891",
       "pxChange24h": "92.6272285500004",
-      "throttledOraclePrice": "2666.48162040777",
-      "throttledPoolPrice": "2666.48166680625",
+      "markPrice": "2666.48162040777",
+      "throttledMidPrice": "2666.48166680625",
       "pricesUpdatedAt": 1747927089597
     }
   ]
@@ -153,17 +150,14 @@ All WebSocket messages follow a standardized envelope structure:
 
 - `symbol` (string): Trading symbol
 - `updatedAt` (integer): Last calculation timestamp (milliseconds)
-- `longOiQty` (string): Long open interest in lots
-- `shortOiQty` (string): Short open interest in lots
 - `oiQty` (string): Total open interest quantity
 - `fundingRate` (string): Current hourly funding rate
 - `longFundingValue` (string): Current long funding value
 - `shortFundingValue` (string): Current short funding value
-- `fundingRateVelocity` (string): Funding rate velocity
 - `volume24h` (string): 24-hour trading volume
 - `pxChange24h` (string, optional): 24-hour price change
-- `throttledOraclePrice` (string, optional): Last oracle price at summary update
-- `throttledPoolPrice` (string, optional): Last pool price at summary update
+- `markPrice` (string, optional): Last mark price at summary update
+- `throttledMidPrice` (string, optional): Last mid price at summary update
 - `pricesUpdatedAt` (integer, optional): Last price update timestamp
 
 </details>
@@ -191,17 +185,14 @@ All WebSocket messages follow a standardized envelope structure:
   "data": {
     "symbol": "BTCRUSDPERP",
     "updatedAt": 1747927089946,
-    "longOiQty": "154.741",
-    "shortOiQty": "154.706",
     "oiQty": "154.741",
     "fundingRate": "-0.000509373441021089",
     "longFundingValue": "412142.26",
     "shortFundingValue": "412142.26",
-    "fundingRateVelocity": "-0.00000006243",
     "volume24h": "917833.49891",
     "pxChange24h": "92.6272285500004",
-    "throttledOraclePrice": "2666.48162040777",
-    "throttledPoolPrice": "2666.48166680625",
+    "markPrice": "2666.48162040777",
+    "throttledMidPrice": "2666.48166680625",
     "pricesUpdatedAt": 1747927089597
   }
 }
@@ -315,14 +306,26 @@ Same as above - see `/v2/spotMarkets/summary` channel for complete field definit
     {
       "exchangeId": 1,
       "symbol": "BTCRUSDPERP",
-      "accountId": 12345,
+      "takerAccountId": 12345,
+      "makerAccountId": 67890,
+      "takerOrderId": "63552420354981888",
+      "makerOrderId": "63552420037263360",
       "qty": "1.0",
       "side": "B",
       "price": "43000.00",
-      "fee": "0.50",
+      "takerFee": "0.50",
+      "makerFee": "-0.10",
       "type": "ORDER_MATCH",
       "timestamp": 1747927089946,
-      "sequenceNumber": 152954
+      "sequenceNumber": 152954,
+      "takerOpeningFee": "0.25",
+      "makerOpeningFee": "-0.05",
+      "takerPriceVariationPnl": "15.00",
+      "makerPriceVariationPnl": "-15.00",
+      "takerFundingPnl": "-2.50",
+      "makerFundingPnl": "2.50",
+      "takerRealizedPnl": "12.50",
+      "makerRealizedPnl": "-12.50"
     }
   ]
 }
@@ -333,18 +336,26 @@ Same as above - see `/v2/spotMarkets/summary` channel for complete field definit
 
 - `exchangeId` (integer): Exchange identifier
 - `symbol` (string): Trading symbol
-- `accountId` (integer): Account identifier
+- `takerAccountId` (integer): Taker account identifier
+- `makerAccountId` (integer, optional): Maker account identifier (counterparty)
+- `takerOrderId` (string, optional): Taker order ID. Omitted for legacy V2 executions and when not meaningful.
+- `makerOrderId` (string, optional): Maker order ID. Omitted for legacy V2 executions and when not meaningful.
 - `qty` (string): Execution quantity
-- `side` (Side): Execution side (B=Buy, A=Sell)
-- `fee` (string): Total execution fee in rUSD
-- `openingFee` (string, optional): Opening fee portion of the total fee in rUSD. Absent for position-extending executions.
+- `side` (Side): Execution side from the taker perspective (B=Buy, A=Sell)
+- `takerFee` (string): Signed taker fee impact in rUSD
+- `makerFee` (string, optional): Signed maker fee impact in rUSD. Negative means rebate.
+- `takerOpeningFee` (string, optional): Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.
+- `makerOpeningFee` (string, optional): Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and legacy V2 executions.
 - `price` (string): Execution price
-- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL)
+- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL, DUST)
 - `timestamp` (integer): Execution timestamp (milliseconds)
 - `sequenceNumber` (integer): Global sequence number
-- `realizedPnl` (string, optional): Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.
-- `priceVariationPnl` (string, optional): PnL component from price movement in rUSD. Absent for position-extending executions.
-- `fundingPnl` (string, optional): PnL component from funding payments in rUSD. Absent for position-extending executions.
+- `takerPriceVariationPnl` (string, optional): Taker PnL component from price movement in rUSD. Absent for position-extending executions.
+- `makerPriceVariationPnl` (string, optional): Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.
+- `takerFundingPnl` (string, optional): Taker PnL component from funding payments in rUSD. Absent for position-extending executions.
+- `makerFundingPnl` (string, optional): Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.
+- `takerRealizedPnl` (string, optional): Realized taker PnL in rUSD (`takerPriceVariationPnl + takerFundingPnl`). Absent for position-extending executions.
+- `makerRealizedPnl` (string, optional): Realized maker PnL in rUSD (`makerPriceVariationPnl + makerFundingPnl`). Absent when counterparty state is unavailable or the execution is position-extending.
 
 </details>
 
@@ -531,22 +542,22 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 - `side` (Side): Execution side (B=Buy, A=Sell)
 - `price` (string): Execution price
 - `fee` (string): Execution fee
-- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL)
+- `type` (ExecutionType): Execution type (ORDER_MATCH, LIQUIDATION, ADL, DUST)
 - `timestamp` (integer): Execution timestamp (milliseconds)
 
 </details>
 
-#### `/v2/market/{symbol}/spotExecutionBusts`
-**Purpose**: Real-time spot execution busts (failed spot fills) for a specific market
+#### `/v2/market/{symbol}/executionBusts`
+**Purpose**: Real-time execution busts (failed fills) for a specific market, covering both spot and perp
 
 **Parameters**:
-- `symbol`: Trading symbol (e.g., `ETHRUSD`, `BTCRUSD`)
+- `symbol`: Trading symbol (e.g., `BTCRUSDPERP`, `ETHRUSD`). Clients can distinguish spot vs perp entries from the suffix (`*RUSDPERP` for perp, `*RUSD` for spot)
 
 **Subscription**:
 ```json
 {
   "type": "subscribe",
-  "channel": "/v2/market/ETHRUSD/spotExecutionBusts"
+  "channel": "/v2/market/BTCRUSDPERP/executionBusts"
 }
 ```
 
@@ -555,10 +566,10 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 {
   "type": "channel_data",
   "timestamp": 1747927089946,
-  "channel": "/v2/market/ETHRUSD/spotExecutionBusts",
+  "channel": "/v2/market/BTCRUSDPERP/executionBusts",
   "data": [
     {
-      "symbol": "ETHRUSD",
+      "symbol": "BTCRUSDPERP",
       "accountId": 12345,
       "exchangeId": 1,
       "makerAccountId": 67890,
@@ -566,7 +577,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
       "makerOrderId": "63552420037263360",
       "qty": "1.0",
       "side": "B",
-      "price": "2500.00",
+      "price": "43000.00",
       "reason": "08c379a0...",
       "timestamp": 1747927089946
     }
@@ -575,9 +586,9 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 ```
 
 <details>
-<summary><strong>Data Type - SpotExecutionBust</strong></summary>
+<summary><strong>Data Type - ExecutionBust</strong></summary>
 
-- `symbol` (string): Trading symbol
+- `symbol` (string): Trading symbol. Spot symbols end in `RUSD`; perp symbols end in `RUSDPERP`
 - `accountId` (integer): Account identifier (taker)
 - `exchangeId` (integer): Exchange identifier
 - `makerAccountId` (integer): Maker account ID (counterparty)
@@ -586,7 +597,7 @@ Same as above - see `/v2/prices` channel for complete field definitions.
 - `qty` (string): Failed base quantity
 - `side` (Side): Execution side (B=Buy, A=Sell)
 - `price` (string): Execution price
-- `reason` (string): Hex-encoded revert reason bytes
+- `reason` (string): Human Readable Reason String (decoded revert reason bytes)
 - `timestamp` (integer): Block timestamp (milliseconds)
 
 </details>
@@ -732,11 +743,12 @@ Same as above - see `/v2/prices` channel for complete field definitions.
     {
       "exchangeId": 1,
       "symbol": "BTCRUSDPERP",
-      "accountId": 12345,
+      "takerAccountId": 12345,
+      "makerAccountId": 67890,
       "qty": "1.0",
       "side": "B",
       "price": "43000.00",
-      "fee": "0.50",
+      "takerFee": "0.50",
       "type": "ORDER_MATCH",
       "timestamp": 1747927089946,
       "sequenceNumber": 152954
@@ -798,8 +810,8 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
 
 </details>
 
-#### `/v2/wallet/{address}/spotExecutionBusts`
-**Purpose**: Real-time spot execution bust updates for a wallet
+#### `/v2/wallet/{address}/executionBusts`
+**Purpose**: Real-time execution bust updates (failed fills) for a wallet, covering both spot and perp
 
 **Parameters**:
 - `address`: Ethereum wallet address
@@ -808,7 +820,7 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
 ```json
 {
   "type": "subscribe",
-  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/spotExecutionBusts"
+  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/executionBusts"
 }
 ```
 
@@ -817,10 +829,10 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
 {
   "type": "channel_data",
   "timestamp": 1747927089946,
-  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/spotExecutionBusts",
+  "channel": "/v2/wallet/0x6c51275fd01d5dbd2da194e92f920f8598306df2/executionBusts",
   "data": [
     {
-      "symbol": "ETHRUSD",
+      "symbol": "BTCRUSDPERP",
       "accountId": 12345,
       "exchangeId": 1,
       "makerAccountId": 67890,
@@ -828,7 +840,7 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
       "makerOrderId": "63552420037263360",
       "qty": "1.0",
       "side": "B",
-      "price": "2500.00",
+      "price": "43000.00",
       "reason": "08c379a0...",
       "timestamp": 1747927089946
     }
@@ -837,9 +849,9 @@ Same as above - see `/v2/market/{symbol}/spotExecutions` channel for complete fi
 ```
 
 <details>
-<summary><strong>Data Type - SpotExecutionBust</strong></summary>
+<summary><strong>Data Type - ExecutionBust</strong></summary>
 
-Same as above - see `/v2/market/{symbol}/spotExecutionBusts` channel for complete field definitions.
+Same as above - see `/v2/market/{symbol}/executionBusts` channel for complete field definitions.
 
 </details>
 
