@@ -1262,6 +1262,7 @@
       "type": "object",
       "required": [
         "exchangeId",
+        "symbol",
         "accountId",
         "isBuy",
         "limitPx",
@@ -1394,6 +1395,7 @@
       "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
+        "symbol",
         "signature"
       ],
       "properties": {
@@ -1414,7 +1416,7 @@
         },
         "symbol": {
           "$ref": "#/definitions/Symbol",
-          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
+          "description": "Market symbol for the order."
         },
         "signature": {
           "type": "string",
