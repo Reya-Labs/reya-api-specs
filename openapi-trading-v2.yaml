@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.1.9
+  version: 2.1.10
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -685,7 +685,7 @@ components:
       name: startTime
       in: query
       required: false
-      description: Return results after this sequence number (for pagination)
+      description: Return results at or after this timestamp, in milliseconds (for pagination)
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733379000
@@ -694,7 +694,7 @@ components:
       name: endTime
       in: query
       required: false
-      description: Return results before this sequence number (for pagination)
+      description: Return results at or before this timestamp, in milliseconds (for pagination)
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
