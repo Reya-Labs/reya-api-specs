@@ -637,7 +637,8 @@
         "fee",
         "price",
         "type",
-        "timestamp"
+        "timestamp",
+        "sequenceNumber"
       ],
       "properties": {
         "exchangeId": {
@@ -688,6 +689,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution timestamp (milliseconds)",
           "example": 1747927089946
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Execution sequence number, increases by 1 for every spot execution in reya chain",
+          "example": 152954
         }
       },
       "additionalProperties": true
