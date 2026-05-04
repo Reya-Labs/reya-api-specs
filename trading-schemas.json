@@ -968,6 +968,7 @@
       "type": "object",
       "required": [
         "asset",
+        "address",
         "priceHaircut",
         "liquidationDiscount",
         "status",
@@ -978,6 +979,11 @@
         "asset": {
           "$ref": "#/definitions/Asset",
           "example": "WSTETH"
+        },
+        "address": {
+          "$ref": "#/definitions/Address",
+          "description": "ERC20 contract address of the underlying collateral token on the Reya chain.",
+          "example": "0x7ae54d5a9e5a975dfc3261d915f8151dcca76be0"
         },
         "spotMarketSymbol": {
           "$ref": "#/definitions/Symbol"
