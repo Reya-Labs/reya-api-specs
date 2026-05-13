@@ -61,8 +61,10 @@ channels:
         $ref: '#/components/messages/CancelAllResponseMessage'
       pingMessage:
         $ref: '#/components/messages/PingMessage'
-      pongMessage:
-        $ref: '#/components/messages/PongMessage'
+      serverPongMessage:
+        $ref: '#/components/messages/ServerPongMessage'
+      clientPongMessage:
+        $ref: '#/components/messages/ClientPongMessage'
       errorMessage:
         $ref: '#/components/messages/ErrorMessage'
     bindings:
@@ -124,10 +126,10 @@ operations:
       channel:
         $ref: '#/channels/operations'
       messages:
-        - $ref: '#/channels/operations/messages/pongMessage'
+        - $ref: '#/channels/operations/messages/serverPongMessage'
     summary: Send a ping (optional)
     description: |
-      Optional client-initiated liveness probe. Server replies with `PongMessage` containing `server_time_ms` for clock-sync. Server itself sends pings every 5s independently — this client-initiated ping is for clients that want to probe on demand.
+      Optional client-initiated liveness probe. Server replies with `ServerPongMessage` containing `server_time_ms` for clock-sync. Server itself sends pings every 5s independently — this client-initiated ping is for clients that want to probe on demand.
 
   receivePing:
     action: receive
@@ -144,10 +146,10 @@ operations:
     channel:
       $ref: '#/channels/operations'
     messages:
-      - $ref: '#/channels/operations/messages/pongMessage'
+      - $ref: '#/channels/operations/messages/clientPongMessage'
     summary: Reply pong to a server ping
     description: |
-      Client's reply to a server-initiated `ping`. Echo the ping's `id`. Unsolicited client pongs are silently ignored.
+      Client's reply to a server-initiated `ping` (`ClientPongMessage` — no `server_time_ms`). Echo the ping's `id`. Unsolicited client pongs are silently ignored.
 
   receiveError:
     action: receive
@@ -210,12 +212,19 @@ components:
       payload:
         $ref: '#/components/schemas/PingMessagePayload'
 
-    PongMessage:
-      name: pong
-      title: Pong Message
-      summary: Heartbeat pong (either direction)
+    ServerPongMessage:
+      name: serverPong
+      title: Server Pong Message
+      summary: Server-emitted pong (reply to a client `ping`, carries `server_time_ms`)
       payload:
-        $ref: '#/components/schemas/PongMessagePayload'
+        $ref: '#/components/schemas/ServerPongMessagePayload'
+
+    ClientPongMessage:
+      name: clientPong
+      title: Client Pong Message
+      summary: Client-emitted pong (reply to a server `ping`, no server-only fields)
+      payload:
+        $ref: '#/components/schemas/ClientPongMessagePayload'
 
     ErrorMessage:
       name: error
@@ -324,6 +333,11 @@ components:
     # ─────────────────────────────────────────────────────────────────────────
     # Response envelopes — `payload` (success) or `error` (failure), keyed by `ok`.
     # ─────────────────────────────────────────────────────────────────────────
+    # Response envelopes enforce `ok` ↔ (`payload` xor `error`) via `allOf`:
+    #   ok: true  → `payload` required, `error` forbidden
+    #   ok: false → `error` required, `payload` forbidden
+    # The wire contract is the same one the REST `/v2` endpoints emit; the
+    # conditionals make it machine-checkable instead of a prose convention.
     CreateOrderResponseMessagePayload:
       type: object
       title: CreateOrderResponseMessagePayload
@@ -346,6 +360,19 @@ components:
           $ref: './trading-schemas.json#/definitions/CreateOrderResponse'
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - if:
+            properties: { ok: { const: true } }
+            required: [ok]
+          then:
+            required: [payload]
+            not: { required: [error] }
+        - if:
+            properties: { ok: { const: false } }
+            required: [ok]
+          then:
+            required: [error]
+            not: { required: [payload] }
 
     CancelOrderResponseMessagePayload:
       type: object
@@ -369,6 +396,19 @@ components:
           $ref: './trading-schemas.json#/definitions/CancelOrderResponse'
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - if:
+            properties: { ok: { const: true } }
+            required: [ok]
+          then:
+            required: [payload]
+            not: { required: [error] }
+        - if:
+            properties: { ok: { const: false } }
+            required: [ok]
+          then:
+            required: [error]
+            not: { required: [payload] }
 
     CancelAllResponseMessagePayload:
       type: object
@@ -392,6 +432,19 @@ components:
           $ref: './trading-schemas.json#/definitions/MassCancelResponse'
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - if:
+            properties: { ok: { const: true } }
+            required: [ok]
+          then:
+            required: [payload]
+            not: { required: [error] }
+        - if:
+            properties: { ok: { const: false } }
+            required: [ok]
+          then:
+            required: [error]
+            not: { required: [payload] }
 
     # ─────────────────────────────────────────────────────────────────────────
     # Heartbeat envelopes.
@@ -410,9 +463,11 @@ components:
           description: Optional correlation identifier echoed in the corresponding pong.
           example: "ping-001"
 
-    PongMessagePayload:
+    # Server-emitted pong — sent in reply to a client `ping`. `server_time_ms`
+    # is server-only and required here so clients can rely on it for clock-sync.
+    ServerPongMessagePayload:
       type: object
-      title: PongMessagePayload
+      title: ServerPongMessagePayload
       additionalProperties: false
       required:
         - type
@@ -428,9 +483,69 @@ components:
           $ref: './trading-schemas.json#/definitions/UnsignedInteger'
           description: Server wall-clock time in milliseconds at pong emission. Useful for clock-sync.
 
+    # Client-emitted pong — sent in reply to a server `ping`. No `server_time_ms`
+    # so clients can satisfy the schema without fabricating server state.
+    ClientPongMessagePayload:
+      type: object
+      title: ClientPongMessagePayload
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/PongMessageType'
+        id:
+          type: string
+          description: Echoes the corresponding ping's `id` if any.
+          example: "ping-001"
+
     # ─────────────────────────────────────────────────────────────────────────
     # Top-level error envelope (for malformed frames / unknown type / id collisions).
+    #
+    # The framing layer can emit error codes that the REST surface never does
+    # — they only make sense for a streamed envelope protocol. Per-operation
+    # `{ok:false, error}` responses still use the 12-code `RequestError` from
+    # `trading-schemas.json`; this superset is scoped to the top-level
+    # `error` envelope only.
     # ─────────────────────────────────────────────────────────────────────────
+    WsExecRequestErrorCode:
+      type: string
+      description: |
+        Union of (a) the 12 REST-shared trade-handler error codes from `RequestErrorCode` and (b) four ws-exec-only framing-layer codes that only ever appear in the top-level `error` envelope. Mirrors the runtime `WsExecErrorCode` union in `packages/ws-exec/src/envelope.ts`.
+      enum:
+        # Trade-handler codes (shared with REST `RequestErrorCode`).
+        - SYMBOL_NOT_FOUND
+        - NO_ACCOUNTS_FOUND
+        - NO_PRICES_FOUND_FOR_SYMBOL
+        - INPUT_VALIDATION_ERROR
+        - CREATE_ORDER_OTHER_ERROR
+        - CANCEL_ORDER_OTHER_ERROR
+        - ORDER_DEADLINE_PASSED_ERROR
+        - ORDER_DEADLINE_TOO_HIGH_ERROR
+        - INVALID_NONCE_ERROR
+        - UNAVAILABLE_MATCHING_ENGINE_ERROR
+        - UNAUTHORIZED_SIGNATURE_ERROR
+        - NUMERIC_OVERFLOW_ERROR
+        # ws-exec framing codes (server emits in the top-level `error` envelope).
+        - MALFORMED_JSON
+        - UNKNOWN_TYPE
+        - DUPLICATE_REQUEST_ID
+        - INTERNAL
+
+    WsExecError:
+      type: object
+      title: WsExecError
+      additionalProperties: false
+      required:
+        - error
+        - message
+      properties:
+        error:
+          $ref: '#/components/schemas/WsExecRequestErrorCode'
+        message:
+          type: string
+          description: Human-readable error message.
+
     ErrorMessagePayload:
       type: object
       title: ErrorMessagePayload
@@ -446,4 +561,4 @@ components:
           description: Echoes the offending request's `id` when known (e.g., for in-flight id collisions); absent for frame-level errors that couldn't be parsed.
           example: "req-7f3c1a"
         error:
-          $ref: './trading-schemas.json#/definitions/RequestError'
+          $ref: '#/components/schemas/WsExecError'
