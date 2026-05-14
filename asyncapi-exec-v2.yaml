@@ -7,6 +7,8 @@ info:
 
     Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
 
+    Auth model: there is no per-connection handshake, login, or session. The WebSocket connection itself is anonymous; auth is per-message. Each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature in the payload (`signature`, `nonce`, `signerWallet`, `expiresAfter`) and is validated server-side per-frame. The signing model is byte-identical to REST `/v2/createOrder` etc. — same EIP-712 domain, same typed-data structure, same nonce semantics. This is why no `security:` scheme is declared on the server entries: there is nothing to authenticate at the transport layer.
+
     Heartbeat: server sends `ping` every 5s; client must reply `pong` within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout).
 
     For market data, position updates, and fill streaming, see the streaming WebSocket API (`asyncapi-trading-v2.yaml`). The recommended Market Maker integration runs both connections in parallel: this surface for order entry, the streaming surface for read-side fanout.
@@ -129,7 +131,7 @@ operations:
         - $ref: '#/channels/operations/messages/serverPongMessage'
     summary: Send a ping (optional)
     description: |
-      Optional client-initiated liveness probe. Server replies with `ServerPongMessage` containing `server_time_ms` for clock-sync. Server itself sends pings every 5s independently — this client-initiated ping is for clients that want to probe on demand.
+      Optional client-initiated liveness probe. Server replies with `ServerPongMessage` containing `serverTimeMs` for clock-sync. Server itself sends pings every 5s independently — this client-initiated ping is for clients that want to probe on demand.
 
   receivePing:
     action: receive
@@ -137,9 +139,14 @@ operations:
       $ref: '#/channels/operations'
     messages:
       - $ref: '#/channels/operations/messages/pingMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/clientPongMessage'
     summary: Receive a server ping
     description: |
-      Server sends `ping` every 5s. Client must reply `pong` (echoing the ping's `id` if any) within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`.
+      Server sends `ping` every 5s. Client must reply `pong` (`ClientPongMessage`, echoing the ping's `id` if any) within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`.
 
   sendPong:
     action: send
@@ -149,7 +156,7 @@ operations:
       - $ref: '#/channels/operations/messages/clientPongMessage'
     summary: Reply pong to a server ping
     description: |
-      Client's reply to a server-initiated `ping` (`ClientPongMessage` — no `server_time_ms`). Echo the ping's `id`. Unsolicited client pongs are silently ignored.
+      Client's reply to a server-initiated `ping` (`ClientPongMessage` — no `serverTimeMs`). Echo the ping's `id`. Unsolicited client pongs are silently ignored.
 
   receiveError:
     action: receive
@@ -215,7 +222,7 @@ components:
     ServerPongMessage:
       name: serverPong
       title: Server Pong Message
-      summary: Server-emitted pong (reply to a client `ping`, carries `server_time_ms`)
+      summary: Server-emitted pong (reply to a client `ping`, carries `serverTimeMs`)
       payload:
         $ref: '#/components/schemas/ServerPongMessagePayload'
 
@@ -333,11 +340,30 @@ components:
     # ─────────────────────────────────────────────────────────────────────────
     # Response envelopes — `payload` (success) or `error` (failure), keyed by `ok`.
     # ─────────────────────────────────────────────────────────────────────────
-    # Response envelopes enforce `ok` ↔ (`payload` xor `error`) via `allOf`:
+    # Response envelopes enforce `ok` ↔ (`payload` xor `error`) via `allOf`,
+    # composed from the shared `OkXorErrorEnvelope` schema below:
     #   ok: true  → `payload` required, `error` forbidden
     #   ok: false → `error` required, `payload` forbidden
     # The wire contract is the same one the REST `/v2` endpoints emit; the
     # conditionals make it machine-checkable instead of a prose convention.
+    OkXorErrorEnvelope:
+      title: OkXorErrorEnvelope
+      description: |
+        Conditional-rule schema (no own properties) composed into every `*ResponseMessagePayload` via `allOf` to enforce that exactly one of `payload` / `error` is present, keyed by the `ok` discriminator. Factored out so the three response payloads stay in lockstep.
+      allOf:
+        - if:
+            properties: { ok: { const: true } }
+            required: [ok]
+          then:
+            required: [payload]
+            not: { required: [error] }
+        - if:
+            properties: { ok: { const: false } }
+            required: [ok]
+          then:
+            required: [error]
+            not: { required: [payload] }
+
     CreateOrderResponseMessagePayload:
       type: object
       title: CreateOrderResponseMessagePayload
@@ -361,18 +387,7 @@ components:
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
       allOf:
-        - if:
-            properties: { ok: { const: true } }
-            required: [ok]
-          then:
-            required: [payload]
-            not: { required: [error] }
-        - if:
-            properties: { ok: { const: false } }
-            required: [ok]
-          then:
-            required: [error]
-            not: { required: [payload] }
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
 
     CancelOrderResponseMessagePayload:
       type: object
@@ -397,18 +412,7 @@ components:
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
       allOf:
-        - if:
-            properties: { ok: { const: true } }
-            required: [ok]
-          then:
-            required: [payload]
-            not: { required: [error] }
-        - if:
-            properties: { ok: { const: false } }
-            required: [ok]
-          then:
-            required: [error]
-            not: { required: [payload] }
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
 
     CancelAllResponseMessagePayload:
       type: object
@@ -433,18 +437,7 @@ components:
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
       allOf:
-        - if:
-            properties: { ok: { const: true } }
-            required: [ok]
-          then:
-            required: [payload]
-            not: { required: [error] }
-        - if:
-            properties: { ok: { const: false } }
-            required: [ok]
-          then:
-            required: [error]
-            not: { required: [payload] }
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
 
     # ─────────────────────────────────────────────────────────────────────────
     # Heartbeat envelopes.
@@ -460,10 +453,11 @@ components:
           $ref: '#/components/schemas/PingMessageType'
         id:
           type: string
-          description: Optional correlation identifier echoed in the corresponding pong.
+          description: |
+            Optional correlation identifier echoed in the corresponding pong. Server-initiated heartbeat pings (sent every 5s) never carry an `id` — they are unsolicited liveness probes and the client's reply pong omits `id` accordingly. Only client-initiated probes set `id`, in which case the server's reply `ServerPongMessage` echoes it. Clients MAY treat any incoming ping without `id` as the heartbeat case and reply with a bare pong.
           example: "ping-001"
 
-    # Server-emitted pong — sent in reply to a client `ping`. `server_time_ms`
+    # Server-emitted pong — sent in reply to a client `ping`. `serverTimeMs`
     # is server-only and required here so clients can rely on it for clock-sync.
     ServerPongMessagePayload:
       type: object
@@ -471,7 +465,7 @@ components:
       additionalProperties: false
       required:
         - type
-        - server_time_ms
+        - serverTimeMs
       properties:
         type:
           $ref: '#/components/schemas/PongMessageType'
@@ -479,11 +473,11 @@ components:
           type: string
           description: Echoes the corresponding ping's `id` if any.
           example: "ping-001"
-        server_time_ms:
+        serverTimeMs:
           $ref: './trading-schemas.json#/definitions/UnsignedInteger'
           description: Server wall-clock time in milliseconds at pong emission. Useful for clock-sync.
 
-    # Client-emitted pong — sent in reply to a server `ping`. No `server_time_ms`
+    # Client-emitted pong — sent in reply to a server `ping`. No `serverTimeMs`
     # so clients can satisfy the schema without fabricating server state.
     ClientPongMessagePayload:
       type: object
@@ -511,9 +505,10 @@ components:
     WsExecRequestErrorCode:
       type: string
       description: |
-        Union of (a) the 12 REST-shared trade-handler error codes from `RequestErrorCode` and (b) four ws-exec-only framing-layer codes that only ever appear in the top-level `error` envelope. Mirrors the runtime `WsExecErrorCode` union in `packages/ws-exec/src/envelope.ts`.
+        Union of (a) the 12 REST-shared trade-handler error codes from `RequestErrorCode` (defined in `trading-schemas.json`) and (b) four ws-exec-only framing-layer codes that only ever appear in the top-level `error` envelope. The 12 shared codes MUST stay byte-identical to `trading-schemas.json#/definitions/RequestErrorCode` — when adding/renaming/removing a trade-handler error, update both schemas in the same change.
       enum:
-        # Trade-handler codes (shared with REST `RequestErrorCode`).
+        # Trade-handler codes — keep in sync with
+        # trading-schemas.json#/definitions/RequestErrorCode (REST-shared).
         - SYMBOL_NOT_FOUND
         - NO_ACCOUNTS_FOUND
         - NO_PRICES_FOUND_FOR_SYMBOL
