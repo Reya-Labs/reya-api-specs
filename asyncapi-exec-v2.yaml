@@ -7,7 +7,7 @@ info:
 
     Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
 
-    Auth model: there is no per-connection handshake, login, or session. The WebSocket connection itself is anonymous; auth is per-message. Each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature in the payload (`signature`, `nonce`, `signerWallet`, `expiresAfter`) and is validated server-side per-frame. The signing model is byte-identical to REST `/v2/createOrder` etc. — same EIP-712 domain, same typed-data structure, same nonce semantics. This is why no `security:` scheme is declared on the server entries: there is nothing to authenticate at the transport layer.
+    Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature (`signature`, `nonce`, `signerWallet`, `expiresAfter`), validated server-side per-frame and byte-identical to the REST signing model. There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
 
     Heartbeat: server sends `ping` every 5s; client must reply `pong` within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout).
 
@@ -241,9 +241,6 @@ components:
         $ref: '#/components/schemas/ErrorMessagePayload'
 
   schemas:
-    # ─────────────────────────────────────────────────────────────────────────
-    # Discriminator enums for the envelope `type` field.
-    # ─────────────────────────────────────────────────────────────────────────
     CreateOrderMessageType:
       type: string
       enum:
@@ -280,9 +277,6 @@ components:
         - error
       description: Message type for top-level error envelopes
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Request envelopes — `payload` is the existing REST request schema.
-    # ─────────────────────────────────────────────────────────────────────────
     CreateOrderRequestMessagePayload:
       type: object
       title: CreateOrderRequestMessagePayload
@@ -337,19 +331,9 @@ components:
         payload:
           $ref: './trading-schemas.json#/definitions/MassCancelRequest'
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Response envelopes — `payload` (success) or `error` (failure), keyed by `ok`.
-    # ─────────────────────────────────────────────────────────────────────────
-    # Response envelopes enforce `ok` ↔ (`payload` xor `error`) via `allOf`,
-    # composed from the shared `OkXorErrorEnvelope` schema below:
-    #   ok: true  → `payload` required, `error` forbidden
-    #   ok: false → `error` required, `payload` forbidden
-    # The wire contract is the same one the REST `/v2` endpoints emit; the
-    # conditionals make it machine-checkable instead of a prose convention.
     OkXorErrorEnvelope:
       title: OkXorErrorEnvelope
-      description: |
-        Conditional-rule schema (no own properties) composed into every `*ResponseMessagePayload` via `allOf` to enforce that exactly one of `payload` / `error` is present, keyed by the `ok` discriminator. Factored out so the three response payloads stay in lockstep.
+      description: Enforces that exactly one of `payload` / `error` is present, keyed by the `ok` discriminator. Composed into every `*ResponseMessagePayload` via `allOf`.
       allOf:
         - if:
             properties: { ok: { const: true } }
@@ -439,9 +423,6 @@ components:
       allOf:
         - $ref: '#/components/schemas/OkXorErrorEnvelope'
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Heartbeat envelopes.
-    # ─────────────────────────────────────────────────────────────────────────
     PingMessagePayload:
       type: object
       title: PingMessagePayload
@@ -453,12 +434,9 @@ components:
           $ref: '#/components/schemas/PingMessageType'
         id:
           type: string
-          description: |
-            Optional correlation identifier echoed in the corresponding pong. Server-initiated heartbeat pings (sent every 5s) never carry an `id` — they are unsolicited liveness probes and the client's reply pong omits `id` accordingly. Only client-initiated probes set `id`, in which case the server's reply `ServerPongMessage` echoes it. Clients MAY treat any incoming ping without `id` as the heartbeat case and reply with a bare pong.
+          description: Optional correlation identifier echoed in the corresponding pong. Server-initiated heartbeat pings never set `id`; only client-initiated probes do, in which case the server's reply `ServerPongMessage` echoes it.
           example: "ping-001"
 
-    # Server-emitted pong — sent in reply to a client `ping`. `serverTimeMs`
-    # is server-only and required here so clients can rely on it for clock-sync.
     ServerPongMessagePayload:
       type: object
       title: ServerPongMessagePayload
@@ -477,8 +455,6 @@ components:
           $ref: './trading-schemas.json#/definitions/UnsignedInteger'
           description: Server wall-clock time in milliseconds at pong emission. Useful for clock-sync.
 
-    # Client-emitted pong — sent in reply to a server `ping`. No `serverTimeMs`
-    # so clients can satisfy the schema without fabricating server state.
     ClientPongMessagePayload:
       type: object
       title: ClientPongMessagePayload
@@ -493,22 +469,11 @@ components:
           description: Echoes the corresponding ping's `id` if any.
           example: "ping-001"
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Top-level error envelope (for malformed frames / unknown type / id collisions).
-    #
-    # The framing layer can emit error codes that the REST surface never does
-    # — they only make sense for a streamed envelope protocol. Per-operation
-    # `{ok:false, error}` responses still use the 12-code `RequestError` from
-    # `trading-schemas.json`; this superset is scoped to the top-level
-    # `error` envelope only.
-    # ─────────────────────────────────────────────────────────────────────────
     WsExecRequestErrorCode:
       type: string
-      description: |
-        Union of (a) the 12 REST-shared trade-handler error codes from `RequestErrorCode` (defined in `trading-schemas.json`) and (b) four ws-exec-only framing-layer codes that only ever appear in the top-level `error` envelope. The 12 shared codes MUST stay byte-identical to `trading-schemas.json#/definitions/RequestErrorCode` — when adding/renaming/removing a trade-handler error, update both schemas in the same change.
+      description: The 12 REST-shared trade-handler codes plus four ws-exec-only framing codes emitted in the top-level `error` envelope.
       enum:
-        # Trade-handler codes — keep in sync with
-        # trading-schemas.json#/definitions/RequestErrorCode (REST-shared).
+        # Keep in sync with trading-schemas.json#/definitions/RequestErrorCode.
         - SYMBOL_NOT_FOUND
         - NO_ACCOUNTS_FOUND
         - NO_PRICES_FOUND_FOR_SYMBOL
@@ -521,7 +486,6 @@ components:
         - UNAVAILABLE_MATCHING_ENGINE_ERROR
         - UNAUTHORIZED_SIGNATURE_ERROR
         - NUMERIC_OVERFLOW_ERROR
-        # ws-exec framing codes (server emits in the top-level `error` envelope).
         - MALFORMED_JSON
         - UNKNOWN_TYPE
         - DUPLICATE_REQUEST_ID
