@@ -169,11 +169,18 @@ operations:
       Server emits an `error` envelope when it cannot parse a request at all (malformed JSON, unknown `type`, in-flight `id` collision). Connection stays open. Operation-specific errors instead come back as `{ ok: false, error }` on the corresponding `*ResponseMessage` correlated by `id`.
 
 components:
+  correlationIds:
+    requestId:
+      description: The envelope `id` field, used to pair a request with its response (and to echo on heartbeat / error frames where present).
+      location: '$message.payload#/id'
+
   messages:
     CreateOrderRequestMessage:
       name: createOrderRequest
       title: Create Order Request
       summary: Client request to place an order
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CreateOrderRequestMessagePayload'
 
@@ -181,6 +188,8 @@ components:
       name: createOrderResponse
       title: Create Order Response
       summary: Server response to a create-order request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CreateOrderResponseMessagePayload'
 
@@ -188,6 +197,8 @@ components:
       name: cancelOrderRequest
       title: Cancel Order Request
       summary: Client request to cancel an order
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CancelOrderRequestMessagePayload'
 
@@ -195,6 +206,8 @@ components:
       name: cancelOrderResponse
       title: Cancel Order Response
       summary: Server response to a cancel-order request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CancelOrderResponseMessagePayload'
 
@@ -202,6 +215,8 @@ components:
       name: cancelAllRequest
       title: Cancel All Request
       summary: Client request to mass-cancel orders
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CancelAllRequestMessagePayload'
 
@@ -209,6 +224,8 @@ components:
       name: cancelAllResponse
       title: Cancel All Response
       summary: Server response to a cancel-all request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CancelAllResponseMessagePayload'
 
@@ -216,6 +233,8 @@ components:
       name: ping
       title: Ping Message
       summary: Heartbeat ping (either direction)
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/PingMessagePayload'
 
@@ -223,6 +242,8 @@ components:
       name: serverPong
       title: Server Pong Message
       summary: Server-emitted pong (reply to a client `ping`, carries `serverTimeMs`)
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/ServerPongMessagePayload'
 
@@ -230,6 +251,8 @@ components:
       name: clientPong
       title: Client Pong Message
       summary: Client-emitted pong (reply to a server `ping`, no server-only fields)
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/ClientPongMessagePayload'
 
@@ -237,6 +260,8 @@ components:
       name: error
       title: Error Message
       summary: Top-level error envelope
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/ErrorMessagePayload'
 
@@ -469,23 +494,10 @@ components:
           description: Echoes the corresponding ping's `id` if any.
           example: "ping-001"
 
-    WsExecRequestErrorCode:
+    WsExecErrorCode:
       type: string
-      description: The 12 REST-shared trade-handler codes plus four ws-exec-only framing codes emitted in the top-level `error` envelope.
+      description: "Framing-layer error codes emitted in the top-level `error` envelope. Operation-level errors (`RequestErrorCode` from `trading-schemas.json`) ride the per-operation `*ResponseMessage` `{ ok: false, error }` shape instead."
       enum:
-        # Keep in sync with trading-schemas.json#/definitions/RequestErrorCode.
-        - SYMBOL_NOT_FOUND
-        - NO_ACCOUNTS_FOUND
-        - NO_PRICES_FOUND_FOR_SYMBOL
-        - INPUT_VALIDATION_ERROR
-        - CREATE_ORDER_OTHER_ERROR
-        - CANCEL_ORDER_OTHER_ERROR
-        - ORDER_DEADLINE_PASSED_ERROR
-        - ORDER_DEADLINE_TOO_HIGH_ERROR
-        - INVALID_NONCE_ERROR
-        - UNAVAILABLE_MATCHING_ENGINE_ERROR
-        - UNAUTHORIZED_SIGNATURE_ERROR
-        - NUMERIC_OVERFLOW_ERROR
         - MALFORMED_JSON
         - UNKNOWN_TYPE
         - DUPLICATE_REQUEST_ID
@@ -500,7 +512,7 @@ components:
         - message
       properties:
         error:
-          $ref: '#/components/schemas/WsExecRequestErrorCode'
+          $ref: '#/components/schemas/WsExecErrorCode'
         message:
           type: string
           description: Human-readable error message.
