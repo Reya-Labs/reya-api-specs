@@ -9,7 +9,7 @@ info:
 
     Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature (`signature`, `nonce`, `signerWallet`, `expiresAfter`), validated server-side per-frame and byte-identical to the REST signing model. There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
 
-    Heartbeat: server sends `ping` every 5s; client must reply `pong` within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout).
+    Heartbeat: server-side liveness uses RFC 6455 protocol-level pings (handled automatically by any standards-compliant client WebSocket library — no application-level code is required on the client). The server closes the connection after 120 seconds of inbound silence. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout). Clients may *optionally* send `{type:"ping", id?}` JSON frames for explicit application-level RTT or correlation probes; the server replies with `{type:"pong", id?}` echoing the `id`.
 
     For market data, position updates, and fill streaming, see the streaming WebSocket API (`asyncapi-trading-v2.yaml`). The recommended Market Maker integration runs both connections in parallel: this surface for order entry, the streaming surface for read-side fanout.
   contact:
@@ -46,7 +46,7 @@ defaultContentType: application/json
 channels:
   operations:
     description: |
-      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `cancelOrder`, `cancelAll`) plus bidirectional `ping`/`pong` heartbeats and a server-side `error` envelope for malformed frames.
+      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `cancelOrder`, `cancelAll`), an optional client-initiated `ping` probe (server replies with `pong`), and a server-side `error` envelope for framing-layer failures.
     address: null
     messages:
       createOrderRequestMessage:
@@ -63,10 +63,8 @@ channels:
         $ref: '#/components/messages/CancelAllResponseMessage'
       pingMessage:
         $ref: '#/components/messages/PingMessage'
-      serverPongMessage:
-        $ref: '#/components/messages/ServerPongMessage'
-      clientPongMessage:
-        $ref: '#/components/messages/ClientPongMessage'
+      pongMessage:
+        $ref: '#/components/messages/PongMessage'
       errorMessage:
         $ref: '#/components/messages/ErrorMessage'
     bindings:
@@ -128,35 +126,10 @@ operations:
       channel:
         $ref: '#/channels/operations'
       messages:
-        - $ref: '#/channels/operations/messages/serverPongMessage'
+        - $ref: '#/channels/operations/messages/pongMessage'
     summary: Send a ping (optional)
     description: |
-      Optional client-initiated liveness probe. Server replies with `ServerPongMessage` containing `serverTimeMs` for clock-sync. Server itself sends pings every 5s independently — this client-initiated ping is for clients that want to probe on demand.
-
-  receivePing:
-    action: receive
-    channel:
-      $ref: '#/channels/operations'
-    messages:
-      - $ref: '#/channels/operations/messages/pingMessage'
-    reply:
-      channel:
-        $ref: '#/channels/operations'
-      messages:
-        - $ref: '#/channels/operations/messages/clientPongMessage'
-    summary: Receive a server ping
-    description: |
-      Server sends `ping` every 5s. Client must reply `pong` (`ClientPongMessage`, echoing the ping's `id` if any) within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`.
-
-  sendPong:
-    action: send
-    channel:
-      $ref: '#/channels/operations'
-    messages:
-      - $ref: '#/channels/operations/messages/clientPongMessage'
-    summary: Reply pong to a server ping
-    description: |
-      Client's reply to a server-initiated `ping` (`ClientPongMessage` — no `serverTimeMs`). Echo the ping's `id`. Unsolicited client pongs are silently ignored.
+      Optional client-initiated application-level liveness/RTT probe. Server replies with `PongMessage` echoing the optional `id`. Server-side liveness detection uses RFC 6455 protocol-level pings (`sendPings: true`, `idleTimeout: 120`) and does not depend on this operation.
 
   receiveError:
     action: receive
@@ -232,29 +205,20 @@ components:
     PingMessage:
       name: ping
       title: Ping Message
-      summary: Heartbeat ping (either direction)
+      summary: Optional client-initiated application-level liveness/RTT probe
       correlationId:
         $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/PingMessagePayload'
 
-    ServerPongMessage:
-      name: serverPong
-      title: Server Pong Message
-      summary: Server-emitted pong (reply to a client `ping`, carries `serverTimeMs`)
+    PongMessage:
+      name: pong
+      title: Pong Message
+      summary: Server reply to a client-initiated `ping`, echoing the optional `id`
       correlationId:
         $ref: '#/components/correlationIds/requestId'
       payload:
-        $ref: '#/components/schemas/ServerPongMessagePayload'
-
-    ClientPongMessage:
-      name: clientPong
-      title: Client Pong Message
-      summary: Client-emitted pong (reply to a server `ping`, no server-only fields)
-      correlationId:
-        $ref: '#/components/correlationIds/requestId'
-      payload:
-        $ref: '#/components/schemas/ClientPongMessagePayload'
+        $ref: '#/components/schemas/PongMessagePayload'
 
     ErrorMessage:
       name: error
@@ -459,30 +423,12 @@ components:
           $ref: '#/components/schemas/PingMessageType'
         id:
           type: string
-          description: Optional correlation identifier echoed in the corresponding pong. Server-initiated heartbeat pings never set `id`; only client-initiated probes do, in which case the server's reply `ServerPongMessage` echoes it.
+          description: Optional correlation identifier echoed in the corresponding pong.
           example: "ping-001"
 
-    ServerPongMessagePayload:
+    PongMessagePayload:
       type: object
-      title: ServerPongMessagePayload
-      additionalProperties: false
-      required:
-        - type
-        - serverTimeMs
-      properties:
-        type:
-          $ref: '#/components/schemas/PongMessageType'
-        id:
-          type: string
-          description: Echoes the corresponding ping's `id` if any.
-          example: "ping-001"
-        serverTimeMs:
-          $ref: './trading-schemas.json#/definitions/UnsignedInteger'
-          description: Server wall-clock time in milliseconds at pong emission. Useful for clock-sync.
-
-    ClientPongMessagePayload:
-      type: object
-      title: ClientPongMessagePayload
+      title: PongMessagePayload
       additionalProperties: false
       required:
         - type
