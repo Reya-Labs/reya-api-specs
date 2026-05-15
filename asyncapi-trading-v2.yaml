@@ -1097,6 +1097,10 @@ components:
           type: string
           description: Optional correlation identifier echoed in the corresponding pong.
           example: "ping-001"
+        timestamp:
+          type: integer
+          description: Optional timestamp in milliseconds.
+          example: 1747927089946
       required:
         - type
 
@@ -1111,6 +1115,10 @@ components:
           type: string
           description: Echoes the corresponding ping's `id` if any.
           example: "ping-001"
+        timestamp:
+          type: integer
+          description: Optional timestamp in milliseconds.
+          example: 1747927089946
       required:
         - type
 
