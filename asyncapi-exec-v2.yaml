@@ -1,0 +1,535 @@
+asyncapi: 3.0.0
+info:
+  title: Reya DEX Order Entry WebSocket API v2
+  version: 2.0.0
+  description: |
+    Order-entry WebSocket API for Reya Network's decentralized exchange. This is a request/response surface for placing and cancelling orders over a persistent WebSocket connection — same operations and payload bodies as the REST `/v2` endpoints (`POST /v2/createOrder`, `POST /v2/cancelOrder`, `POST /v2/cancelAll`), with lower per-operation overhead.
+
+    Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
+
+    Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature (`signature`, `nonce`, `signerWallet`, `expiresAfter`), validated server-side per-frame and byte-identical to the REST signing model. There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
+
+    Heartbeat: server sends `ping` every 5s; client must reply `pong` within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout).
+
+    For market data, position updates, and fill streaming, see the streaming WebSocket API (`asyncapi-trading-v2.yaml`). The recommended Market Maker integration runs both connections in parallel: this surface for order entry, the streaming surface for read-side fanout.
+  contact:
+    name: Reya Network
+    url: https://reya.xyz
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  tags:
+    - name: orders
+      description: Order entry and cancellation
+    - name: control
+      description: Connection control (ping, pong, error)
+  externalDocs:
+    description: Reya Network Documentation
+    url: https://docs.reya.xyz
+
+servers:
+  production:
+    host: ws-exec.reya.xyz
+    protocol: wss
+    description: Production WebSocket order entry server
+  staging:
+    host: ws-exec-staging.reya.xyz
+    protocol: wss
+    description: Staging WebSocket order entry server
+  test:
+    host: ws-exec-testnet.reya.xyz
+    protocol: wss
+    description: Test WebSocket order entry server
+
+defaultContentType: application/json
+
+channels:
+  operations:
+    description: |
+      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `cancelOrder`, `cancelAll`) plus bidirectional `ping`/`pong` heartbeats and a server-side `error` envelope for malformed frames.
+    address: null
+    messages:
+      createOrderRequestMessage:
+        $ref: '#/components/messages/CreateOrderRequestMessage'
+      createOrderResponseMessage:
+        $ref: '#/components/messages/CreateOrderResponseMessage'
+      cancelOrderRequestMessage:
+        $ref: '#/components/messages/CancelOrderRequestMessage'
+      cancelOrderResponseMessage:
+        $ref: '#/components/messages/CancelOrderResponseMessage'
+      cancelAllRequestMessage:
+        $ref: '#/components/messages/CancelAllRequestMessage'
+      cancelAllResponseMessage:
+        $ref: '#/components/messages/CancelAllResponseMessage'
+      pingMessage:
+        $ref: '#/components/messages/PingMessage'
+      serverPongMessage:
+        $ref: '#/components/messages/ServerPongMessage'
+      clientPongMessage:
+        $ref: '#/components/messages/ClientPongMessage'
+      errorMessage:
+        $ref: '#/components/messages/ErrorMessage'
+    bindings:
+      ws: {}
+
+operations:
+  sendCreateOrder:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/createOrderRequestMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/createOrderResponseMessage'
+    summary: Place an order
+    description: |
+      Client places a spot, perp IOC, or perp GTC/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema). Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+
+  sendCancelOrder:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/cancelOrderRequestMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/cancelOrderResponseMessage'
+    summary: Cancel an order
+    description: |
+      Client cancels a previously placed order. The `payload` body is identical to the REST `POST /v2/cancelOrder` body (existing `CancelOrderRequest` schema). Server replies with `CancelOrderResponseMessage` correlated by the same `id`.
+
+  sendCancelAll:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/cancelAllRequestMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/cancelAllResponseMessage'
+    summary: Cancel all orders for an account on a market
+    description: |
+      Client mass-cancels all open orders for an account on a given (spot) market. The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Perp mass-cancel is not supported — sending one returns the same not-supported error REST returns today. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
+
+  sendPing:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/pingMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/serverPongMessage'
+    summary: Send a ping (optional)
+    description: |
+      Optional client-initiated liveness probe. Server replies with `ServerPongMessage` containing `serverTimeMs` for clock-sync. Server itself sends pings every 5s independently — this client-initiated ping is for clients that want to probe on demand.
+
+  receivePing:
+    action: receive
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/pingMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/clientPongMessage'
+    summary: Receive a server ping
+    description: |
+      Server sends `ping` every 5s. Client must reply `pong` (`ClientPongMessage`, echoing the ping's `id` if any) within 5s or the connection is closed with WS code `4002 HEARTBEAT_TIMEOUT`.
+
+  sendPong:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/clientPongMessage'
+    summary: Reply pong to a server ping
+    description: |
+      Client's reply to a server-initiated `ping` (`ClientPongMessage` — no `serverTimeMs`). Echo the ping's `id`. Unsolicited client pongs are silently ignored.
+
+  receiveError:
+    action: receive
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/errorMessage'
+    summary: Receive a top-level error envelope
+    description: |
+      Server emits an `error` envelope when it cannot parse a request at all (malformed JSON, unknown `type`, in-flight `id` collision). Connection stays open. Operation-specific errors instead come back as `{ ok: false, error }` on the corresponding `*ResponseMessage` correlated by `id`.
+
+components:
+  correlationIds:
+    requestId:
+      description: The envelope `id` field, used to pair a request with its response (and to echo on heartbeat / error frames where present).
+      location: '$message.payload#/id'
+
+  messages:
+    CreateOrderRequestMessage:
+      name: createOrderRequest
+      title: Create Order Request
+      summary: Client request to place an order
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CreateOrderRequestMessagePayload'
+
+    CreateOrderResponseMessage:
+      name: createOrderResponse
+      title: Create Order Response
+      summary: Server response to a create-order request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CreateOrderResponseMessagePayload'
+
+    CancelOrderRequestMessage:
+      name: cancelOrderRequest
+      title: Cancel Order Request
+      summary: Client request to cancel an order
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CancelOrderRequestMessagePayload'
+
+    CancelOrderResponseMessage:
+      name: cancelOrderResponse
+      title: Cancel Order Response
+      summary: Server response to a cancel-order request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CancelOrderResponseMessagePayload'
+
+    CancelAllRequestMessage:
+      name: cancelAllRequest
+      title: Cancel All Request
+      summary: Client request to mass-cancel orders
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CancelAllRequestMessagePayload'
+
+    CancelAllResponseMessage:
+      name: cancelAllResponse
+      title: Cancel All Response
+      summary: Server response to a cancel-all request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CancelAllResponseMessagePayload'
+
+    PingMessage:
+      name: ping
+      title: Ping Message
+      summary: Heartbeat ping (either direction)
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/PingMessagePayload'
+
+    ServerPongMessage:
+      name: serverPong
+      title: Server Pong Message
+      summary: Server-emitted pong (reply to a client `ping`, carries `serverTimeMs`)
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ServerPongMessagePayload'
+
+    ClientPongMessage:
+      name: clientPong
+      title: Client Pong Message
+      summary: Client-emitted pong (reply to a server `ping`, no server-only fields)
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ClientPongMessagePayload'
+
+    ErrorMessage:
+      name: error
+      title: Error Message
+      summary: Top-level error envelope
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ErrorMessagePayload'
+
+  schemas:
+    CreateOrderMessageType:
+      type: string
+      enum:
+        - createOrder
+      description: Message type for createOrder request and response
+
+    CancelOrderMessageType:
+      type: string
+      enum:
+        - cancelOrder
+      description: Message type for cancelOrder request and response
+
+    CancelAllMessageType:
+      type: string
+      enum:
+        - cancelAll
+      description: Message type for cancelAll request and response
+
+    PingMessageType:
+      type: string
+      enum:
+        - ping
+      description: Message type for ping messages
+
+    PongMessageType:
+      type: string
+      enum:
+        - pong
+      description: Message type for pong messages
+
+    ErrorMessageType:
+      type: string
+      enum:
+        - error
+      description: Message type for top-level error envelopes
+
+    CreateOrderRequestMessagePayload:
+      type: object
+      title: CreateOrderRequestMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/CreateOrderMessageType'
+        id:
+          type: string
+          description: Client-chosen correlation identifier; must be unique across in-flight requests on the connection.
+          example: "req-7f3c1a"
+        payload:
+          $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
+
+    CancelOrderRequestMessagePayload:
+      type: object
+      title: CancelOrderRequestMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/CancelOrderMessageType'
+        id:
+          type: string
+          description: Client-chosen correlation identifier; must be unique across in-flight requests on the connection.
+          example: "req-7f3c1b"
+        payload:
+          $ref: './trading-schemas.json#/definitions/CancelOrderRequest'
+
+    CancelAllRequestMessagePayload:
+      type: object
+      title: CancelAllRequestMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/CancelAllMessageType'
+        id:
+          type: string
+          description: Client-chosen correlation identifier; must be unique across in-flight requests on the connection.
+          example: "req-7f3c1c"
+        payload:
+          $ref: './trading-schemas.json#/definitions/MassCancelRequest'
+
+    OkXorErrorEnvelope:
+      title: OkXorErrorEnvelope
+      description: Enforces that exactly one of `payload` / `error` is present, keyed by the `ok` discriminator. Composed into every `*ResponseMessagePayload` via `allOf`.
+      allOf:
+        - if:
+            properties: { ok: { const: true } }
+            required: [ok]
+          then:
+            required: [payload]
+            not: { required: [error] }
+        - if:
+            properties: { ok: { const: false } }
+            required: [ok]
+          then:
+            required: [error]
+            not: { required: [payload] }
+
+    CreateOrderResponseMessagePayload:
+      type: object
+      title: CreateOrderResponseMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - ok
+      properties:
+        type:
+          $ref: '#/components/schemas/CreateOrderMessageType'
+        id:
+          type: string
+          description: Echoes the request `id`.
+          example: "req-7f3c1a"
+        ok:
+          type: boolean
+          description: True on success (with `payload`), false on failure (with `error`).
+        payload:
+          $ref: './trading-schemas.json#/definitions/CreateOrderResponse'
+        error:
+          $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
+
+    CancelOrderResponseMessagePayload:
+      type: object
+      title: CancelOrderResponseMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - ok
+      properties:
+        type:
+          $ref: '#/components/schemas/CancelOrderMessageType'
+        id:
+          type: string
+          description: Echoes the request `id`.
+          example: "req-7f3c1b"
+        ok:
+          type: boolean
+          description: True on success (with `payload`), false on failure (with `error`).
+        payload:
+          $ref: './trading-schemas.json#/definitions/CancelOrderResponse'
+        error:
+          $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
+
+    CancelAllResponseMessagePayload:
+      type: object
+      title: CancelAllResponseMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - ok
+      properties:
+        type:
+          $ref: '#/components/schemas/CancelAllMessageType'
+        id:
+          type: string
+          description: Echoes the request `id`.
+          example: "req-7f3c1c"
+        ok:
+          type: boolean
+          description: True on success (with `payload`), false on failure (with `error`).
+        payload:
+          $ref: './trading-schemas.json#/definitions/MassCancelResponse'
+        error:
+          $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
+
+    PingMessagePayload:
+      type: object
+      title: PingMessagePayload
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/PingMessageType'
+        id:
+          type: string
+          description: Optional correlation identifier echoed in the corresponding pong. Server-initiated heartbeat pings never set `id`; only client-initiated probes do, in which case the server's reply `ServerPongMessage` echoes it.
+          example: "ping-001"
+
+    ServerPongMessagePayload:
+      type: object
+      title: ServerPongMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - serverTimeMs
+      properties:
+        type:
+          $ref: '#/components/schemas/PongMessageType'
+        id:
+          type: string
+          description: Echoes the corresponding ping's `id` if any.
+          example: "ping-001"
+        serverTimeMs:
+          $ref: './trading-schemas.json#/definitions/UnsignedInteger'
+          description: Server wall-clock time in milliseconds at pong emission. Useful for clock-sync.
+
+    ClientPongMessagePayload:
+      type: object
+      title: ClientPongMessagePayload
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/PongMessageType'
+        id:
+          type: string
+          description: Echoes the corresponding ping's `id` if any.
+          example: "ping-001"
+
+    WsExecErrorCode:
+      type: string
+      description: "Framing-layer error codes emitted in the top-level `error` envelope. Operation-level errors (`RequestErrorCode` from `trading-schemas.json`) ride the per-operation `*ResponseMessage` `{ ok: false, error }` shape instead."
+      enum:
+        - MALFORMED_JSON
+        - UNKNOWN_TYPE
+        - DUPLICATE_REQUEST_ID
+        - INTERNAL
+
+    WsExecError:
+      type: object
+      title: WsExecError
+      additionalProperties: false
+      required:
+        - error
+        - message
+      properties:
+        error:
+          $ref: '#/components/schemas/WsExecErrorCode'
+        message:
+          type: string
+          description: Human-readable error message.
+
+    ErrorMessagePayload:
+      type: object
+      title: ErrorMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - error
+      properties:
+        type:
+          $ref: '#/components/schemas/ErrorMessageType'
+        id:
+          type: string
+          description: Echoes the offending request's `id` when known (e.g., for in-flight id collisions); absent for frame-level errors that couldn't be parsed.
+          example: "req-7f3c1a"
+        error:
+          $ref: '#/components/schemas/WsExecError'
