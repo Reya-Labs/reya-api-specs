@@ -382,6 +382,7 @@
       "$id": "#Order",
       "x-parser-schema-id": "Order",
       "type": "object",
+      "description": "Represents a state of an order. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges, orderHistory), `sequenceNumber` identifies the state transition and `lastUpdateAt` is the event time.",
       "required": [
         "exchangeId",
         "symbol",
@@ -454,13 +455,40 @@
         },
         "createdAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Creation timestamp (milliseconds)",
+          "description": "Order creation timestamp (milliseconds since epoch).",
           "example": 1747927089946
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Last update timestamp (milliseconds)",
+          "description": "Timestamp of this state, in milliseconds since epoch. For openOrders snapshots this is the order creation time; for orderChanges WS events and orderHistory REST rows this is the matching engine event time. Used as the cursor for `orderHistory` pagination via the `endTime` query parameter (inclusive upper bound).",
           "example": 1747927089946
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Matching engine monotonic sequence number for the state transition. Populated on event-style emissions (orderChanges WS, orderHistory REST). Together with `orderId` it uniquely identifies a state-change event and is the recommended deduplication key when coalescing the live WS feed with paginated REST history.",
+          "example": 152954
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderList": {
+      "title": "OrderList",
+      "$id": "#OrderList",
+      "x-parser-schema-id": "OrderList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
