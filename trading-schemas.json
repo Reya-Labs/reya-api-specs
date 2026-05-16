@@ -382,7 +382,7 @@
       "$id": "#Order",
       "x-parser-schema-id": "Order",
       "type": "object",
-      "description": "Represents a state of an order. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges, orderHistory), `sequenceNumber` identifies the state transition and `lastUpdateAt` is the event time.",
+      "description": "Represents a state of an order. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges WS, orderHistory REST), `lastUpdateAt` reflects the event time and a single order produces one row per state transition (OPEN, PARTIALLY_FILLED, FILLED, CANCELLED, REJECTED). Recommended deduplication key when coalescing WS + REST is the composite `(orderId, cumQty, status)`.",
       "required": [
         "exchangeId",
         "symbol",
@@ -462,11 +462,6 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Timestamp of this state, in milliseconds since epoch. For openOrders snapshots this is the order creation time; for orderChanges WS events and orderHistory REST rows this is the matching engine event time. Used as the cursor for `orderHistory` pagination via the `endTime` query parameter (inclusive upper bound).",
           "example": 1747927089946
-        },
-        "sequenceNumber": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Matching engine monotonic sequence number for the state transition. Populated on event-style emissions (orderChanges WS, orderHistory REST). Together with `orderId` it uniquely identifies a state-change event and is the recommended deduplication key when coalescing the live WS feed with paginated REST history.",
-          "example": 152954
         }
       },
       "additionalProperties": true
