@@ -779,8 +779,24 @@
         },
         "reason": {
           "type": "string",
-          "description": "Hex-encoded revert reason bytes",
-          "example": "08c379a0..."
+          "description": "Raw hex-encoded revert reason bytes emitted by the on-chain FailedFillBytes event. Starts with the 4-byte custom-error selector. Use reasonName/reasonArgs for the decoded form.",
+          "example": "0xf2a27bca00000000000000000000000000000000000000000000000000000002540d8985ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb91258"
+        },
+        "reasonName": {
+          "type": ["string", "null"],
+          "description": "Decoded name of the on-chain custom error that caused the bust (e.g. SignatureExpired, NegativeAccountRealBalance). Null when the selector is not recognised; consumers should fall back to inspecting reason.",
+          "example": "NegativeAccountRealBalance"
+        },
+        "reasonArgs": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Decoded arguments of the on-chain custom error, keyed by Solidity parameter name. Values are stringified ABI-decoded values. Empty object when the error has no parameters; null when reasonName is null.",
+          "example": {
+            "accountId": "10000063365",
+            "realBalance": "-4575272"
+          }
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
