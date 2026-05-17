@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.2.2
+  version: 2.2.3
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -140,7 +140,13 @@ channels:
 
   walletOrderChanges:
     address: /v2/wallet/{address}/orderChanges
-    description: Real-time order change updates for wallet
+    description: |
+      Real-time order change updates for a wallet. The `subscribed` confirmation
+      carries an `OrderChangesSnapshot` payload (current open orders +
+      `snapshotSequenceNumber` cursor). Every subsequent `channel_data`
+      message carries an `Order` with `sequenceNumber` > `snapshotSequenceNumber`,
+      so clients can stitch the live feed onto the `/wallet/{address}/spotOrderHistory`
+      REST endpoint without overlap or gap.
     parameters:
       address:
         description: Ethereum wallet address
