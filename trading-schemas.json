@@ -382,7 +382,7 @@
       "$id": "#Order",
       "x-parser-schema-id": "Order",
       "type": "object",
-      "description": "Represents a state of an order. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges WS, orderHistory REST), `lastUpdateAt` reflects the event time and a single order produces one row per state transition (OPEN, PARTIALLY_FILLED, FILLED, CANCELLED, REJECTED). The `sequenceNumber` field (Redis stream ID) lets clients stitch the orderChanges WS feed onto the orderHistory REST endpoint via the `snapshotSequenceNumber` returned in the orderChanges subscription response.",
+      "description": "Represents a state of an order. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges WS, orderHistory REST), `lastUpdateAt` reflects the event time and a single order produces one row per state transition (OPEN, PARTIALLY_FILLED, FILLED, CANCELLED, REJECTED). The monotonic `sequenceNumber` lets clients stitch the orderChanges WS feed onto the orderHistory REST endpoint via the `snapshotSequenceNumber` returned in the orderChanges subscription response.",
       "required": [
         "exchangeId",
         "symbol",
@@ -464,9 +464,9 @@
           "example": 1747927089946
         },
         "sequenceNumber": {
-          "type": "string",
-          "description": "Identifier of the event that produced this state. Populated on event-style emissions (orderChanges WS, orderHistory REST). Currently the underlying Redis stream ID (`<ms_timestamp>-<sub_seq>`). Monotonic in real time and survives matching-engine restarts (timestamp-based). Together with `snapshotSequenceNumber` from the orderChanges subscription response it lets a client stitch the REST history onto the live WS stream without gaps or duplicates.",
-          "example": "1747927089946-0"
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Monotonic identifier of the event that produced this state. Populated on event-style emissions (orderChanges WS, orderHistory REST). Encoded from the underlying Redis stream ID `<ms>-<sub_seq>` as `ms * 1000 + sub_seq` (sub_seq assumed < 1000). Survives matching-engine restarts because the ms component is wall-clock based. Together with `snapshotSequenceNumber` from the orderChanges subscription response it lets a client stitch the REST history onto the live WS stream — every subsequent WS message carries a strictly greater value.",
+          "example": 1747927089946000
         }
       },
       "additionalProperties": true
@@ -476,7 +476,7 @@
       "$id": "#OrderChangesSnapshot",
       "x-parser-schema-id": "OrderChangesSnapshot",
       "type": "object",
-      "description": "Initial payload returned in the `subscribed` confirmation for the `/v2/wallet/{address}/orderChanges` WS channel. Combines the current open orders snapshot with a `snapshotSequenceNumber` cursor; every subsequent orderChanges WS message carries a `sequenceNumber` that is monotonically greater than `snapshotSequenceNumber`, so clients can splice the live feed against the orderHistory REST endpoint without overlap or gap.",
+      "description": "Initial payload returned in the `subscribed` confirmation for the `/v2/wallet/{address}/orderChanges` WS channel. Combines the current open orders snapshot with a `snapshotSequenceNumber` cursor; every subsequent orderChanges WS message carries a strictly greater `sequenceNumber`, so clients can splice the live feed against the orderHistory REST endpoint without overlap or gap.",
       "required": [
         "data",
         "snapshotSequenceNumber"
@@ -489,9 +489,9 @@
           }
         },
         "snapshotSequenceNumber": {
-          "type": "string",
-          "description": "Redis stream ID (`<ms_timestamp>-<sub_seq>`) that the snapshot was taken at. All subsequent orderChanges messages on this subscription have `sequenceNumber` > `snapshotSequenceNumber`.",
-          "example": "1747927089946-0"
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Monotonic cursor (same encoding as `Order.sequenceNumber`: `ms * 1000 + sub_seq` from the Redis stream ID) marking the boundary that the snapshot was taken at. All subsequent orderChanges messages on this subscription have `sequenceNumber` > `snapshotSequenceNumber`.",
+          "example": 1747927089946000
         }
       },
       "additionalProperties": true
