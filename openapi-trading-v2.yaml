@@ -785,6 +785,9 @@ components:
     OrderList:
       $ref: './trading-schemas.json#/definitions/OrderList'
 
+    OrderChangesSnapshot:
+      $ref: './trading-schemas.json#/definitions/OrderChangesSnapshot'
+
     Account:
       $ref: './trading-schemas.json#/definitions/Account'
 
