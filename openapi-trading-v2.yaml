@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.2.4
+  version: 2.2.5
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -566,11 +566,15 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /wallet/{address}/spotOrderHistory:
+  /wallet/{address}/orderHistory:
     get:
-      summary: Get wallet spot order history
+      summary: Get wallet order history
       description: |
-        Returns up to 100 historical spot order state-change events for a wallet, newest first.
+        Returns up to 100 historical order state-change events for a wallet, newest first. Today the
+        result set is spot-only (matching-engine sourced); perp will start landing here once the perp
+        order indexer is wired in. The row shape will not change between spot-only and the
+        unified result.
+
         Each row is one state transition emitted by the matching engine (`OPEN`, `PARTIALLY_FILLED`,
         `FILLED`, `CANCELLED`, `REJECTED`). The row shape matches the `Order` events published on the
         `/v2/wallet/{address}/orderChanges` WebSocket channel, so live + historical entries can be
@@ -580,7 +584,7 @@ paths:
         inclusive upper bound) set to the oldest live entry's `lastUpdateAt` to fetch the previous
         page. Deduplicate boundary entries by `(orderId, sequenceNumber)` when joining with the live
         WS feed.
-      operationId: getWalletSpotOrderHistory
+      operationId: getWalletOrderHistory
       tags:
         - Wallet Data
       parameters:
