@@ -393,7 +393,8 @@
         "orderType",
         "status",
         "createdAt",
-        "lastUpdateAt"
+        "lastUpdateAt",
+        "sequenceNumber"
       ],
       "properties": {
         "exchangeId": {
@@ -465,7 +466,7 @@
         },
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Monotonic identifier of the event that produced this state. Populated on event-style emissions (orderChanges WS, orderHistory REST). Encoded from the underlying Redis stream ID `<ms>-<sub_seq>` as `ms * 1000 + sub_seq` (sub_seq assumed < 1000). Survives matching-engine restarts because the ms component is wall-clock based. Together with `snapshotSequenceNumber` from the orderChanges subscription response it lets a client stitch the REST history onto the live WS stream — every subsequent WS message carries a strictly greater value.",
+          "description": "Monotonic identifier of this order state, comparable across all sources. Encoded as `<ms> * 1000 + <sub_seq>`. On event-style emissions (orderChanges WS, orderHistory REST) the value is derived from the underlying Redis stream ID (`<ms>-<sub_seq>`, `sub_seq < 1000` assumed). On non-event emissions (openOrders snapshot rows, perp orders from the conditional-orders table) the value falls back to `lastUpdateAt * 1000` — same encoding space, still monotonic per order. Together with `snapshotSequenceNumber` from the orderChanges subscription response, this lets a client stitch the REST history onto the live WS stream — every subsequent WS message carries a strictly greater value.",
           "example": 1747927089946000
         }
       },
