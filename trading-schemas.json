@@ -736,7 +736,8 @@
         "side",
         "price",
         "reason",
-        "timestamp"
+        "timestamp",
+        "sequenceNumber"
       ],
       "properties": {
         "symbol": {
@@ -786,6 +787,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Block timestamp (milliseconds)",
           "example": 1747927089946
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Execution sequence number, increases by 1 for every spot execution bust in reya chain",
+          "example": 152954
         }
       },
       "additionalProperties": true
