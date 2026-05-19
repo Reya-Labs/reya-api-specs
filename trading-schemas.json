@@ -382,6 +382,7 @@
       "$id": "#Order",
       "x-parser-schema-id": "Order",
       "type": "object",
+      "description": "Represents a state of an order. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges WS, orderHistory REST), `lastUpdateAt` reflects the event time and a single order produces one row per state transition (OPEN, PARTIALLY_FILLED, FILLED, CANCELLED, REJECTED). The monotonic `sequenceNumber` lets clients stitch the orderChanges WS feed onto the orderHistory REST endpoint via the `snapshotSequenceNumber` returned in the orderChanges subscription response.",
       "required": [
         "exchangeId",
         "symbol",
@@ -392,7 +393,8 @@
         "orderType",
         "status",
         "createdAt",
-        "lastUpdateAt"
+        "lastUpdateAt",
+        "sequenceNumber"
       ],
       "properties": {
         "exchangeId": {
@@ -454,13 +456,65 @@
         },
         "createdAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Creation timestamp (milliseconds)",
+          "description": "Order creation timestamp (milliseconds since epoch).",
           "example": 1747927089946
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Last update timestamp (milliseconds)",
+          "description": "Timestamp of this state, in milliseconds since epoch. For openOrders snapshots this is the order creation time; for orderChanges WS events and orderHistory REST rows this is the matching engine event time. Used as the cursor for `orderHistory` pagination via the `endTime` query parameter (inclusive upper bound).",
           "example": 1747927089946
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Monotonic identifier of this order state, comparable across all sources. Encoded as `<ms> * 1000 + <sub_seq>`. On event-style emissions (orderChanges WS, orderHistory REST) the value is derived from the underlying Redis stream ID (`<ms>-<sub_seq>`, `sub_seq < 1000` assumed). On non-event emissions (openOrders snapshot rows, perp orders from the conditional-orders table) the value falls back to `lastUpdateAt * 1000` — same encoding space, still monotonic per order. Together with `snapshotSequenceNumber` from the orderChanges subscription response, this lets a client stitch the REST history onto the live WS stream — every subsequent WS message carries a strictly greater value.",
+          "example": 1747927089946000
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderChangesSnapshot": {
+      "title": "OrderChangesSnapshot",
+      "$id": "#OrderChangesSnapshot",
+      "x-parser-schema-id": "OrderChangesSnapshot",
+      "type": "object",
+      "description": "Initial payload returned in the `subscribed` confirmation for the `/v2/wallet/{address}/orderChanges` WS channel. Combines the current open orders snapshot with a `snapshotSequenceNumber` cursor; every subsequent orderChanges WS message carries a strictly greater `sequenceNumber`, so clients can splice the live feed against the orderHistory REST endpoint without overlap or gap.",
+      "required": [
+        "data",
+        "snapshotSequenceNumber"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "snapshotSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Monotonic cursor (same encoding as `Order.sequenceNumber`: `ms * 1000 + sub_seq` from the Redis stream ID) marking the boundary that the snapshot was taken at. All subsequent orderChanges messages on this subscription have `sequenceNumber` > `snapshotSequenceNumber`.",
+          "example": 1747927089946000
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderList": {
+      "title": "OrderList",
+      "$id": "#OrderList",
+      "x-parser-schema-id": "OrderList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
