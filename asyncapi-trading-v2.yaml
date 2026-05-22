@@ -229,8 +229,14 @@ operations:
       $ref: '#/channels/control'
     messages:
       - $ref: '#/channels/control/messages/pingMessage'
-    summary: Send ping to check connection
-    description: Client sends ping to server.
+    reply:
+      channel:
+        $ref: '#/channels/control'
+      messages:
+        - $ref: '#/channels/control/messages/pongMessage'
+    summary: Send a ping (optional)
+    description: |
+      Optional client-initiated application-level liveness/RTT probe. Server replies with `PongMessage` echoing the optional `id`. Server-side liveness detection uses RFC 6455 protocol-level pings (`sendPings: true`, `idleTimeout: 120`) and does not depend on this operation.
 
   sendSubscribe:
     action: send
@@ -411,6 +417,11 @@ operations:
     summary: Receive price updates for specific symbol
 
 components:
+  correlationIds:
+    requestId:
+      description: The envelope `id` field, used to correlate a client ping with its server pong.
+      location: '$message.payload#/id'
+
   messages:
     MarketsSummaryUpdate:
       name: marketsSummaryUpdate
@@ -527,14 +538,18 @@ components:
     PingMessage:
       name: ping
       title: Ping Message
-      summary: Ping message to check connection
+      summary: Optional client-initiated application-level liveness/RTT probe
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/PingMessagePayload'
 
     PongMessage:
       name: pong
       title: Pong Message
-      summary: Pong response from server
+      summary: Server reply to a client-initiated `ping`, echoing the optional `id`
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/PongMessagePayload'
 
@@ -1078,9 +1093,13 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/PingMessageType'
+        id:
+          type: string
+          description: Optional correlation identifier echoed in the corresponding pong.
+          example: "ping-001"
         timestamp:
           type: integer
-          description: Optional timestamp in milliseconds
+          description: Optional timestamp in milliseconds.
           example: 1747927089946
       required:
         - type
@@ -1092,9 +1111,13 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/PongMessageType'
+        id:
+          type: string
+          description: Echoes the corresponding ping's `id` if any.
+          example: "ping-001"
         timestamp:
           type: integer
-          description: Optional timestamp in milliseconds
+          description: Optional timestamp in milliseconds.
           example: 1747927089946
       required:
         - type

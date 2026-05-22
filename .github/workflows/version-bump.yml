@@ -5,6 +5,7 @@ on:
     paths:
       - 'openapi-trading-v2.yaml'
       - 'asyncapi-trading-v2.yaml'
+      - 'asyncapi-exec-v2.yaml'
       - 'trading-schemas.json'
 
 permissions:
@@ -39,89 +40,104 @@ jobs:
         run: |
           OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
           ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
+          EXEC_VERSION=$(yq '.info.version' asyncapi-exec-v2.yaml)
           echo "openapi_version=$OPENAPI_VERSION" >> $GITHUB_OUTPUT
           echo "asyncapi_version=$ASYNCAPI_VERSION" >> $GITHUB_OUTPUT
+          echo "exec_version=$EXEC_VERSION" >> $GITHUB_OUTPUT
           echo "Current OpenAPI version: $OPENAPI_VERSION"
           echo "Current AsyncAPI version: $ASYNCAPI_VERSION"
+          echo "Current ws-exec AsyncAPI version: $EXEC_VERSION"
 
       - name: Check if versions were modified in PR
         id: check-modified
         run: |
           # Get the base branch commit
           BASE_SHA=$(git merge-base HEAD origin/${{ github.base_ref }})
-          
+
           # Simple check: did the version line change?
           if git diff $BASE_SHA HEAD -- openapi-trading-v2.yaml | grep -q "^\+.*version:"; then
             OPENAPI_MODIFIED=1
           else
             OPENAPI_MODIFIED=0
           fi
-          
+
           if git diff $BASE_SHA HEAD -- asyncapi-trading-v2.yaml | grep -q "^\+.*version:"; then
             ASYNCAPI_MODIFIED=1
           else
             ASYNCAPI_MODIFIED=0
           fi
-          
+
+          if git diff $BASE_SHA HEAD -- asyncapi-exec-v2.yaml | grep -q "^\+.*version:"; then
+            EXEC_MODIFIED=1
+          else
+            EXEC_MODIFIED=0
+          fi
+
           {
             echo "openapi_modified=$OPENAPI_MODIFIED"
             echo "asyncapi_modified=$ASYNCAPI_MODIFIED"
+            echo "exec_modified=$EXEC_MODIFIED"
           } >> $GITHUB_OUTPUT
-          
+
           echo "OpenAPI version modified: $OPENAPI_MODIFIED"
           echo "AsyncAPI version modified: $ASYNCAPI_MODIFIED"
+          echo "ws-exec AsyncAPI version modified: $EXEC_MODIFIED"
 
       - name: Check version consistency
         id: check-consistency
         run: |
           OPENAPI_VERSION="${{ steps.current-versions.outputs.openapi_version }}"
           ASYNCAPI_VERSION="${{ steps.current-versions.outputs.asyncapi_version }}"
-          
-          if [ "$OPENAPI_VERSION" = "$ASYNCAPI_VERSION" ]; then
+          EXEC_VERSION="${{ steps.current-versions.outputs.exec_version }}"
+
+          if [ "$OPENAPI_VERSION" = "$ASYNCAPI_VERSION" ] && [ "$OPENAPI_VERSION" = "$EXEC_VERSION" ]; then
             echo "versions_match=true" >> $GITHUB_OUTPUT
             echo "✅ Versions are consistent: $OPENAPI_VERSION"
           else
             echo "versions_match=false" >> $GITHUB_OUTPUT
-            echo "❌ Version mismatch - OpenAPI: $OPENAPI_VERSION, AsyncAPI: $ASYNCAPI_VERSION"
+            echo "❌ Version mismatch — OpenAPI: $OPENAPI_VERSION, AsyncAPI: $ASYNCAPI_VERSION, ws-exec AsyncAPI: $EXEC_VERSION"
           fi
 
       - name: Bump patch version
         id: bump-version
-        if: steps.check-modified.outputs.openapi_modified == '0' && steps.check-modified.outputs.asyncapi_modified == '0'
+        if: steps.check-modified.outputs.openapi_modified == '0' && steps.check-modified.outputs.asyncapi_modified == '0' && steps.check-modified.outputs.exec_modified == '0'
         run: |
           CURRENT_VERSION="${{ steps.current-versions.outputs.openapi_version }}"
-          
+
           # Parse version (assuming format: major.minor.patch)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-          
+
           # Increment patch version
           NEW_PATCH=$((PATCH + 1))
           NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
-          
+
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
-          
-          # Update both spec files
+
+          # Update all three spec files
           sed -i "s/^  version: .*$/  version: $NEW_VERSION/" openapi-trading-v2.yaml
           sed -i "s/^  version: .*$/  version: $NEW_VERSION/" asyncapi-trading-v2.yaml
-          
-          echo "✅ Updated both spec files to version $NEW_VERSION"
+          sed -i "s/^  version: .*$/  version: $NEW_VERSION/" asyncapi-exec-v2.yaml
+
+          echo "✅ Updated all three spec files to version $NEW_VERSION"
 
       - name: Validate version consistency and progression (after manual changes)
-        if: steps.check-modified.outputs.openapi_modified != '0' || steps.check-modified.outputs.asyncapi_modified != '0'
+        if: steps.check-modified.outputs.openapi_modified != '0' || steps.check-modified.outputs.asyncapi_modified != '0' || steps.check-modified.outputs.exec_modified != '0'
         run: |
           CURRENT_OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
           CURRENT_ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
-          
+          CURRENT_EXEC_VERSION=$(yq '.info.version' asyncapi-exec-v2.yaml)
+
           # Check version consistency
-          if [ "$CURRENT_OPENAPI_VERSION" != "$CURRENT_ASYNCAPI_VERSION" ]; then
+          if [ "$CURRENT_OPENAPI_VERSION" != "$CURRENT_ASYNCAPI_VERSION" ] || [ "$CURRENT_OPENAPI_VERSION" != "$CURRENT_EXEC_VERSION" ]; then
             echo "❌ ERROR: Version mismatch detected!"
             echo "OpenAPI version: $CURRENT_OPENAPI_VERSION"
             echo "AsyncAPI version: $CURRENT_ASYNCAPI_VERSION"
-            echo "Both specs must have the same version."
+            echo "ws-exec AsyncAPI version: $CURRENT_EXEC_VERSION"
+            echo "All three specs must have the same version."
             exit 1
           fi
-          
+
           echo "✅ Version consistency verified: $CURRENT_OPENAPI_VERSION"
           
           # Get the base branch commit to compare versions
@@ -169,7 +185,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add openapi-trading-v2.yaml asyncapi-trading-v2.yaml
+          git add openapi-trading-v2.yaml asyncapi-trading-v2.yaml asyncapi-exec-v2.yaml
           git commit -m "chore: bump API specs version to ${{ steps.bump-version.outputs.new_version }}"
           git push origin HEAD:${{ github.head_ref }}
 
@@ -197,18 +213,20 @@ jobs:
             
             const openApiModified = '${{ steps.check-modified.outputs.openapi_modified }}' !== '0';
             const asyncApiModified = '${{ steps.check-modified.outputs.asyncapi_modified }}' !== '0';
+            const execModified = '${{ steps.check-modified.outputs.exec_modified }}' !== '0';
             const versionsMatch = '${{ steps.check-consistency.outputs.versions_match }}' === 'true';
             const newVersion = '${{ steps.bump-version.outputs.new_version }}';
             const currentOpenApiVersion = '${{ steps.current-versions.outputs.openapi_version }}';
             const currentAsyncApiVersion = '${{ steps.current-versions.outputs.asyncapi_version }}';
-            
+            const currentExecVersion = '${{ steps.current-versions.outputs.exec_version }}';
+
             let message = '🤖 **API Specs Version Check**\n\n';
-            
+
             if (newVersion) {
               message += `✅ **Version automatically bumped to \`${newVersion}\`**\n`;
               message += `- Previous version: \`${currentOpenApiVersion}\`\n`;
-              message += `- Both OpenAPI and AsyncAPI specs updated\n`;
-            } else if (openApiModified || asyncApiModified) {
+              message += `- OpenAPI, AsyncAPI, and ws-exec AsyncAPI specs updated\n`;
+            } else if (openApiModified || asyncApiModified || execModified) {
               message += '📝 **Manual version changes detected**\n\n';
               if (versionsMatch) {
                 message += `✅ Version consistency verified: \`${currentOpenApiVersion}\`\n`;
@@ -216,7 +234,8 @@ jobs:
                 message += `❌ **Version mismatch detected!**\n`;
                 message += `- OpenAPI version: \`${currentOpenApiVersion}\`\n`;
                 message += `- AsyncAPI version: \`${currentAsyncApiVersion}\`\n`;
-                message += `\n⚠️ Please ensure both specs have the same version.\n`;
+                message += `- ws-exec AsyncAPI version: \`${currentExecVersion}\`\n`;
+                message += `\n⚠️ Please ensure all three specs have the same version.\n`;
               }
             }
             

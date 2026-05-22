@@ -7,6 +7,7 @@ on:
     paths:
       - 'openapi-trading-v2.yaml'
       - 'asyncapi-trading-v2.yaml'
+      - 'asyncapi-exec-v2.yaml'
       - 'trading-schemas.json'
   workflow_dispatch:
 
@@ -33,24 +34,28 @@ jobs:
         run: |
           OPENAPI_VERSION=$(yq '.info.version' openapi-trading-v2.yaml)
           ASYNCAPI_VERSION=$(yq '.info.version' asyncapi-trading-v2.yaml)
+          EXEC_VERSION=$(yq '.info.version' asyncapi-exec-v2.yaml)
           echo "openapi_version=$OPENAPI_VERSION" >> $GITHUB_OUTPUT
           echo "asyncapi_version=$ASYNCAPI_VERSION" >> $GITHUB_OUTPUT
+          echo "exec_version=$EXEC_VERSION" >> $GITHUB_OUTPUT
           echo "Current OpenAPI version: $OPENAPI_VERSION"
           echo "Current AsyncAPI version: $ASYNCAPI_VERSION"
+          echo "Current ws-exec AsyncAPI version: $EXEC_VERSION"
 
       - name: Validate version consistency
         id: validate-consistency
         run: |
           OPENAPI_VERSION="${{ steps.current-versions.outputs.openapi_version }}"
           ASYNCAPI_VERSION="${{ steps.current-versions.outputs.asyncapi_version }}"
-          
-          if [ "$OPENAPI_VERSION" = "$ASYNCAPI_VERSION" ]; then
+          EXEC_VERSION="${{ steps.current-versions.outputs.exec_version }}"
+
+          if [ "$OPENAPI_VERSION" = "$ASYNCAPI_VERSION" ] && [ "$OPENAPI_VERSION" = "$EXEC_VERSION" ]; then
             echo "versions_match=true" >> $GITHUB_OUTPUT
             echo "version=$OPENAPI_VERSION" >> $GITHUB_OUTPUT
             echo "✅ Versions are consistent: $OPENAPI_VERSION"
           else
             echo "versions_match=false" >> $GITHUB_OUTPUT
-            echo "❌ Version mismatch - OpenAPI: $OPENAPI_VERSION, AsyncAPI: $ASYNCAPI_VERSION"
+            echo "❌ Version mismatch — OpenAPI: $OPENAPI_VERSION, AsyncAPI: $ASYNCAPI_VERSION, ws-exec AsyncAPI: $EXEC_VERSION"
             exit 1
           fi
 
@@ -74,18 +79,19 @@ jobs:
         run: |
           VERSION="${{ steps.validate-consistency.outputs.version }}"
           COMMIT_SHA="${{ github.sha }}"
-          
+
           # Create annotated tag
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git tag -a "$VERSION" -m "Release version $VERSION
-          
+
           Auto-tagged after merge to main branch.
-          
+
           Changes included:
           - OpenAPI Trading API v2: $VERSION
-          - AsyncAPI Trading WebSocket API v2: $VERSION"
-          
+          - AsyncAPI Trading WebSocket API v2: $VERSION
+          - AsyncAPI ws-exec WebSocket API v2: $VERSION"
+
           echo "✅ Created tag $VERSION for commit $COMMIT_SHA"
 
       - name: Push tag
@@ -143,18 +149,19 @@ jobs:
             
             // Build comprehensive release body
             let releaseBody = `## 🚀 API Specifications Release ${version}
-            
+
             This release contains updates to the Reya DEX Trading API specifications.
-            
+
             ### 📋 Updated Specifications
             - **OpenAPI Trading API v2**: \`${version}\`
             - **AsyncAPI Trading WebSocket API v2**: \`${version}\`
-            
+            - **AsyncAPI ws-exec WebSocket API v2**: \`${version}\`
+
             ### 📦 Release Details
             - **Release Tag**: \`${version}\`
             - **Commit**: \`${commitSha.substring(0, 7)}\`
             - **Previous Version**: ${previousTag ? `\`${previousTag}\`` : '_First release_'}
-            
+
             ### 🔄 Latest Changes
             **${commit.message.split('\n')[0]}**`;
             
@@ -189,6 +196,7 @@ jobs:
           echo "=== Post-Merge Version Tagging Results ==="
           echo "OpenAPI Version: ${{ steps.current-versions.outputs.openapi_version }}"
           echo "AsyncAPI Version: ${{ steps.current-versions.outputs.asyncapi_version }}"
+          echo "ws-exec AsyncAPI Version: ${{ steps.current-versions.outputs.exec_version }}"
           echo "Versions Match: ${{ steps.validate-consistency.outputs.versions_match }}"
           echo "Version is New: ${{ steps.check-version-new.outputs.version_is_new }}"
           
