@@ -1372,12 +1372,12 @@
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID to cancel. Provide either orderId OR clientOrderId, not both. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "description": "Internal matching engine order ID to cancel. At least one of `orderId` or `clientOrderId` must be provided; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. Provide either orderId OR clientOrderId, not both. This is the same clientOrderId provided in CreateOrderRequest.",
+          "description": "Client-provided order ID for tracking and correlation. At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {
