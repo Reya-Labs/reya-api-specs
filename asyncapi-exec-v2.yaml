@@ -7,7 +7,7 @@ info:
 
     Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
 
-    Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature (`signature`, `nonce`, `signerWallet`, `expiresAfter`), validated server-side per-frame and byte-identical to the REST signing model. There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
+    Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature (`signature`, `nonce`, `signerWallet`, `deadline`), validated server-side per-frame and byte-identical to the REST signing model. `deadline` is the EIP-712 envelope's signature-validity window — distinct from `expiresAfter`, which `createOrder` payloads optionally carry as the on-chain `OrderDetails.orderExpiry` (order lifetime). There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
 
     Heartbeat: server-side liveness uses RFC 6455 protocol-level pings (handled automatically by any standards-compliant client WebSocket library — no application-level code is required on the client). The server closes the connection after 120 seconds of inbound silence. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout). Clients may *optionally* send `{type:"ping", id?}` JSON frames for explicit application-level RTT or correlation probes; the server replies with `{type:"pong", id?}` echoing the `id`.
 
