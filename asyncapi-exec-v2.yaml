@@ -112,9 +112,9 @@ operations:
         $ref: '#/channels/operations'
       messages:
         - $ref: '#/channels/operations/messages/cancelAllResponseMessage'
-    summary: Cancel all orders for an account on a market
+    summary: Cancel all orders for an account, optionally scoped to a market
     description: |
-      Client mass-cancels all open orders for an account on a given (spot) market. The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Perp mass-cancel is not supported — sending one returns the same not-supported error REST returns today. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
+      Client mass-cancels open orders for an account, optionally scoped to a specific market via `symbol` (omit to cancel across all the signer's markets). The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Supports both spot and perp markets via the unified `marketId` namespace. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
 
   sendPing:
     action: send
