@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.3.3
+  version: 3.0.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -55,12 +55,35 @@ paths:
   /marketDefinitions:
     get:
       summary: Get market definitions
+      description: 'Deprecated: use `/perpMarketDefinitions` instead. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
       operationId: getMarketDefinitions
+      deprecated: true
       tags:
         - Reference Data
       responses:
         '200':
           description: List of market definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /perpMarketDefinitions:
+    get:
+      summary: Get perp market definitions
+      description: Alias of `/marketDefinitions`, mirroring the `/spotMarketDefinitions` naming.
+      operationId: getPerpMarketDefinitions
+      tags:
+        - Reference Data
+      responses:
+        '200':
+          description: List of perp market definitions
           content:
             application/json:
               schema:
@@ -215,8 +238,9 @@ paths:
   /markets/summary:
     get:
       summary: Get market summaries
-      description: Statistics and throttled market data for all markets. Recalculated every 0.5s
+      description: 'Deprecated: use `/perpMarkets/summary` instead. Statistics and throttled market data for all markets. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
       operationId: getMarketsSummary
+      deprecated: true
       tags:
         - Market Data
       responses:
@@ -233,11 +257,54 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /perpMarkets/summary:
+    get:
+      summary: Get perp market summaries
+      description: Alias of `/markets/summary`, mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
+      operationId: getPerpMarketsSummary
+      tags:
+        - Market Data
+      responses:
+        '200':
+          description: List of perp market summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /market/{symbol}/summary:
     get:
       summary: Get market summary
-      description: Statistics and throttled data for a specific market. Recalculated every 0.5s
+      description: 'Deprecated: use `/perpMarket/{symbol}/summary` instead. Statistics and throttled data for a specific market. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
       operationId: getMarketSummary
+      deprecated: true
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+      responses:
+        '200':
+          description: Market summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /perpMarket/{symbol}/summary:
+    get:
+      summary: Get perp market summary
+      description: Alias of `/market/{symbol}/summary`, mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+      operationId: getPerpMarketSummary
       tags:
         - Market Data
       parameters:
@@ -697,7 +764,10 @@ components:
       name: startTime
       in: query
       required: false
-      description: Return results after this sequence number (for pagination)
+      description: >-
+        Return results at or after this time (inclusive lower bound).
+        Millisecond POSIX timestamp, matched against each execution's on-chain
+        block timestamp.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733379000
@@ -706,7 +776,12 @@ components:
       name: endTime
       in: query
       required: false
-      description: Return results before this sequence number (for pagination)
+      description: >-
+        Return results at or before this time (inclusive upper bound).
+        Millisecond POSIX timestamp, matched against each execution's on-chain
+        block timestamp. Results are returned newest-first and capped at a
+        maximum that varies by endpoint; to page backward through history,
+        pass the oldest timestamp from the previous page.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
