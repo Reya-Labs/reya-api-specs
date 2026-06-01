@@ -60,14 +60,16 @@ channels:
 
   marketsSummary:
     address: /v2/markets/summary
-    description: Real-time updates for all market summaries
+    description: 'Deprecated: use `/v2/perpMarkets/summary` instead. Real-time updates for all market summaries. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
+    x-deprecated: true
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
 
   marketSummary:
     address: /v2/market/{symbol}/summary
-    description: Real-time updates for a specific market's summary
+    description: 'Deprecated: use `/v2/perpMarket/{symbol}/summary` instead. Real-time updates for a specific market''s summary. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
+    x-deprecated: true
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
@@ -312,7 +314,8 @@ operations:
       $ref: '#/channels/marketsSummary'
     messages:
       - $ref: '#/channels/marketsSummary/messages/marketsSummaryUpdate'
-    summary: Receive market summaries updates
+    summary: 'Deprecated: use receivePerpMarketsSummary instead. Receive market summaries updates.'
+    x-deprecated: true
 
   receiveMarketSummary:
     action: receive
@@ -320,7 +323,8 @@ operations:
       $ref: '#/channels/marketSummary'
     messages:
       - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
-    summary: Receive specific market summary updates
+    summary: 'Deprecated: use receivePerpMarketSummary instead. Receive specific market summary updates.'
+    x-deprecated: true
 
   receivePerpMarketsSummary:
     action: receive

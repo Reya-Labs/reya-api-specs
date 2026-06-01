@@ -55,7 +55,9 @@ paths:
   /marketDefinitions:
     get:
       summary: Get market definitions
+      description: 'Deprecated: use `/perpMarketDefinitions` instead. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
       operationId: getMarketDefinitions
+      deprecated: true
       tags:
         - Reference Data
       responses:
@@ -236,8 +238,9 @@ paths:
   /markets/summary:
     get:
       summary: Get market summaries
-      description: Statistics and throttled market data for all markets. Recalculated every 0.5s
+      description: 'Deprecated: use `/perpMarkets/summary` instead. Statistics and throttled market data for all markets. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
       operationId: getMarketsSummary
+      deprecated: true
       tags:
         - Market Data
       responses:
@@ -278,8 +281,9 @@ paths:
   /market/{symbol}/summary:
     get:
       summary: Get market summary
-      description: Statistics and throttled data for a specific market. Recalculated every 0.5s
+      description: 'Deprecated: use `/perpMarket/{symbol}/summary` instead. Statistics and throttled data for a specific market. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
       operationId: getMarketSummary
+      deprecated: true
       tags:
         - Market Data
       parameters:
