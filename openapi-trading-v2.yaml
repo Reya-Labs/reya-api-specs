@@ -700,9 +700,9 @@ components:
       description: >-
         Return results at or before this time (inclusive upper bound).
         Millisecond POSIX timestamp, matched against each execution's on-chain
-        block timestamp. Results are returned newest-first and capped at 100;
-        to page backward through history, pass the oldest timestamp from the
-        previous page.
+        block timestamp. Results are returned newest-first and capped at a
+        maximum that varies by endpoint; to page backward through history,
+        pass the oldest timestamp from the previous page.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
