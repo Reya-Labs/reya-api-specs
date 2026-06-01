@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.2.3
+  version: 2.3.0
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -71,6 +71,27 @@ channels:
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
+        location: $message.payload#/symbol
+    messages:
+      marketSummaryUpdate:
+        $ref: '#/components/messages/MarketSummaryUpdate'
+
+  # PRO-107: perp-prefixed aliases of the un-prefixed summary channels, mirroring
+  # the spot* naming. The server collapses these onto the canonical un-prefixed
+  # channel; subscribing under either name yields identical data.
+  perpMarketsSummary:
+    address: /v2/perpMarkets/summary
+    description: Alias of `/v2/markets/summary` (mirrors `/v2/spotMarkets/summary`). Real-time updates for all perp market summaries
+    messages:
+      marketsSummaryUpdate:
+        $ref: '#/components/messages/MarketsSummaryUpdate'
+
+  perpMarketSummary:
+    address: /v2/perpMarket/{symbol}/summary
+    description: Alias of `/v2/market/{symbol}/summary` (mirrors `/v2/spotMarket/{symbol}/summary`). Real-time updates for a specific perp market's summary
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., BTCRUSDPERP)
         location: $message.payload#/symbol
     messages:
       marketSummaryUpdate:
@@ -303,6 +324,23 @@ operations:
     messages:
       - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
     summary: Receive specific market summary updates
+
+  # PRO-107: perp-prefixed alias operations (same payloads as the un-prefixed channels).
+  receivePerpMarketsSummary:
+    action: receive
+    channel:
+      $ref: '#/channels/perpMarketsSummary'
+    messages:
+      - $ref: '#/channels/perpMarketsSummary/messages/marketsSummaryUpdate'
+    summary: Receive perp market summaries updates (alias of receiveMarketsSummary)
+
+  receivePerpMarketSummary:
+    action: receive
+    channel:
+      $ref: '#/channels/perpMarketSummary'
+    messages:
+      - $ref: '#/channels/perpMarketSummary/messages/marketSummaryUpdate'
+    summary: Receive specific perp market summary updates (alias of receiveMarketSummary)
 
   receiveSpotMarketsSummary:
     action: receive
