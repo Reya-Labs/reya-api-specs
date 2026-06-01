@@ -72,8 +72,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  # PRO-107: perp-prefixed alias of /marketDefinitions, mirroring the spot* naming.
-  # Same handler/response; the un-prefixed route is kept for back-compat.
   /perpMarketDefinitions:
     get:
       summary: Get perp market definitions
@@ -256,7 +254,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  # PRO-107: perp-prefixed alias of /markets/summary, mirroring the spot* naming.
   /perpMarkets/summary:
     get:
       summary: Get perp market summaries
@@ -299,7 +296,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  # PRO-107: perp-prefixed alias of /market/{symbol}/summary, mirroring the spot* naming.
   /perpMarket/{symbol}/summary:
     get:
       summary: Get perp market summary

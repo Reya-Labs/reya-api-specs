@@ -76,9 +76,6 @@ channels:
       marketSummaryUpdate:
         $ref: '#/components/messages/MarketSummaryUpdate'
 
-  # PRO-107: perp-prefixed aliases of the un-prefixed summary channels, mirroring
-  # the spot* naming. The server collapses these onto the canonical un-prefixed
-  # channel; subscribing under either name yields identical data.
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
     description: Alias of `/v2/markets/summary` (mirrors `/v2/spotMarkets/summary`). Real-time updates for all perp market summaries
@@ -325,7 +322,6 @@ operations:
       - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
     summary: Receive specific market summary updates
 
-  # PRO-107: perp-prefixed alias operations (same payloads as the un-prefixed channels).
   receivePerpMarketsSummary:
     action: receive
     channel:
