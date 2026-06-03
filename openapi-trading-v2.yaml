@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.3.4
+  version: 2.3.5
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -372,6 +372,7 @@ paths:
         - $ref: '#/components/parameters/SymbolParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/ExecutionTypeParam'
       responses:
         '200':
           description: List of perp executions
@@ -530,6 +531,7 @@ paths:
         - $ref: '#/components/parameters/AddressParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/ExecutionTypeParam'
       responses:
         '200':
           description: List of perpetual executions
@@ -773,6 +775,18 @@ components:
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
+
+    ExecutionTypeParam:
+      name: type
+      in: query
+      required: false
+      description: Filter perp executions by type. Omit to return executions of all types.
+      schema:
+        type: string
+        enum:
+          - ORDER_MATCH
+          - LIQUIDATION
+        example: LIQUIDATION
 
     ResolutionParam:
       name: resolution
