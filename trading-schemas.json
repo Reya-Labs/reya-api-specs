@@ -107,8 +107,8 @@
       "$id": "#TimeInForce",
       "x-parser-schema-id": "TimeInForce",
       "type": "string",
-      "enum": ["IOC", "GTC"],
-      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
+      "enum": ["IOC", "GTC", "GTT"],
+      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel, GTT = Good Till Time)",
       "example": "GTC"
     },
     "OrderType": {
@@ -1321,7 +1321,7 @@
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "Order time in force (exclusively used for LIMIT orders). Maps to on-chain `OrderDetails.timeInForce` (0 = GTC, 1 = IOC). This field is signed but not enforced on-chain.",
+          "description": "Order time in force (exclusively used for LIMIT orders). Maps to on-chain `OrderDetails.timeInForce` (0 = GTC, 1 = IOC, 2 = GTT). This field is signed but not enforced on-chain.",
           "example": "GTC"
         },
         "triggerPx": {
@@ -1332,6 +1332,11 @@
         "reduceOnly": {
           "type": "boolean",
           "description": "Reduce-only intent. Perp only; spot markets must set this to false. Maps to on-chain `OrderDetails.reduceOnly`.",
+          "example": false
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "Post-only (maker-only) intent: the order must rest and never cross as a taker. Valid on GTC/GTT; rejected on IOC. Maps to on-chain `OrderDetails.postOnly`.",
           "example": false
         },
         "signature": {
@@ -1355,7 +1360,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Optional; `0` (the default if omitted) means good-until-cancelled. When `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter`.",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Optional; `0` (the default if omitted) means good-until-cancelled. GTC and IOC orders use `0`; only GTT orders set a non-zero `expiresAfter`, which must be greater than `deadline` (`deadline <= expiresAfter`).",
           "example": 1676923200
         },
         "clientOrderId": {
