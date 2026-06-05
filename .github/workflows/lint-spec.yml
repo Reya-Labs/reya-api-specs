@@ -7,7 +7,7 @@ name: Lint API Specs
 # that used to live in trading-schemas.json) and it breaks GitBook's published
 # OpenAPI renderer: GitBook silently drops operations whose response schema
 # carries a `$id` (e.g. the `/perpMarketDefinitions` alias of the deprecated
-# `/marketDefinitions`, which share the `MarketDefinition` schema). See PRO-216.
+# `/marketDefinitions`, which share the `MarketDefinition` schema).
 #
 # `redocly lint` runs as an informational step (the spec has pre-existing
 # findings; tightening it into a hard gate is tracked separately).
