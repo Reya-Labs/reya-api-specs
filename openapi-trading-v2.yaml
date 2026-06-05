@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.2
+  version: 3.0.3
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -49,28 +49,6 @@ paths:
               schema:
                 type: string
                 format: binary
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /marketDefinitions:
-    get:
-      summary: Get market definitions
-      description: 'Deprecated: use `/perpMarketDefinitions` instead. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
-      operationId: getMarketDefinitions
-      deprecated: true
-      tags:
-        - Reference Data
-      responses:
-        '200':
-          description: List of market definitions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketDefinition'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
