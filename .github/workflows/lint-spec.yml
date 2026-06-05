@@ -1,0 +1,52 @@
+name: Lint API Specs
+
+# Spec-quality gate on every spec change.
+#
+# Hard gate: the bundled OpenAPI must contain no JSON-Schema `$id` keys. `$id`
+# is invalid in OpenAPI 3.0 schema objects (it is an AsyncAPI-parser artifact
+# that used to live in trading-schemas.json) and it breaks GitBook's published
+# OpenAPI renderer: GitBook silently drops operations whose response schema
+# carries a `$id` (e.g. the `/perpMarketDefinitions` alias of the deprecated
+# `/marketDefinitions`, which share the `MarketDefinition` schema). See PRO-216.
+#
+# `redocly lint` runs as an informational step (the spec has pre-existing
+# findings; tightening it into a hard gate is tracked separately).
+
+on:
+  pull_request:
+    paths:
+      - 'openapi-trading-v2.yaml'
+      - 'asyncapi-trading-v2.yaml'
+      - 'asyncapi-exec-v2.yaml'
+      - 'trading-schemas.json'
+  workflow_dispatch:
+
+jobs:
+  lint-spec:
+    name: Lint API Specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Pinned to the same redocly version the off-chain `build:specs` step uses
+      # to produce the served bundle, so this reproduces what GitBook ingests.
+      - name: Bundle OpenAPI spec
+        run: npx --yes @redocly/cli@2.0.8 bundle openapi-trading-v2.yaml -o /tmp/openapi-bundled.yaml
+
+      - name: Assert bundle has no `$id` keys (invalid in OpenAPI 3.0; breaks GitBook)
+        run: |
+          if grep -nE '^[[:space:]]*\$id:' /tmp/openapi-bundled.yaml; then
+            echo "::error::Bundled OpenAPI contains \$id keys. They are invalid in OpenAPI 3.0 schema objects and break GitBook's published renderer (it drops operations). Strip \$id / x-parser-schema-id from trading-schemas.json."
+            exit 1
+          fi
+          echo "OK - no \$id keys in the bundled spec."
+
+      - name: redocly lint (informational)
+        continue-on-error: true
+        run: npx --yes @redocly/cli@2.0.8 lint openapi-trading-v2.yaml
