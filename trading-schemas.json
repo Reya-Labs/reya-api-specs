@@ -1,11 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://api.reya.xyz/schemas/trading-schemas.json",
   "definitions": {
     "Symbol": {
       "title": "Symbol",
-      "$id": "#Symbol",
-      "x-parser-schema-id": "Symbol",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
       "examples": ["BTCRUSDPERP", "WETHRUSD"],
@@ -13,60 +10,44 @@
     },
     "Asset": {
       "title": "Asset",
-      "$id": "#Asset",
-      "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
       "examples": ["BTCRUSDPERP", "WETHRUSD"]
     },
     "Address": {
       "title": "Address",
-      "$id": "#Address",
-      "x-parser-schema-id": "Address",
       "type": "string",
       "pattern": "^0x[a-fA-F0-9]{40}$",
       "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"]
     },
     "UnsignedDecimal": {
       "title": "UnsignedDecimal",
-      "$id": "#UnsignedDecimal",
-      "x-parser-schema-id": "UnsignedDecimal",
       "type": "string",
       "pattern": "^\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
       "examples": ["1.0", "0.001", "154.741", "1.2345e10", "6.789e-5"]
     },
     "SignedDecimal": {
       "title": "SignedDecimal",
-      "$id": "#Decimal",
-      "x-parser-schema-id": "SignedDecimal",
       "type": "string",
       "pattern": "^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
       "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75", "-1.12628295e-9", "3.14159e+8"]
     },
     "PriceValue": {
       "title": "PriceValue",
-      "$id": "#PriceValue",
-      "x-parser-schema-id": "PriceValue",
       "$ref": "#/definitions/SignedDecimal"
     },
     "Qty": {
       "title": "Qty",
-      "$id": "#Qty",
-      "x-parser-schema-id": "Qty",
       "$ref": "#/definitions/UnsignedDecimal"
     },
     "UnsignedInteger": {
       "title": "UnsignedInteger",
-      "$id": "#UnsignedInteger",
-      "x-parser-schema-id": "UnsignedInteger",
       "type": "integer",
       "minimum": 0,
       "examples": [1747927089946, 1756733379000]
     },
     "RequestErrorCode": {
       "title": "RequestErrorCode",
-      "$id": "#RequestErrorCode",
-      "x-parser-schema-id": "RequestErrorCode",
       "type": "string",
       "enum": [
         "SYMBOL_NOT_FOUND",
@@ -86,8 +67,6 @@
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
-      "$id": "#ServerErrorCode",
-      "x-parser-schema-id": "ServerErrorCode",
       "type": "string",
       "enum": [
         "INTERNAL_SERVER_ERROR"
@@ -96,16 +75,12 @@
     },
     "Side": {
       "title": "Side",
-      "$id": "#Side",
-      "x-parser-schema-id": "Side",
       "type": "string",
       "enum": ["B", "A"],
       "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
     },
     "TimeInForce": {
       "title": "TimeInForce",
-      "$id": "#TimeInForce",
-      "x-parser-schema-id": "TimeInForce",
       "type": "string",
       "enum": ["IOC", "GTC", "GTT"],
       "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel, GTT = Good Till Time)",
@@ -113,8 +88,6 @@
     },
     "OrderType": {
       "title": "OrderType",
-      "$id": "#OrderType",
-      "x-parser-schema-id": "OrderType",
       "type": "string",
       "enum": ["LIMIT", "STOP_LOSS", "TAKE_PROFIT"],
       "description": "Order type aligned with the on-chain `OrderDetails.orderType` enum: LIMIT = limit order, STOP_LOSS = stop-loss trigger order, TAKE_PROFIT = take-profit trigger order.",
@@ -122,48 +95,36 @@
     },
     "ExecutionType": {
       "title": "ExecutionType",
-      "$id": "#ExecutionType",
-      "x-parser-schema-id": "ExecutionType",
       "type": "string",
       "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "DUST"],
       "description": "Type of execution"
     },
     "AccountType": {
       "title": "AccountType",
-      "$id": "#AccountType",
-      "x-parser-schema-id": "AccountType",
       "type": "string",
       "enum": ["MAINPERP", "SUBPERP", "SPOT"],
       "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
     },
     "OrderStatus": {
       "title": "OrderStatus",
-      "$id": "#OrderStatus",
-      "x-parser-schema-id": "OrderStatus",
       "type": "string",
       "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
       "description": "Order status"
     },
     "TierType": {
       "title": "TierType",
-      "$id": "#TierType",
-      "x-parser-schema-id": "TierType",
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
     },
     "DepthType": {
       "title": "DepthType",
-      "$id": "#DepthType",
-      "x-parser-schema-id": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
       "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
     },
     "RequestError": {
       "title": "RequestError",
-      "$id": "#RequestError",
-      "x-parser-schema-id": "RequestError",
       "type": "object",
       "required": [
         "error",
@@ -183,8 +144,6 @@
     },
     "ServerError": {
       "title": "ServerError",
-      "$id": "#ServerError",
-      "x-parser-schema-id": "ServerError",
       "type": "object",
       "required": [
         "error",
@@ -204,8 +163,6 @@
     },
     "MarketSummary": {
       "title": "MarketSummary",
-      "$id": "#MarketSummary",
-      "x-parser-schema-id": "MarketSummary",
       "type": "object",
       "required": [
         "symbol",
@@ -273,8 +230,6 @@
     },
     "SpotMarketSummary": {
       "title": "SpotMarketSummary",
-      "$id": "#SpotMarketSummary",
-      "x-parser-schema-id": "SpotMarketSummary",
       "type": "object",
       "required": [
         "symbol",
@@ -310,8 +265,6 @@
     },
     "Position": {
       "title": "Position",
-      "$id": "#Position",
-      "x-parser-schema-id": "Position",
       "type": "object",
       "required": [
         "exchangeId",
@@ -361,8 +314,6 @@
     },
     "Order": {
       "title": "Order",
-      "$id": "#Order",
-      "x-parser-schema-id": "Order",
       "type": "object",
       "required": [
         "exchangeId",
@@ -449,8 +400,6 @@
     },
     "AccountBalance": {
       "title": "AccountBalance",
-      "$id": "#AccountBalance",
-      "x-parser-schema-id": "AccountBalance",
       "type": "object",
       "required": [
         "accountId",
@@ -482,8 +431,6 @@
     },
     "PerpExecutionList": {
       "title": "PerpExecutionList",
-      "$id": "#PerpExecutionList",
-      "x-parser-schema-id": "PerpExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -504,8 +451,6 @@
     },
     "PerpExecution": {
       "title": "PerpExecution",
-      "$id": "#PerpExecution",
-      "x-parser-schema-id": "PerpExecution",
       "type": "object",
       "required": [
         "exchangeId",
@@ -627,8 +572,6 @@
     },
     "SpotExecutionList": {
       "title": "SpotExecutionList",
-      "$id": "#SpotExecutionList",
-      "x-parser-schema-id": "SpotExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -649,8 +592,6 @@
     },
     "SpotExecution": {
       "title": "SpotExecution",
-      "$id": "#SpotExecution",
-      "x-parser-schema-id": "SpotExecution",
       "type": "object",
       "required": [
         "symbol",
@@ -724,8 +665,6 @@
     },
     "ExecutionBustList": {
       "title": "ExecutionBustList",
-      "$id": "#ExecutionBustList",
-      "x-parser-schema-id": "ExecutionBustList",
       "type": "object",
       "required": [
         "data",
@@ -746,8 +685,6 @@
     },
     "ExecutionBust": {
       "title": "ExecutionBust",
-      "$id": "#ExecutionBust",
-      "x-parser-schema-id": "ExecutionBust",
       "type": "object",
       "required": [
         "symbol",
@@ -823,8 +760,6 @@
     },
     "Price": {
       "title": "Price",
-      "$id": "#Price",
-      "x-parser-schema-id": "Price",
       "type": "object",
       "required": [
         "symbol",
@@ -856,8 +791,6 @@
 
     "MarketDefinition": {
       "title": "MarketDefinition",
-      "$id": "#MarketDefinition",
-      "x-parser-schema-id": "MarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -918,8 +851,6 @@
     },
     "SpotMarketDefinition": {
       "title": "SpotMarketDefinition",
-      "$id": "#SpotMarketDefinition",
-      "x-parser-schema-id": "SpotMarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -969,8 +900,6 @@
     },
     "Account": {
       "title": "Account",
-      "$id": "#Account",
-      "x-parser-schema-id": "Account",
       "type": "object",
       "required": [
         "accountId",
@@ -994,8 +923,6 @@
     },
     "AssetDefinition": {
       "title": "AssetDefinition",
-      "$id": "#AssetDefinition",
-      "x-parser-schema-id": "AssetDefinition",
       "type": "object",
       "required": [
         "asset",
@@ -1044,8 +971,6 @@
     },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
-      "$id": "#CandleHistoryData",
-      "x-parser-schema-id": "CandleHistoryData",
       "type": "object",
       "required": [
         "t",
@@ -1100,8 +1025,6 @@
     },
     "FeeTierParameters": {
       "title": "FeeTierParameters",
-      "$id": "#FeeTierParameters",
-      "x-parser-schema-id": "FeeTierParameters",
       "type": "object",
       "required": [
         "tierId",
@@ -1138,8 +1061,6 @@
     },
     "GlobalFeeParameters": {
       "title": "GlobalFeeParameters",
-      "$id": "#GlobalFeeParameters",
-      "x-parser-schema-id": "GlobalFeeParameters",
       "type": "object",
       "required": [
         "ogDiscount",
@@ -1173,8 +1094,6 @@
     },
     "LiquidityParameters": {
       "title": "LiquidityParameters",
-      "$id": "#LiquidityParameters",
-      "x-parser-schema-id": "LiquidityParameters",
       "type": "object",
       "required": [
         "symbol",
@@ -1200,8 +1119,6 @@
     },
     "WalletConfiguration": {
       "title": "WalletConfiguration",
-      "$id": "#WalletConfiguration",
-      "x-parser-schema-id": "WalletConfiguration",
       "type": "object",
       "required": [
         "feeTierId",
@@ -1235,8 +1152,6 @@
     },
     "PaginationMeta": {
       "title": "PaginationMeta",
-      "$id": "#PaginationMeta",
-      "x-parser-schema-id": "PaginationMeta",
       "type": "object",
       "required": [
         "limit",
@@ -1268,8 +1183,6 @@
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
-      "$id": "#CreateOrderRequest",
-      "x-parser-schema-id": "CreateOrderRequest",
       "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty`. Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `expiresAfter` (order lifetime — enforced on-chain at execution). Convention: if `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
@@ -1373,8 +1286,6 @@
     },
     "CreateOrderResponse": {
       "title": "CreateOrderResponse",
-      "$id": "#CreateOrderResponse",
-      "x-parser-schema-id": "CreateOrderResponse",
       "type": "object",
       "required": [
         "status"
@@ -1408,8 +1319,6 @@
     },
     "CancelOrderRequest": {
       "title": "CancelOrderRequest",
-      "$id": "#CancelOrderRequest",
-      "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
         "symbol",
@@ -1458,8 +1367,6 @@
     },
     "CancelOrderResponse": {
       "title": "CancelOrderResponse",
-      "$id": "#CancelOrderResponse",
-      "x-parser-schema-id": "CancelOrderResponse",
       "type": "object",
       "required": [
         "status",
@@ -1484,8 +1391,6 @@
     },
     "MassCancelRequest": {
       "title": "MassCancelRequest",
-      "$id": "#MassCancelRequest",
-      "x-parser-schema-id": "MassCancelRequest",
       "type": "object",
       "required": [
         "signature",
@@ -1524,8 +1429,6 @@
     },
     "MassCancelResponse": {
       "title": "MassCancelResponse",
-      "$id": "#MassCancelResponse",
-      "x-parser-schema-id": "MassCancelResponse",
       "type": "object",
       "required": [
         "cancelledCount"
@@ -1541,8 +1444,6 @@
     },
     "Level": {
       "title": "Level",
-      "$id": "#Level",
-      "x-parser-schema-id": "Level",
       "type": "object",
       "required": [
         "px",
@@ -1564,8 +1465,6 @@
     },
     "Depth": {
       "title": "Depth",
-      "$id": "#Depth",
-      "x-parser-schema-id": "Depth",
       "type": "object",
       "required": [
         "symbol",
