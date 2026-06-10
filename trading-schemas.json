@@ -61,7 +61,8 @@
         "INVALID_NONCE_ERROR",
         "UNAVAILABLE_MATCHING_ENGINE_ERROR",
         "UNAUTHORIZED_SIGNATURE_ERROR",
-        "NUMERIC_OVERFLOW_ERROR"
+        "NUMERIC_OVERFLOW_ERROR",
+        "CANCEL_ALL_AFTER_OTHER_ERROR"
       ],
       "description": "Standardized error codes for API responses"
     },
@@ -1438,6 +1439,77 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Number of orders that were cancelled",
           "example": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "CancelAllAfterRequest": {
+      "title": "CancelAllAfterRequest",
+      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels all of the account's open orders (same scope as `POST /v2/cancelAll` with no `symbol` filter) if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "type": "object",
+      "required": [
+        "accountId",
+        "timeoutMs",
+        "signature",
+        "nonce",
+        "signerWallet",
+        "deadline"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID whose open orders are covered by the countdown.",
+          "example": 12345
+        },
+        "timeoutMs": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Values outside `{0} ∪ [5000, 60000]` are rejected with `INPUT_VALIDATION_ERROR`. Signed into the `CancelAllAfter` envelope.",
+          "example": 30000
+        },
+        "signature": {
+          "type": "string",
+          "description": "EIP-712 signature over the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "example": "1234567890"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `CancelAllAfter` envelope and enforced by the API at entry. NOT the countdown trigger time; the countdown is `timeoutMs` relative to server receipt.",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true
+    },
+    "CancelAllAfterResponse": {
+      "title": "CancelAllAfterResponse",
+      "type": "object",
+      "required": [
+        "accountId",
+        "timeoutMs"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID the countdown applies to, echoed from the request.",
+          "example": 12345
+        },
+        "timeoutMs": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Effective countdown duration in milliseconds; `0` means the switch is now disarmed.",
+          "example": 30000
+        },
+        "triggerAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Milliseconds POSIX timestamp at which the cancel-all fires if the countdown is not refreshed before then (server receipt time + `timeoutMs`). Omitted when `timeoutMs` is `0` (disarmed).",
+          "example": 1747927119946
         }
       },
       "additionalProperties": true

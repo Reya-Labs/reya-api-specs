@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.3
+  version: 3.0.4
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -647,6 +647,8 @@ paths:
         For perp markets, routing between the matching engine and the conditional-order path is determined
         server-side by `orderType` (LIMIT/TP/SL) and `timeInForce` (IOC/GTC). NOTE: this routing will be
         revisited once SL/TP orders land as native types in the matching engine / reya-chain.
+
+        Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
       operationId: createOrder
       tags:
         - Order Entry
@@ -674,7 +676,8 @@ paths:
       description: |
         Cancel an existing order. Supports both spot and perp markets. All single cancels — spot and perp,
         including TP/SL — route through the matching engine on a unified `marketId` namespace. `accountId`,
-        `nonce`, and `deadline` are required and bound into the EIP-712 signature.
+        `nonce`, and `deadline` are required and bound into the EIP-712 signature. Also available on the
+        order-entry WebSocket (`asyncapi-exec-v2.yaml`, `cancelOrder`).
       operationId: cancelOrder
       tags:
         - Order Entry
@@ -699,7 +702,7 @@ paths:
   /cancelAll:
     post:
       summary: Cancel all orders
-      description: Cancel all orders matching the specified filters (mass cancel). Supports both spot and perp markets.
+      description: Cancel all orders matching the specified filters (mass cancel). Supports both spot and perp markets. Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `cancelAll`).
       operationId: cancelAll
       tags:
         - Order Entry
@@ -716,6 +719,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MassCancelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /cancelAllAfter:
+    post:
+      summary: Set cancel-all-after countdown
+      description: |
+        Arm, refresh, or disarm an account-scoped dead-man's-switch countdown. While armed, all open
+        orders for `accountId` (same scope as `POST /v2/cancelAll` with no `symbol` filter) are
+        mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
+        `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
+        explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
+        trigger the countdown. `accountId`, `timeoutMs`, and `nonce` are bound into the EIP-712
+        `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds), not
+        the countdown trigger time. The response returns the effective trigger timestamp (`triggerAt`,
+        milliseconds; omitted when disarming). Also available on the order-entry WebSocket
+        (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
+      operationId: cancelAllAfter
+      tags:
+        - Order Entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAllAfterRequest'
+      responses:
+        '200':
+          description: Cancel-all-after response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelAllAfterResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -869,6 +907,12 @@ components:
 
     MassCancelResponse:
       $ref: './trading-schemas.json#/definitions/MassCancelResponse'
+
+    CancelAllAfterRequest:
+      $ref: './trading-schemas.json#/definitions/CancelAllAfterRequest'
+
+    CancelAllAfterResponse:
+      $ref: './trading-schemas.json#/definitions/CancelAllAfterResponse'
 
     Depth:
       $ref: './trading-schemas.json#/definitions/Depth'
