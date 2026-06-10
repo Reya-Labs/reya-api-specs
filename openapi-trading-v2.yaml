@@ -668,6 +668,41 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /modifyOrder:
+    post:
+      summary: Modify order
+      description: |
+        Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`. Target
+        exactly one of `orderId` / `clientOrderId`. Modifiable fields: `limitPx`, `qty`, `postOnly`,
+        `expiresAfter` — at least one must be supplied; all other attributes are inherited from the
+        resting order. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's
+        place in the book; any `limitPx` change or `qty` increase loses it. A post-only modification
+        that would cross is rejected with no mutation; a non-post-only modification that crosses
+        executes — the response reports `execQty` and `status`, with per-fill detail on the streaming
+        surface, as with `createOrder`. Requires a fresh EIP-712 signature over the post-modify order
+        state and a fresh `nonce`. Also available on the order-entry WebSocket
+        (`asyncapi-exec-v2.yaml`, `modifyOrder`).
+      operationId: modifyOrder
+      tags:
+        - Order Entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModifyOrderRequest'
+      responses:
+        '200':
+          description: Order modification response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifyOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /cancelOrder:
     post:
       summary: Cancel order
@@ -892,6 +927,12 @@ components:
 
     CreateOrderResponse:
       $ref: './trading-schemas.json#/definitions/CreateOrderResponse'
+
+    ModifyOrderRequest:
+      $ref: './trading-schemas.json#/definitions/ModifyOrderRequest'
+
+    ModifyOrderResponse:
+      $ref: './trading-schemas.json#/definitions/ModifyOrderResponse'
 
     CancelOrderRequest:
       $ref: './trading-schemas.json#/definitions/CancelOrderRequest'
