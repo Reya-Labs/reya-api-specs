@@ -1445,7 +1445,7 @@
     },
     "CancelAllAfterRequest": {
       "title": "CancelAllAfterRequest",
-      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels all of the account's open orders (same scope as `POST /v2/cancelAll` with no `symbol` filter) if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter` envelope together with `deadline` (signature validity). See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels all of the account's open orders (same scope as `POST /v2/cancelAll` with no `symbol` filter) if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint256 verifyingChainId, uint256 deadline, CancelAllAfterDetails details)` envelope, where `CancelAllAfterDetails(uint128 accountId, uint64 timeoutMs, uint256 nonce)` and `deadline` is the signature validity. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "accountId",
@@ -1462,17 +1462,13 @@
           "example": 12345
         },
         "timeoutMs": {
-          "type": "integer",
-          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Signed into the `CancelAllAfter` envelope.",
-          "oneOf": [
-            { "enum": [0] },
-            { "minimum": 5000, "maximum": 60000 }
-          ],
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Values outside `{0} ∪ [5000, 60000]` are rejected with `INPUT_VALIDATION_ERROR`. Signed into the `CancelAllAfter` envelope.",
           "example": 30000
         },
         "signature": {
           "type": "string",
-          "description": "EIP-712 signature over the `CancelAllAfter` envelope (`accountId`, `timeoutMs`, `nonce`, with `deadline` as the signature-validity field). See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "description": "EIP-712 signature over the `CancelAllAfter(uint256 verifyingChainId, uint256 deadline, CancelAllAfterDetails details)` envelope, where `CancelAllAfterDetails(uint128 accountId, uint64 timeoutMs, uint256 nonce)`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {

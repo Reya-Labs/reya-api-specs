@@ -647,6 +647,8 @@ paths:
         For perp markets, routing between the matching engine and the conditional-order path is determined
         server-side by `orderType` (LIMIT/TP/SL) and `timeInForce` (IOC/GTC). NOTE: this routing will be
         revisited once SL/TP orders land as native types in the matching engine / reya-chain.
+
+        Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
       operationId: createOrder
       tags:
         - Order Entry
@@ -674,7 +676,8 @@ paths:
       description: |
         Cancel an existing order. Supports both spot and perp markets. All single cancels — spot and perp,
         including TP/SL — route through the matching engine on a unified `marketId` namespace. `accountId`,
-        `nonce`, and `deadline` are required and bound into the EIP-712 signature.
+        `nonce`, and `deadline` are required and bound into the EIP-712 signature. Also available on the
+        order-entry WebSocket (`asyncapi-exec-v2.yaml`, `cancelOrder`).
       operationId: cancelOrder
       tags:
         - Order Entry
@@ -699,7 +702,7 @@ paths:
   /cancelAll:
     post:
       summary: Cancel all orders
-      description: Cancel all orders matching the specified filters (mass cancel). Supports both spot and perp markets.
+      description: Cancel all orders matching the specified filters (mass cancel). Supports both spot and perp markets. Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `cancelAll`).
       operationId: cancelAll
       tags:
         - Order Entry
@@ -723,7 +726,7 @@ paths:
 
   /cancelAllAfter:
     post:
-      summary: Set cancel-all-after countdown (cancel-on-disconnect)
+      summary: Set cancel-all-after countdown
       description: |
         Arm, refresh, or disarm an account-scoped dead-man's-switch countdown. While armed, all open
         orders for `accountId` (same scope as `POST /v2/cancelAll` with no `symbol` filter) are
@@ -733,8 +736,8 @@ paths:
         trigger the countdown. `accountId`, `timeoutMs`, and `nonce` are bound into the EIP-712
         `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds), not
         the countdown trigger time. The response returns the effective trigger timestamp (`triggerAt`,
-        milliseconds). Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`,
-        `cancelAllAfter`).
+        milliseconds; omitted when disarming). Also available on the order-entry WebSocket
+        (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
       operationId: cancelAllAfter
       tags:
         - Order Entry
@@ -746,7 +749,7 @@ paths:
               $ref: '#/components/schemas/CancelAllAfterRequest'
       responses:
         '200':
-          description: Cancel-all-after countdown state
+          description: Cancel-all-after response
           content:
             application/json:
               schema:
