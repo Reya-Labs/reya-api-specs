@@ -721,6 +721,41 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /cancelAllAfter:
+    post:
+      summary: Set cancel-all-after countdown (cancel-on-disconnect)
+      description: |
+        Arm, refresh, or disarm an account-scoped dead-man's-switch countdown. While armed, all open
+        orders for `accountId` (same scope as `POST /v2/cancelAll` with no `symbol` filter) are
+        mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
+        `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
+        explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
+        trigger the countdown. `accountId`, `timeoutMs`, and `nonce` are bound into the EIP-712
+        `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds), not
+        the countdown trigger time. The response returns the effective trigger timestamp (`triggerAt`,
+        milliseconds). Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`,
+        `cancelAllAfter`).
+      operationId: cancelAllAfter
+      tags:
+        - Order Entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAllAfterRequest'
+      responses:
+        '200':
+          description: Cancel-all-after countdown state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelAllAfterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   parameters:
     SymbolParam:
@@ -869,6 +904,12 @@ components:
 
     MassCancelResponse:
       $ref: './trading-schemas.json#/definitions/MassCancelResponse'
+
+    CancelAllAfterRequest:
+      $ref: './trading-schemas.json#/definitions/CancelAllAfterRequest'
+
+    CancelAllAfterResponse:
+      $ref: './trading-schemas.json#/definitions/CancelAllAfterResponse'
 
     Depth:
       $ref: './trading-schemas.json#/definitions/Depth'
