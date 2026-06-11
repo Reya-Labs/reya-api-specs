@@ -1335,11 +1335,15 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a resting order in place. The order keeps its `orderId` and `clientOrderId` in all cases. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. Modifiable fields: `limitPx`, `qty`, `postOnly`, `expiresAfter` — at least one must be supplied (else `EMPTY_MODIFY_ERROR`); omitted fields are inherited unchanged from the resting order. Non-modifiable attributes (`side`, `timeInForce`, `reduceOnly`, `accountId`, `signerWallet`, `clientOrderId`) always carry over from the resting order. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not the remaining quantity, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. Requires a fresh EIP-712 signature over the full post-modify order state (the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails`) and a fresh `nonce`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Modifies a resting order in place. The order keeps its `orderId` and `clientOrderId` in all cases. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. The four modifiable fields — `limitPx`, `qty`, `postOnly`, `expiresAfter` — are all required and carry the complete post-modify state of the order; there is no omitted-means-inherited shorthand. The request's EIP-712 signature covers the full post-modify order state, so the client necessarily knows every value; requiring all four keeps the wire contract identical to the signed contract and eliminates sentinel/inherit ambiguity. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Non-modifiable attributes (`side`, `timeInForce`, `reduceOnly`, `accountId`, `signerWallet`, `clientOrderId`) always carry over from the resting order. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not the remaining quantity, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. Requires a fresh EIP-712 signature over the full post-modify order state (the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails` — the signature covers exactly the four values sent plus the inherited immutables) and a fresh `nonce`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "symbol",
         "accountId",
+        "limitPx",
+        "qty",
+        "postOnly",
+        "expiresAfter",
         "signature",
         "nonce",
         "signerWallet",
@@ -1367,22 +1371,22 @@
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "New worst acceptable execution price. Omit to keep the resting order's price. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately.",
+          "description": "The post-modify worst acceptable execution price. Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately.",
           "example": "50000.0"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
-          "description": "New TOTAL order quantity (not remaining). Omit to keep the resting quantity. Must be strictly greater than the order's `cumQty`. A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
+          "description": "The post-modify TOTAL order quantity (not remaining). Always required — send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
           "example": "0.1"
         },
         "postOnly": {
           "type": "boolean",
-          "description": "New post-only (maker-only) intent. Omit to keep the resting order's value. If true and the post-modify order would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is unchanged.",
+          "description": "The post-modify post-only (maker-only) flag. Always required — send the complete intended value even when it is unchanged from the resting order. If true and the post-modify order would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is unchanged.",
           "example": false
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. New order expiry (`OrderDetails.expiresAfter`). Omit to keep the resting order's value. Only valid on GTT orders and must be non-zero; clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order (same convention as `createOrder`). Modifications that would flip an order between GTC and GTT are rejected with `INPUT_VALIDATION_ERROR` (`timeInForce` is not modifiable).",
+          "description": "Unix seconds. The post-modify order expiry (`OrderDetails.expiresAfter`). Always required — send the complete intended value even when it is unchanged from the resting order; `0` means no expiry and is a valid post-modify state. Must stay consistent with the order's `timeInForce` (`0` for GTC, non-zero for GTT): modifications that would flip an order between GTC and GTT are rejected with `INPUT_VALIDATION_ERROR` (`timeInForce` is not modifiable). For non-zero values, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order (same convention as `createOrder`).",
           "example": 1676923200
         },
         "signature": {

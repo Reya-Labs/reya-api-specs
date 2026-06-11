@@ -109,7 +109,7 @@ operations:
         - $ref: '#/channels/operations/messages/modifyOrderResponseMessage'
     summary: Modify a resting order in place
     description: |
-      Client modifies a resting order's `limitPx`, `qty`, `postOnly`, and/or `expiresAfter` in place, preserving `orderId` and `clientOrderId`. The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including queue-priority, post-only, and crossing semantics. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`, reporting the outcome (`status`, `execQty`, `cumQty`); per-fill detail is delivered on the streaming surface, as with `createOrder`.
+      Client modifies a resting order in place, sending the complete post-modify state for all four modifiable fields (`limitPx`, `qty`, `postOnly`, `expiresAfter` — all required, no omitted-means-inherited shorthand) while preserving `orderId` and `clientOrderId`. The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including required-field, queue-priority, post-only, and crossing semantics. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`, reporting the outcome (`status`, `execQty`, `cumQty`); per-fill detail is delivered on the streaming surface, as with `createOrder`.
 
   sendCancelOrder:
     action: send
