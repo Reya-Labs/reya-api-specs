@@ -62,7 +62,12 @@
         "UNAVAILABLE_MATCHING_ENGINE_ERROR",
         "UNAUTHORIZED_SIGNATURE_ERROR",
         "NUMERIC_OVERFLOW_ERROR",
-        "CANCEL_ALL_AFTER_OTHER_ERROR"
+        "CANCEL_ALL_AFTER_OTHER_ERROR",
+        "ORDER_NOT_FOUND",
+        "POST_ONLY_WOULD_CROSS_ERROR",
+        "MODIFY_QTY_BELOW_FILLED_ERROR",
+        "EMPTY_MODIFY_ERROR",
+        "MODIFY_ORDER_OTHER_ERROR"
       ],
       "description": "Standardized error codes for API responses"
     },
@@ -378,9 +383,19 @@
           "description": "Order time in force, exclusively used for LIMIT orders",
           "example": "GTC"
         },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. On-chain order expiry (`OrderDetails.expiresAfter`); `0` or absent means good-until-cancelled. Non-zero only for GTT orders. Updated by `modifyOrder`.",
+          "example": 1676923200
+        },
         "reduceOnly": {
           "type": "boolean",
           "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "example": false
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`.",
           "example": false
         },
         "status": {
@@ -1250,7 +1265,7 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "Post-only (maker-only) intent: the order must rest and never cross as a taker. Valid on GTC/GTT; rejected on IOC. Maps to on-chain `OrderDetails.postOnly`.",
+          "description": "Post-only (maker-only) intent: the order must rest and never cross as a taker. Valid on GTC/GTT; rejected on IOC. An order that would cross at insertion is rejected with `POST_ONLY_WOULD_CROSS_ERROR`. Maps to on-chain `OrderDetails.postOnly`.",
           "example": false
         },
         "signature": {
@@ -1274,7 +1289,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Optional; `0` (the default if omitted) means good-until-cancelled. GTC and IOC orders use `0`; only GTT orders set a non-zero `expiresAfter`, which must be greater than `deadline` (`deadline <= expiresAfter`).",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. `0` (the default if omitted) means good-until-cancelled. Coupled to `timeInForce`; mismatched combinations are rejected with `INPUT_VALIDATION_ERROR`: GTC and IOC MUST use `0` (a non-zero value is rejected — GTC never expires), and GTT MUST set a non-zero `expiresAfter` greater than `deadline` (`deadline <= expiresAfter`). Note: a GTT fill matched within a few seconds of `expiresAfter` can revert on-chain with `OrderExpired` if it mines after expiry, so choose a lifetime with adequate margin.",
           "example": 1676923200
         },
         "clientOrderId": {
@@ -1313,6 +1328,119 @@
         "clientOrderId": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Client-provided order ID echoed back from the request",
+          "example": "123456789"
+        }
+      },
+      "additionalProperties": true
+    },
+    "ModifyOrderRequest": {
+      "title": "ModifyOrderRequest",
+      "description": "Modifies a resting order in place. The order keeps its `orderId` and `clientOrderId` in all cases. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. The four modifiable fields — `limitPx`, `qty`, `postOnly`, `expiresAfter` — are all required and carry the complete post-modify state of the order; there is no omitted-means-inherited shorthand. The request's EIP-712 signature covers the full post-modify order state, so the client necessarily knows every value; requiring all four keeps the wire contract identical to the signed contract and eliminates sentinel/inherit ambiguity. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Non-modifiable attributes (`side`, `timeInForce`, `reduceOnly`, `accountId`, `signerWallet`, `clientOrderId`) always carry over from the resting order. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not the remaining quantity, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. Requires a fresh EIP-712 signature over the full post-modify order state (the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails` — the signature covers exactly the four values sent plus the inherited immutables) and a fresh `nonce`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "type": "object",
+      "required": [
+        "symbol",
+        "accountId",
+        "limitPx",
+        "qty",
+        "postOnly",
+        "expiresAfter",
+        "signature",
+        "nonce",
+        "signerWallet",
+        "deadline"
+      ],
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Internal matching engine order ID of the order to modify. Exactly one of `orderId` or `clientOrderId` must be provided.",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest). Exactly one of `orderId` or `clientOrderId` must be provided. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
+          "example": "123456789"
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order."
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID that owns the order. Not modifiable; must match the resting order.",
+          "example": 12345
+        },
+        "limitPx": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "The post-modify worst acceptable execution price. Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately.",
+          "example": "50000.0"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "The post-modify TOTAL order quantity (not remaining). Always required — send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
+          "example": "0.1"
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "The post-modify post-only (maker-only) flag. Always required — send the complete intended value even when it is unchanged from the resting order. If true and the post-modify order would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is unchanged.",
+          "example": false
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. The post-modify order expiry (`OrderDetails.expiresAfter`). Always required — send the complete intended value even when it is unchanged from the resting order; `0` means no expiry and is a valid post-modify state. Must stay consistent with the order's `timeInForce` (`0` for GTC, non-zero for GTT): modifications that would flip an order between GTC and GTT are rejected with `INPUT_VALIDATION_ERROR` (`timeInForce` is not modifiable). For non-zero values, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order (same convention as `createOrder`).",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "description": "Fresh EIP-712 signature over the full post-modify order state — the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "example": "1234567890"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Not modifiable; must match the resting order's signer."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Distinct from `expiresAfter` (order lifetime).",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true
+    },
+    "ModifyOrderResponse": {
+      "title": "ModifyOrderResponse",
+      "description": "Result of a modification, same shape as `CreateOrderResponse`. `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
+      "type": "object",
+      "required": [
+        "status",
+        "orderId"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/OrderStatus"
+        },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Quantity executed by this modification (taker fills triggered when it crossed). `0` or absent when the modified order rested.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total executed quantity across the order's lifetime, including fills from before the modification.",
+          "example": "0.5"
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Modified order ID — unchanged by the modification.",
+          "example": "123456789-123123123"
+        },
+        "clientOrderId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Client-provided order ID preserved from order creation.",
           "example": "123456789"
         }
       },

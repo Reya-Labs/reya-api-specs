@@ -1,13 +1,13 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Order Entry WebSocket API v2
-  version: 3.0.4
+  version: 3.0.5
   description: |
-    Order-entry WebSocket API for Reya Network's decentralized exchange. This is a request/response surface for placing and cancelling orders and managing cancel-on-disconnect over a persistent WebSocket connection — same operations and payload bodies as the REST `/v2` endpoints (`POST /v2/createOrder`, `POST /v2/cancelOrder`, `POST /v2/cancelAll`, `POST /v2/cancelAllAfter`), with lower per-operation overhead.
+    Order-entry WebSocket API for Reya Network's decentralized exchange. This is a request/response surface for placing, modifying, and cancelling orders and managing cancel-on-disconnect over a persistent WebSocket connection — same operations and payload bodies as the REST `/v2` endpoints (`POST /v2/createOrder`, `POST /v2/modifyOrder`, `POST /v2/cancelOrder`, `POST /v2/cancelAll`, `POST /v2/cancelAllAfter`), with lower per-operation overhead.
 
     Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
 
-    Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` / `cancelAllAfter` frame carries its own EIP-712 signature (`signature`, `nonce`, `deadline`; `createOrder` and `cancelAllAfter` payloads additionally carry `signerWallet`, while the cancel payloads recover the signer from the signature), validated server-side per-frame and byte-identical to the REST signing model. `deadline` is the EIP-712 envelope's signature-validity window — distinct from `expiresAfter`, which `createOrder` payloads optionally carry as the on-chain `OrderDetails.expiresAfter` (order lifetime). There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
+    Auth is per-message: each `createOrder` / `modifyOrder` / `cancelOrder` / `cancelAll` / `cancelAllAfter` frame carries its own EIP-712 signature (`signature`, `nonce`, `deadline`; `createOrder`, `modifyOrder`, and `cancelAllAfter` payloads additionally carry `signerWallet`, while the cancel payloads recover the signer from the signature), validated server-side per-frame and byte-identical to the REST signing model. `deadline` is the EIP-712 envelope's signature-validity window — distinct from `expiresAfter`, which `createOrder` payloads optionally carry as the on-chain `OrderDetails.expiresAfter` (order lifetime). There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
 
     Heartbeat: server-side liveness uses RFC 6455 protocol-level pings (handled automatically by any standards-compliant client WebSocket library — no application-level code is required on the client). The server closes the connection after 120 seconds of inbound silence. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout), and closing does **not** trigger cancel-on-disconnect (see below). Clients may *optionally* send `{type:"ping", id?}` JSON frames for explicit application-level RTT or correlation probes; the server replies with `{type:"pong", id?}` echoing the `id`.
 
@@ -48,13 +48,17 @@ defaultContentType: application/json
 channels:
   operations:
     description: |
-      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `cancelOrder`, `cancelAll`, `cancelAllAfter`), an optional client-initiated `ping` probe (server replies with `pong`), and a server-side `error` envelope for framing-layer failures.
+      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `modifyOrder`, `cancelOrder`, `cancelAll`, `cancelAllAfter`), an optional client-initiated `ping` probe (server replies with `pong`), and a server-side `error` envelope for framing-layer failures.
     address: null
     messages:
       createOrderRequestMessage:
         $ref: '#/components/messages/CreateOrderRequestMessage'
       createOrderResponseMessage:
         $ref: '#/components/messages/CreateOrderResponseMessage'
+      modifyOrderRequestMessage:
+        $ref: '#/components/messages/ModifyOrderRequestMessage'
+      modifyOrderResponseMessage:
+        $ref: '#/components/messages/ModifyOrderResponseMessage'
       cancelOrderRequestMessage:
         $ref: '#/components/messages/CancelOrderRequestMessage'
       cancelOrderResponseMessage:
@@ -90,7 +94,22 @@ operations:
         - $ref: '#/channels/operations/messages/createOrderResponseMessage'
     summary: Place an order
     description: |
-      Client places a spot, perp IOC, or perp GTC/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema). Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema). Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+
+  sendModifyOrder:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/modifyOrderRequestMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/modifyOrderResponseMessage'
+    summary: Modify a resting order in place
+    description: |
+      Client modifies a resting order in place, sending the complete post-modify state for all four modifiable fields (`limitPx`, `qty`, `postOnly`, `expiresAfter` — all required, no omitted-means-inherited shorthand) while preserving `orderId` and `clientOrderId`. The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including required-field, queue-priority, post-only, and crossing semantics. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`, reporting the outcome (`status`, `execQty`, `cumQty`); per-fill detail is delivered on the streaming surface, as with `createOrder`.
 
   sendCancelOrder:
     action: send
@@ -187,6 +206,24 @@ components:
       payload:
         $ref: '#/components/schemas/CreateOrderResponseMessagePayload'
 
+    ModifyOrderRequestMessage:
+      name: modifyOrderRequest
+      title: Modify Order Request
+      summary: Client request to modify a resting order
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ModifyOrderRequestMessagePayload'
+
+    ModifyOrderResponseMessage:
+      name: modifyOrderResponse
+      title: Modify Order Response
+      summary: Server response to a modify-order request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ModifyOrderResponseMessagePayload'
+
     CancelOrderRequestMessage:
       name: cancelOrderRequest
       title: Cancel Order Request
@@ -275,6 +312,12 @@ components:
         - createOrder
       description: Message type for createOrder request and response
 
+    ModifyOrderMessageType:
+      type: string
+      enum:
+        - modifyOrder
+      description: Message type for modifyOrder request and response
+
     CancelOrderMessageType:
       type: string
       enum:
@@ -328,6 +371,24 @@ components:
           example: "req-7f3c1a"
         payload:
           $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
+
+    ModifyOrderRequestMessagePayload:
+      type: object
+      title: ModifyOrderRequestMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/ModifyOrderMessageType'
+        id:
+          type: string
+          description: Client-chosen correlation identifier; must be unique across in-flight requests on the connection.
+          example: "req-7f3c1e"
+        payload:
+          $ref: './trading-schemas.json#/definitions/ModifyOrderRequest'
 
     CancelOrderRequestMessagePayload:
       type: object
@@ -420,6 +481,31 @@ components:
           description: True on success (with `payload`), false on failure (with `error`).
         payload:
           $ref: './trading-schemas.json#/definitions/CreateOrderResponse'
+        error:
+          $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
+
+    ModifyOrderResponseMessagePayload:
+      type: object
+      title: ModifyOrderResponseMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - ok
+      properties:
+        type:
+          $ref: '#/components/schemas/ModifyOrderMessageType'
+        id:
+          type: string
+          description: Echoes the request `id`.
+          example: "req-7f3c1e"
+        ok:
+          type: boolean
+          description: True on success (with `payload`), false on failure (with `error`).
+        payload:
+          $ref: './trading-schemas.json#/definitions/ModifyOrderResponse'
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
       allOf:

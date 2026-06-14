@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.4
+  version: 3.0.5
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -642,7 +642,7 @@ paths:
     post:
       summary: Create order
       description: |
-        Create a new order (IOC, GTC, SL, TP). Supports both spot and perp markets.
+        Create a new order (IOC, GTC, GTT, SL, TP). Supports both spot and perp markets.
 
         For perp markets, routing between the matching engine and the conditional-order path is determined
         server-side by `orderType` (LIMIT/TP/SL) and `timeInForce` (IOC/GTC). NOTE: this routing will be
@@ -665,6 +665,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /modifyOrder:
+    post:
+      summary: Modify order
+      description: |
+        Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`. Target
+        exactly one of `orderId` / `clientOrderId`. The four modifiable fields — `limitPx`, `qty`,
+        `postOnly`, `expiresAfter` — are all required and carry the complete post-modify state; a
+        request whose post-modify state is identical to the order's current state is rejected with
+        `EMPTY_MODIFY_ERROR`. Non-modifiable attributes always carry over from the resting order.
+        Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the
+        book; any `limitPx` change or `qty` increase loses it. A post-only modification that would
+        cross is rejected with no mutation; a non-post-only modification that crosses executes — the
+        response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
+        with `createOrder`. Requires a fresh EIP-712 signature over the full post-modify order state —
+        covering exactly the four values sent plus the inherited immutables — and a fresh `nonce`.
+        Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `modifyOrder`).
+      operationId: modifyOrder
+      tags:
+        - Order Entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModifyOrderRequest'
+      responses:
+        '200':
+          description: Order modification response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifyOrderResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -895,6 +932,12 @@ components:
 
     CreateOrderResponse:
       $ref: './trading-schemas.json#/definitions/CreateOrderResponse'
+
+    ModifyOrderRequest:
+      $ref: './trading-schemas.json#/definitions/ModifyOrderRequest'
+
+    ModifyOrderResponse:
+      $ref: './trading-schemas.json#/definitions/ModifyOrderResponse'
 
     CancelOrderRequest:
       $ref: './trading-schemas.json#/definitions/CancelOrderRequest'
