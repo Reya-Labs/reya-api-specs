@@ -94,7 +94,7 @@ operations:
         - $ref: '#/channels/operations/messages/createOrderResponseMessage'
     summary: Place an order
     description: |
-      Client places a spot, perp IOC, or perp GTC/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema). Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema). Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
 
   sendModifyOrder:
     action: send

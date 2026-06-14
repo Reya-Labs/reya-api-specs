@@ -642,7 +642,7 @@ paths:
     post:
       summary: Create order
       description: |
-        Create a new order (IOC, GTC, SL, TP). Supports both spot and perp markets.
+        Create a new order (IOC, GTC, GTT, SL, TP). Supports both spot and perp markets.
 
         For perp markets, routing between the matching engine and the conditional-order path is determined
         server-side by `orderType` (LIMIT/TP/SL) and `timeInForce` (IOC/GTC). NOTE: this routing will be
