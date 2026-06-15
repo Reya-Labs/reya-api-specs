@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.5
+  version: 3.0.6
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -674,17 +674,21 @@ paths:
     post:
       summary: Modify order
       description: |
-        Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`. Target
-        exactly one of `orderId` / `clientOrderId`. The four modifiable fields — `limitPx`, `qty`,
-        `postOnly`, `expiresAfter` — are all required and carry the complete post-modify state; a
-        request whose post-modify state is identical to the order's current state is rejected with
-        `EMPTY_MODIFY_ERROR`. Non-modifiable attributes always carry over from the resting order.
-        Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the
-        book; any `limitPx` change or `qty` increase loses it. A post-only modification that would
-        cross is rejected with no mutation; a non-post-only modification that crosses executes — the
-        response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
-        with `createOrder`. Requires a fresh EIP-712 signature over the full post-modify order state —
-        covering exactly the four values sent plus the inherited immutables — and a fresh `nonce`.
+        Modify a resting `LIMIT` order in place. The order keeps its `orderId` and `clientOrderId`.
+        Target exactly one of `orderId` / `clientOrderId`. **Full restate:** the body carries the same
+        fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate
+        every value, even unchanged ones; there is no omitted-means-inherited shorthand. The four
+        modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`; the rest (`exchangeId`,
+        `isBuy`, `orderType`, `triggerPx`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
+        `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
+        is rejected with `MODIFY_IMMUTABLE_MISMATCH`. A request whose post-modify state equals the
+        order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease
+        at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
+        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT). A post-only modification that
+        would cross is rejected with no mutation; a non-post-only modification that crosses executes —
+        the response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
+        with `createOrder`. The fresh EIP-712 signature (same `Order` / `OrderDetails` envelope as
+        `createOrder`) is verified over exactly the restated fields; a fresh `nonce` is required.
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `modifyOrder`).
       operationId: modifyOrder
       tags:

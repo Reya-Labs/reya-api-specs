@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Order Entry WebSocket API v2
-  version: 3.0.5
+  version: 3.0.6
   description: |
     Order-entry WebSocket API for Reya Network's decentralized exchange. This is a request/response surface for placing, modifying, and cancelling orders and managing cancel-on-disconnect over a persistent WebSocket connection — same operations and payload bodies as the REST `/v2` endpoints (`POST /v2/createOrder`, `POST /v2/modifyOrder`, `POST /v2/cancelOrder`, `POST /v2/cancelAll`, `POST /v2/cancelAllAfter`), with lower per-operation overhead.
 
@@ -109,7 +109,7 @@ operations:
         - $ref: '#/channels/operations/messages/modifyOrderResponseMessage'
     summary: Modify a resting order in place
     description: |
-      Client modifies a resting order in place, sending the complete post-modify state for all four modifiable fields (`limitPx`, `qty`, `postOnly`, `expiresAfter` — all required, no omitted-means-inherited shorthand) while preserving `orderId` and `clientOrderId`. The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including required-field, queue-priority, post-only, and crossing semantics. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`, reporting the outcome (`status`, `execQty`, `cumQty`); per-fill detail is delivered on the streaming surface, as with `createOrder`.
+      Client modifies a resting `LIMIT` order in place (full restate): the body carries the same fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value, even unchanged ones, with no omitted-means-inherited shorthand. The four modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`; the rest (`exchangeId`, `isBuy`, `orderType`, `triggerPx`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are immutable and must be restated at the resting order's values (a mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`), which preserves `orderId` and `clientOrderId`. The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including immutable-match, queue-priority, post-only, and crossing semantics. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`, reporting the outcome (`status`, `execQty`, `cumQty`); per-fill detail is delivered on the streaming surface, as with `createOrder`.
 
   sendCancelOrder:
     action: send
