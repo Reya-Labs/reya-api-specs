@@ -1335,7 +1335,7 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a resting `LIMIT` order in place. The order keeps its `orderId` and `clientOrderId`. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. **Full restate:** the request carries the SAME fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value at its post-modify state, even unchanged ones; there is no omitted-means-inherited shorthand. The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx` (a TP/SL trigger can be re-priced in place — no cancel+recreate). The remaining `OrderDetails` fields (`exchangeId`, `isBuy`/side, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are IMMUTABLE: restate them at the resting order's values — the matching engine verifies each equals the resting order and rejects a mismatch with `MODIFY_IMMUTABLE_MISMATCH`. The EIP-712 signature is verified over exactly the restated fields (the same `Order` / `OrderDetails` envelope as `createOrder`), so it needs no resting-order lookup; a fresh `nonce` is required. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not remaining, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). `timeInForce` is immutable — a modify cannot flip GTC↔GTT; the restated `timeInForce` must match the resting order and `expiresAfter` must stay consistent with it (`0` for GTC, a non-zero future timestamp for GTT). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Modifies a resting `LIMIT` order in place. The order keeps its `orderId` and `clientOrderId`. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. **Full restate:** the request carries the SAME fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value at its post-modify state, even unchanged ones; there is no omitted-means-inherited shorthand. The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx` (a TP/SL trigger can be re-priced in place — no cancel+recreate). The remaining `OrderDetails` fields (`exchangeId`, `isBuy`/side, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are IMMUTABLE: restate them at the resting order's values — the matching engine verifies each equals the resting order and rejects a mismatch with `INPUT_VALIDATION_ERROR` (the matching engine's internal `MODIFY_IMMUTABLE_MISMATCH` is surfaced to clients as `INPUT_VALIDATION_ERROR`; the human-readable `message` names the offending field). The EIP-712 signature is verified over exactly the restated fields (the same `Order` / `OrderDetails` envelope as `createOrder`), so it needs no resting-order lookup; a fresh `nonce` is required. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not remaining, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). `timeInForce` is immutable — a modify cannot flip GTC↔GTT; the restated `timeInForce` must match the resting order and `expiresAfter` must stay consistent with it (`0` for GTC, a non-zero future timestamp for GTT). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -1374,22 +1374,22 @@
         },
         "exchangeId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "On-chain `OrderDetails.exchangeId`. Immutable — restate the resting order's value (a mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`).",
+          "description": "On-chain `OrderDetails.exchangeId`. Immutable — restate the resting order's value (a mismatch is rejected with `INPUT_VALIDATION_ERROR`).",
           "example": 1
         },
         "isBuy": {
           "type": "boolean",
-          "description": "Order side. Immutable — restate the resting order's value. Combined with `qty`, sets the signed `OrderDetails.quantity` (int256). A mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`.",
+          "description": "Order side. Immutable — restate the resting order's value. Combined with `qty`, sets the signed `OrderDetails.quantity` (int256). A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
           "example": true
         },
         "orderType": {
           "$ref": "#/definitions/OrderType",
-          "description": "On-chain `OrderDetails.orderType`. Immutable and must be `LIMIT` (only LIMIT orders are modifiable). A mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`.",
+          "description": "On-chain `OrderDetails.orderType`. Immutable and must be `LIMIT` (only LIMIT orders are modifiable). A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
           "example": "LIMIT"
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 2 = GTT for resting orders). Immutable — restate the resting order's value; a modify cannot flip GTC↔GTT. Omitted defaults to GTC. A mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`.",
+          "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 2 = GTT for resting orders). Immutable — restate the resting order's value; a modify cannot flip GTC↔GTT. Omitted defaults to GTC. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
           "example": "GTC"
         },
         "triggerPx": {
@@ -1399,7 +1399,7 @@
         },
         "reduceOnly": {
           "type": "boolean",
-          "description": "On-chain `OrderDetails.reduceOnly`. Immutable — restate the resting order's value. A mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`.",
+          "description": "On-chain `OrderDetails.reduceOnly`. Immutable — restate the resting order's value. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
           "example": false
         },
         "limitPx": {
