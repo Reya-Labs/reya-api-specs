@@ -1606,7 +1606,7 @@
     },
     "CancelAllAfterRequest": {
       "title": "CancelAllAfterRequest",
-      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels all of the account's open orders (same scope as `POST /v2/cancelAll` with no `symbol` filter) if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels the account's open orders if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Scope: all open orders EXCEPT protective stops (`STOP_LOSS` / `TAKE_PROFIT`) — the dead-man's-switch deliberately leaves protective stops in place (they are safety orders only the user should cancel explicitly), unlike an explicit `POST /v2/cancelAll` which cancels everything. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "accountId",
@@ -1623,7 +1623,10 @@
           "example": 12345
         },
         "timeoutMs": {
-          "$ref": "#/definitions/UnsignedInteger",
+          "oneOf": [
+            { "type": "integer", "enum": [0] },
+            { "type": "integer", "minimum": 5000, "maximum": 60000 }
+          ],
           "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Values outside `{0} ∪ [5000, 60000]` are rejected with `INPUT_VALIDATION_ERROR`. Signed into the `CancelAllAfter` envelope.",
           "example": 30000
         },
@@ -1669,7 +1672,7 @@
         },
         "triggerAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Milliseconds POSIX timestamp at which the cancel-all fires if the countdown is not refreshed before then (server receipt time + `timeoutMs`). Omitted when `timeoutMs` is `0` (disarmed).",
+          "description": "Advisory milliseconds POSIX timestamp at which the cancel-all fires if the countdown is not refreshed before then. The client sends a RELATIVE `timeoutMs`; the matching engine stamps the absolute deadline on ITS OWN clock (`now_me + timeoutMs`) and echoes it here, so the value is anchored to the engine clock (no API↔ME skew) — treat it as an estimate for display, not an exact wall-clock guarantee. Omitted when `timeoutMs` is `0` (disarmed).",
           "example": 1747927119946
         }
       },
