@@ -1235,7 +1235,7 @@
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Worst acceptable execution price. Maps to on-chain `OrderDetails.limitPrice` (uint256).",
+          "description": "Worst acceptable execution price. Must be a positive number (> 0). Maps to on-chain `OrderDetails.limitPrice` (uint256).",
           "example": "50000.0"
         },
         "qty": {
@@ -1335,7 +1335,7 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a resting `LIMIT` order in place. The order keeps its `orderId` and `clientOrderId`. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. **Full restate:** the request carries the SAME fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value at its post-modify state, even unchanged ones; there is no omitted-means-inherited shorthand. The four modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`. The remaining `OrderDetails` fields (`exchangeId`, `isBuy`/side, `orderType`, `triggerPx`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are IMMUTABLE: restate them at the resting order's values — the matching engine verifies each equals the resting order and rejects a mismatch with `MODIFY_IMMUTABLE_MISMATCH`. The EIP-712 signature is verified over exactly the restated fields (the same `Order` / `OrderDetails` envelope as `createOrder`), so it needs no resting-order lookup; a fresh `nonce` is required. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not remaining, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). `timeInForce` is immutable — a modify cannot flip GTC↔GTT; the restated `timeInForce` must match the resting order and `expiresAfter` must stay consistent with it (`0` for GTC, a non-zero future timestamp for GTT). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Modifies a resting `LIMIT` order in place. The order keeps its `orderId` and `clientOrderId`. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. **Full restate:** the request carries the SAME fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value at its post-modify state, even unchanged ones; there is no omitted-means-inherited shorthand. The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx` (a TP/SL trigger can be re-priced in place — no cancel+recreate). The remaining `OrderDetails` fields (`exchangeId`, `isBuy`/side, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are IMMUTABLE: restate them at the resting order's values — the matching engine verifies each equals the resting order and rejects a mismatch with `MODIFY_IMMUTABLE_MISMATCH`. The EIP-712 signature is verified over exactly the restated fields (the same `Order` / `OrderDetails` envelope as `createOrder`), so it needs no resting-order lookup; a fresh `nonce` is required. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not remaining, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). `timeInForce` is immutable — a modify cannot flip GTC↔GTT; the restated `timeInForce` must match the resting order and `expiresAfter` must stay consistent with it (`0` for GTC, a non-zero future timestamp for GTT). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -1360,7 +1360,7 @@
         },
         "clientOrderId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest). Exactly one of `orderId` or `clientOrderId` must be provided. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
+          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest). Exactly one of `orderId` or `clientOrderId` must be provided. `clientOrderId: 0` is the \"no tag\" sentinel and is NOT a valid sole target — an order created without a client order id can only be modified by `orderId`. When both ids are supplied, `orderId` takes precedence. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
           "example": "123456789"
         },
         "symbol": {
@@ -1394,7 +1394,7 @@
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "On-chain `OrderDetails.triggerPrice`. Immutable — restate the resting order's value (zero/absent for LIMIT). A mismatch is rejected with `MODIFY_IMMUTABLE_MISMATCH`.",
+          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — a TP/SL trigger can be re-priced in place without cancel+recreate (zero for a plain LIMIT order). Restate the post-modify value.",
           "example": "0"
         },
         "reduceOnly": {
@@ -1404,7 +1404,7 @@
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "The post-modify worst acceptable execution price. Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately.",
+          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0); the off-chain validator and the matching engine both reject `<= 0`. Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately.",
           "example": "50000.0"
         },
         "qty": {
@@ -1446,7 +1446,7 @@
     },
     "ModifyOrderResponse": {
       "title": "ModifyOrderResponse",
-      "description": "Result of a modification, same shape as `CreateOrderResponse`. `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
+      "description": "Result of a modification, same shape as `CreateOrderResponse`. `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
       "type": "object",
       "required": [
         "status",
@@ -1468,7 +1468,7 @@
         },
         "orderId": {
           "type": "string",
-          "description": "Modified order ID — unchanged by the modification.",
+          "description": "Order ID — unchanged by the modification (the same ID the order had before).",
           "example": "123456789-123123123"
         },
         "clientOrderId": {
