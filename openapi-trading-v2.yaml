@@ -644,9 +644,14 @@ paths:
       description: |
         Create a new order (IOC, GTC, GTT, SL, TP). Supports both spot and perp markets.
 
-        All order types route through the matching engine. `STOP_LOSS` / `TAKE_PROFIT`
-        are ME-resident native trigger types (the ME owns `orderType` + `triggerPrice`
-        and the trigger queue) — there is no separate off-chain conditional-order path.
+        All order types route through the matching engine on a unified `marketId` namespace;
+        the legacy off-chain conditional-order (DB-backed) path is retired. `STOP_LOSS` /
+        `TAKE_PROFIT` carry `orderType` + `triggerPx` end-to-end and are accepted today as
+        forward-compatible facade orders — the ME stores the trigger fields and rests them as
+        GTC limits. **Availability:** native trigger behaviour (an ME-resident trigger queue
+        that fires on `triggerPx`) is not yet live; it depends on the ME trigger-queue landing.
+        Until then a `STOP_LOSS` / `TAKE_PROFIT` create is accepted but does not yet trigger
+        on its `triggerPx`.
 
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
       operationId: createOrder
@@ -775,13 +780,14 @@ paths:
       summary: Set cancel-all-after countdown
       description: |
         Arm, refresh, or disarm an account-scoped dead-man's-switch countdown. While armed, all open
-        orders for `accountId` (same scope as `POST /v2/cancelAll` with no `symbol` filter) are
+        orders for `accountId` — the same scope as `POST /v2/cancelAll` with no `symbol` filter, EXCEPT
+        protective stops (`STOP_LOSS` / `TAKE_PROFIT`), which are deliberately left in place — are
         mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
         `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
         explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
         trigger the countdown. `accountId`, `timeoutMs`, and `nonce` are bound into the EIP-712
         `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds), not
-        the countdown trigger time. The response returns the effective trigger timestamp (`triggerAt`,
+        the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
         milliseconds; omitted when disarming). Also available on the order-entry WebSocket
         (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
       operationId: cancelAllAfter

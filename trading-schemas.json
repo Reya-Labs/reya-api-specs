@@ -1293,8 +1293,8 @@
           "example": 1676923200
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. Maps to on-chain `OrderDetails.clientOrderId` — signed as part of the EIP-712 payload but not enforced on-chain.",
+          "type": "string",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Carried as a string (full `uint64` range [0, 2^64-1]) to preserve precision, like `orderId` and `nonce`.",
           "example": "123456789"
         }
       },
@@ -1326,8 +1326,8 @@
           "example": "123456789-123123123"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID echoed back from the request",
+          "type": "string",
+          "description": "Client-provided order ID echoed back from the request, as a decimal string (`uint64`).",
           "example": "123456789"
         }
       },
@@ -1345,6 +1345,8 @@
         "limitPx",
         "qty",
         "orderType",
+        "timeInForce",
+        "reduceOnly",
         "postOnly",
         "expiresAfter",
         "signature",
@@ -1359,8 +1361,8 @@
           "example": "490346525705109504"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest). Exactly one of `orderId` or `clientOrderId` must be provided. `clientOrderId: 0` is the \"no tag\" sentinel and is NOT a valid sole target — an order created without a client order id can only be modified by `orderId`. When both ids are supplied, `orderId` takes precedence. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
+          "type": "string",
+          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest), as a decimal string (`uint64`). Exactly one of `orderId` or `clientOrderId` must be provided. The value `\"0\"` is the \"no tag\" sentinel and is NOT a valid sole target — an order created without a client order id can only be modified by `orderId`. Supplying both `orderId` and `clientOrderId`, or neither, is rejected with `INPUT_VALIDATION_ERROR`. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
           "example": "123456789"
         },
         "symbol": {
@@ -1389,12 +1391,12 @@
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 2 = GTT for resting orders). Immutable — restate the resting order's value; a modify cannot flip GTC↔GTT. Omitted defaults to GTC. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
+          "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 2 = GTT for resting orders). Immutable and REQUIRED — restate the resting order's value; a modify cannot flip GTC↔GTT. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
           "example": "GTC"
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — for a `STOP_LOSS`/`TAKE_PROFIT` order the trigger can be re-priced in place (no cancel+recreate); restate the post-modify value. `0` for a `LIMIT` order. The matching engine applies the restated value (it is not immutable-matched). Availability: depends on native SL/TP trigger orders landing in the matching engine (see `orderType`); until then a `LIMIT` order's `triggerPx` stays `0`.",
+          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — for a `STOP_LOSS`/`TAKE_PROFIT` order the trigger can be re-priced in place (no cancel+recreate); restate the post-modify value. `0` for a `LIMIT` order. The matching engine applies the restated value (it is not immutable-matched). Availability: depends on native SL/TP trigger orders landing in the matching engine (see `orderType`); until then a `LIMIT` order's `triggerPx` stays `0`. Optional on the wire — an absent `triggerPx` is treated as `0`.",
           "example": "0"
         },
         "reduceOnly": {
@@ -1446,7 +1448,7 @@
     },
     "ModifyOrderResponse": {
       "title": "ModifyOrderResponse",
-      "description": "Result of a modification, same shape as `CreateOrderResponse`. `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
+      "description": "Result of a modification, same shape as `CreateOrderResponse` plus `execQty` / `cumQty`. `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
       "type": "object",
       "required": [
         "status",
@@ -1472,8 +1474,8 @@
           "example": "123456789-123123123"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID preserved from order creation.",
+          "type": "string",
+          "description": "Client-provided order ID preserved from order creation, as a decimal string (`uint64`).",
           "example": "123456789"
         }
       },
@@ -1496,8 +1498,8 @@
           "example": "490346525705109504"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
+          "type": "string",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {
@@ -1511,12 +1513,12 @@
         },
         "signature": {
           "type": "string",
-          "description": "See signatures section for more details on how to generate.",
+          "description": "EIP-712 signature over the `OrderCancel(uint64 verifyingChainId, uint64 deadline, OrderCancelDetails cancel)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x5678..."
         },
         "nonce": {
           "type": "string",
-          "description": "See signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See `docs/eip712.md`.",
           "example": "1234567890"
         },
         "deadline": {
@@ -1544,8 +1546,8 @@
           "example": "123456789-123123123"
         },
         "clientOrderId": {
-          "type": "integer",
-          "description": "Client-provided order ID echoed back from the request",
+          "type": "string",
+          "description": "Client-provided order ID echoed back from the request, as a decimal string (`uint64`).",
           "example": "123456789"
         }
       },
@@ -1572,12 +1574,12 @@
         },
         "signature": {
           "type": "string",
-          "description": "See signatures and nonces section for more details on how to generate.",
+          "description": "EIP-712 signature over the `MassCancel(uint64 verifyingChainId, uint64 deadline, MassCancelDetails massCancel)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "See signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See `docs/eip712.md`.",
           "example": "1234567890"
         },
         "deadline": {
@@ -1599,7 +1601,7 @@
         "cancelledCount": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Number of orders that were cancelled",
-          "example": true
+          "example": 5
         }
       },
       "additionalProperties": true
