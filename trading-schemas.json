@@ -347,7 +347,7 @@
         },
         "orderId": {
           "type": "string",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
@@ -1323,7 +1323,7 @@
         "orderId": {
           "type": "string",
           "description": "Created order ID (currently generated for all order types except IOC)",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
@@ -1471,7 +1471,7 @@
         "orderId": {
           "type": "string",
           "description": "Order ID — unchanged by the modification (the same ID the order had before).",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
@@ -1543,7 +1543,7 @@
         "orderId": {
           "type": "string",
           "description": "Cancelled order ID",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
