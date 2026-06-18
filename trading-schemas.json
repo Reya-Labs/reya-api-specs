@@ -1322,7 +1322,7 @@
         },
         "orderId": {
           "type": "string",
-          "description": "Created order ID (currently generated for all order types except IOC)",
+          "description": "Engine-assigned order ID, generated for all order types including IOC. A no-cross IOC still receives an ID and is returned with status CANCELLED (it never rests).",
           "example": "490346525705109504"
         },
         "clientOrderId": {
