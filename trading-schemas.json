@@ -424,6 +424,16 @@
           "description": "Total Executed quantity accross all fills where the order is involved.",
           "example": "0.5"
         },
+        "fillIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Matching-engine fill nonces for the fills this update represents. For a taker update, every fill the order produced in its matching round; for a maker update, its single fill. Present only on fill updates; empty/absent for non-fill updates and resting-order snapshots.",
+          "example": [
+            "7205759403792794624"
+          ]
+        },
         "side": {
           "$ref": "#/definitions/Side"
         },
@@ -1357,6 +1367,17 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Client-provided order ID echoed back from the request",
           "example": "123456789"
+        },
+        "fillIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Matching-engine fill nonces for the fills this order produced immediately on entry. Empty if the order did not fill on entry. The same nonces appear on the order's taker update in the orderChanges channel.",
+          "example": [
+            "7205759403792794624",
+            "7205759403792794625"
+          ]
         }
       },
       "additionalProperties": true
