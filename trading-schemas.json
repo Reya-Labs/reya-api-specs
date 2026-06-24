@@ -537,6 +537,11 @@
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
         },
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce — a stable identifier to join this execution to its ME fill (PRO-182).",
+          "example": "42"
+        },
         "takerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
           "description": "Realized taker PnL from this execution in rUSD (takerPriceVariationPnl + takerFundingPnl). Absent for position-extending executions.",
@@ -659,6 +664,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every spot execution in reya chain",
           "example": 152954
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce — a stable identifier to join this execution to its ME fill (PRO-182).",
+          "example": "42"
         }
       },
       "additionalProperties": true
@@ -754,6 +764,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every spot execution bust in reya chain",
           "example": 152954
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce — a stable identifier to join this bust to its ME fill (PRO-182).",
+          "example": "42"
         }
       },
       "additionalProperties": true
