@@ -424,15 +424,15 @@
           "description": "Total Executed quantity accross all fills where the order is involved.",
           "example": "0.5"
         },
-        "fillIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Matching-engine fill nonces for the fills this update represents. For a taker update, every fill the order produced in its matching round; for a maker update, its single fill. Present only on fill updates; empty/absent for non-fill updates and resting-order snapshots.",
-          "example": [
-            "7205759403792794624"
-          ]
+        "firstFillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce of the first fill this update represents. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. For a taker update, the first fill of its matching round; for a maker update, its single fill. Present only on fill updates; absent for non-fill updates and resting-order snapshots.",
+          "example": "7205759403792794624"
+        },
+        "fillCount": {
+          "type": "integer",
+          "description": "Number of fills this update represents — the length of the contiguous nonce range starting at firstFillId. For a taker update, the fills produced in its matching round; for a maker update, 1. Present only on fill updates; absent otherwise.",
+          "example": 2
         },
         "side": {
           "$ref": "#/definitions/Side"
@@ -1368,16 +1368,15 @@
           "description": "Client-provided order ID echoed back from the request",
           "example": "123456789"
         },
-        "fillIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Matching-engine fill nonces for the fills this order produced immediately on entry. Empty if the order did not fill on entry. The same nonces appear on the order's taker update in the orderChanges channel.",
-          "example": [
-            "7205759403792794624",
-            "7205759403792794625"
-          ]
+        "firstFillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. The same first nonce appears on the order's taker update in the orderChanges channel.",
+          "example": "7205759403792794624"
+        },
+        "fillCount": {
+          "type": "integer",
+          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry.",
+          "example": 2
         }
       },
       "additionalProperties": true
