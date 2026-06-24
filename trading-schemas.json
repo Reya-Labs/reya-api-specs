@@ -431,6 +431,7 @@
         },
         "fillCount": {
           "type": "integer",
+          "minimum": 1,
           "description": "Number of fills this update represents — the length of the contiguous nonce range starting at firstFillId. For a taker update, the fills produced in its matching round; for a maker update, 1. Present only on fill updates; absent otherwise.",
           "example": 2
         },
@@ -1370,11 +1371,12 @@
         },
         "firstFillId": {
           "type": "string",
-          "description": "Matching-engine fill nonce of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. The same first nonce appears on the order's taker update in the orderChanges channel.",
+          "description": "Matching-engine fill nonce of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. For a resting (GTC) taker, the same first nonce also appears on the order's taker update in the orderChanges channel; an IOC taker is not published to orderChanges, so this response is the only place its fill range is delivered.",
           "example": "7205759403792794624"
         },
         "fillCount": {
           "type": "integer",
+          "minimum": 1,
           "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry.",
           "example": 2
         }
