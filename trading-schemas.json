@@ -1640,10 +1640,8 @@
           "example": 12345
         },
         "timeoutMs": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 60000,
-          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any other value must be within `[5000, 60000]` and (re-)arms a fresh countdown of that duration — re-arming refreshes it. Values in `(0, 5000)` are rejected with `INPUT_VALIDATION_ERROR`. Signed into the `CancelAllAfter` envelope.",
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Values outside `{0} ∪ [5000, 60000]` are rejected with `INPUT_VALIDATION_ERROR` (the server validates the band). Signed into the `CancelAllAfter` envelope.",
           "example": 30000
         },
         "signature": {
