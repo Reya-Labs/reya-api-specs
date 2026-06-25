@@ -430,9 +430,8 @@
           "example": "7205759403792794624"
         },
         "fillCount": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Number of fills this update represents — the length of the contiguous nonce range starting at firstFillId. For a taker update, the fills produced in its matching round; for a maker update, 1. Present only on fill updates; absent otherwise.",
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of fills this update represents — the length of the contiguous nonce range starting at firstFillId. For a taker update, the fills produced in its matching round; for a maker update, 1. Present only on fill updates; absent otherwise (so it is >= 1 whenever present).",
           "example": 2
         },
         "side": {
@@ -1375,9 +1374,8 @@
           "example": "7205759403792794624"
         },
         "fillCount": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry.",
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry (so it is >= 1 whenever present).",
           "example": 2
         }
       },
