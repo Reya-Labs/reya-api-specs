@@ -853,8 +853,7 @@
         "liquidationMarginParameter",
         "initialMarginParameter",
         "maxLeverage",
-        "oiCap",
-        "status"
+        "oiCap"
       ],
       "properties": {
         "symbol": {
@@ -898,12 +897,6 @@
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Maximum one-sided open interest in units for a given market.",
           "example": "10000"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["TRADING", "REDUCE_ONLY", "SETTLED"],
-          "description": "Trading status of the market, derived from open interest and the open interest cap (TRADING = open for trading, REDUCE_ONLY = positions may only be reduced, SETTLED = market has been settled).",
-          "example": "TRADING"
         }
       },
       "additionalProperties": true
