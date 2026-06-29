@@ -21,6 +21,9 @@ on:
       - 'trading-schemas.json'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   lint-spec:
     name: Lint API Specs
@@ -28,6 +31,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -50,3 +55,9 @@ jobs:
       - name: redocly lint (informational)
         continue-on-error: true
         run: npx --yes @redocly/cli@2.0.8 lint openapi-trading-v2.yaml
+
+      - name: Validate trading AsyncAPI spec
+        run: npx --yes @asyncapi/cli@1.7.0 validate asyncapi-trading-v2.yaml
+
+      - name: Validate order-entry AsyncAPI spec
+        run: npx --yes @asyncapi/cli@1.7.0 validate asyncapi-exec-v2.yaml
