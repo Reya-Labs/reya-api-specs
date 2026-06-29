@@ -750,6 +750,1043 @@
       },
       "additionalProperties": true
     },
+    "ExecutionBustReason": {
+      "title": "ExecutionBustReason",
+      "description": "Machine-readable decoded execution-bust reason. This is a discriminated union keyed by `reasonName`. Known contract errors have strict typed shapes; decoded-but-unmodeled ABI errors use the `ExecutionBustReasonUnmapped` fallback with string-valued `args`.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ExecutionBustReasonNameOnly"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountNotFound"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonExchangeNotFound"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarketNotFound"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnauthorized"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnauthorizedSigner"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnauthorizedMatchingEnginePublisher"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonSignerNonceAlreadyUsed"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarkPriceStale"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonPriceDeviationTooLarge"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonStalePriceDetected"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountBelowIM"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonReduceOnlyConditionFailed"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonOrderExpired"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMaxQuantityExceeded"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarketTypeMismatch"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarketIdMismatch"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonBaseDeltaWrongSpacing"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonPriceWrongSpacing"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonInvalidFillPrice"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonFillExceedsOrderBaseDelta"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonFeatureUnavailable"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonCollateralIsNotQuote"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonCollateralCapExceeded"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonCollateralPoolCollision"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonOpenInterestExceeded"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountType"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonNegativeAccountRealBalance"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountInsolvent"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonSameAccountId"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonDecodedLegacy"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnknown"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnmapped"
+        }
+      ]
+    },
+    "ExecutionBustReasonNameOnly": {
+      "title": "ExecutionBustReasonNameOnly",
+      "type": "object",
+      "required": [
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "InvalidSignature",
+            "SignatureInvalid",
+            "SignatureExpired",
+            "SmallOrderSize",
+            "DustyOrderSize",
+            "InvalidFilledExposures",
+            "StorkPayloadOlderThanLatest",
+            "ZeroSlTpOrderSize"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountNotFound": {
+      "title": "ExecutionBustReasonAccountNotFound",
+      "type": "object",
+      "required": [
+        "accountId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "AccountNotFound"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that does not exist.",
+          "example": 12345
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonExchangeNotFound": {
+      "title": "ExecutionBustReasonExchangeNotFound",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "ExchangeNotFound"
+          ]
+        },
+        "exchangeId": {
+          "type": "integer",
+          "description": "Exchange identifier that does not exist.",
+          "example": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarketNotFound": {
+      "title": "ExecutionBustReasonMarketNotFound",
+      "type": "object",
+      "required": [
+        "marketId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarketNotFound"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier that does not exist.",
+          "example": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnauthorized": {
+      "title": "ExecutionBustReasonUnauthorized",
+      "type": "object",
+      "required": [
+        "address",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "Unauthorized"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "description": "Address that is not authorized.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnauthorizedSigner": {
+      "title": "ExecutionBustReasonUnauthorizedSigner",
+      "type": "object",
+      "required": [
+        "signer",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "UnauthorizedSigner"
+          ]
+        },
+        "signer": {
+          "type": "string",
+          "description": "Signer address that is not authorized to trade for the account.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnauthorizedMatchingEnginePublisher": {
+      "title": "ExecutionBustReasonUnauthorizedMatchingEnginePublisher",
+      "type": "object",
+      "required": [
+        "publisher",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "UnauthorizedMatchingEnginePublisher"
+          ]
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Matching-engine publisher address that is not authorized.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonSignerNonceAlreadyUsed": {
+      "title": "ExecutionBustReasonSignerNonceAlreadyUsed",
+      "type": "object",
+      "required": [
+        "signer",
+        "nonce",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "SignerNonceAlreadyUsed"
+          ]
+        },
+        "signer": {
+          "type": "string",
+          "description": "Signer address that already used the nonce.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Signer nonce that was already consumed. Kept as a string because contract nonces are uint256.",
+          "example": "42"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarkPriceStale": {
+      "title": "ExecutionBustReasonMarkPriceStale",
+      "type": "object",
+      "required": [
+        "marketId",
+        "priceTimestamp",
+        "blockTimestamp",
+        "maxStaleDuration",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarkPriceStale"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier whose mark price is stale.",
+          "example": 4
+        },
+        "priceTimestamp": {
+          "type": "integer",
+          "description": "Timestamp carried by the price update.",
+          "example": 1700000000
+        },
+        "blockTimestamp": {
+          "type": "integer",
+          "description": "Block timestamp observed by the contracts.",
+          "example": 1700000121
+        },
+        "maxStaleDuration": {
+          "type": "integer",
+          "description": "Maximum allowed price staleness in seconds.",
+          "example": 60
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonPriceDeviationTooLarge": {
+      "title": "ExecutionBustReasonPriceDeviationTooLarge",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ExecutionBustReasonPassivePerpPriceDeviationTooLarge"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonSpotPriceDeviationTooLarge"
+        }
+      ],
+      "description": "PriceDeviationTooLarge has two contract shapes: passive-perp includes marketId/price/referencePrice/maxDeviation, while spot/core includes fillPrice/oraclePrice/oracleDeviation."
+    },
+    "ExecutionBustReasonPassivePerpPriceDeviationTooLarge": {
+      "title": "ExecutionBustReasonPassivePerpPriceDeviationTooLarge",
+      "type": "object",
+      "required": [
+        "marketId",
+        "price",
+        "referencePrice",
+        "maxDeviation",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "PriceDeviationTooLarge"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier whose fill price deviated too far.",
+          "example": 8
+        },
+        "price": {
+          "type": "string",
+          "description": "Fill price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "referencePrice": {
+          "type": "string",
+          "description": "Reference price decoded from an 18-decimal fixed-point contract value.",
+          "example": "100"
+        },
+        "maxDeviation": {
+          "type": "string",
+          "description": "Maximum allowed price deviation decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.05"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonSpotPriceDeviationTooLarge": {
+      "title": "ExecutionBustReasonSpotPriceDeviationTooLarge",
+      "type": "object",
+      "required": [
+        "fillPrice",
+        "oraclePrice",
+        "oracleDeviation",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "PriceDeviationTooLarge"
+          ]
+        },
+        "fillPrice": {
+          "type": "string",
+          "description": "Fill price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "oraclePrice": {
+          "type": "string",
+          "description": "Oracle price decoded from an 18-decimal fixed-point contract value.",
+          "example": "100"
+        },
+        "oracleDeviation": {
+          "type": "string",
+          "description": "Oracle deviation threshold decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.05"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonStalePriceDetected": {
+      "title": "ExecutionBustReasonStalePriceDetected",
+      "type": "object",
+      "required": [
+        "nodeId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "StalePriceDetected"
+          ]
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Oracle node identifier that returned a stale price.",
+          "example": "0xabc"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountBelowIM": {
+      "title": "ExecutionBustReasonAccountBelowIM",
+      "type": "object",
+      "required": [
+        "accountId",
+        "delta",
+        "shortfall",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "AccountBelowIM"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that is below initial margin.",
+          "example": 1234
+        },
+        "delta": {
+          "type": "string",
+          "description": "Signed initial-margin delta decoded from an 18-decimal fixed-point contract value.",
+          "example": "-321"
+        },
+        "shortfall": {
+          "type": "string",
+          "description": "Absolute initial-margin shortfall decoded from an 18-decimal fixed-point contract value.",
+          "example": "321"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonReduceOnlyConditionFailed": {
+      "title": "ExecutionBustReasonReduceOnlyConditionFailed",
+      "type": "object",
+      "required": [
+        "marketId",
+        "accountId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "ReduceOnlyConditionFailed"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier for the reduce-only check.",
+          "example": 5
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier for the reduce-only check.",
+          "example": 1234
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonOrderExpired": {
+      "title": "ExecutionBustReasonOrderExpired",
+      "type": "object",
+      "required": [
+        "expiredAt",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "OrderExpired"
+          ]
+        },
+        "expiredAt": {
+          "type": "integer",
+          "description": "Order expiration timestamp.",
+          "example": 1700000000
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMaxQuantityExceeded": {
+      "title": "ExecutionBustReasonMaxQuantityExceeded",
+      "type": "object",
+      "required": [
+        "updatedQuantity",
+        "maxQuantity",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MaxQuantityExceeded"
+          ]
+        },
+        "updatedQuantity": {
+          "type": "string",
+          "description": "Updated nonce quantity.",
+          "example": "10"
+        },
+        "maxQuantity": {
+          "type": "string",
+          "description": "Maximum allowed nonce quantity.",
+          "example": "5"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarketTypeMismatch": {
+      "title": "ExecutionBustReasonMarketTypeMismatch",
+      "type": "object",
+      "required": [
+        "accountMarketType",
+        "counterpartyMarketType",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarketTypeMismatch"
+          ]
+        },
+        "accountMarketType": {
+          "type": "integer",
+          "description": "Account-side market type.",
+          "example": 1
+        },
+        "counterpartyMarketType": {
+          "type": "integer",
+          "description": "Counterparty-side market type.",
+          "example": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarketIdMismatch": {
+      "title": "ExecutionBustReasonMarketIdMismatch",
+      "type": "object",
+      "required": [
+        "accountMarketId",
+        "counterpartyMarketId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarketIdMismatch"
+          ]
+        },
+        "accountMarketId": {
+          "type": "integer",
+          "description": "Account-side market identifier.",
+          "example": 4
+        },
+        "counterpartyMarketId": {
+          "type": "integer",
+          "description": "Counterparty-side market identifier.",
+          "example": 5
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonBaseDeltaWrongSpacing": {
+      "title": "ExecutionBustReasonBaseDeltaWrongSpacing",
+      "type": "object",
+      "required": [
+        "baseDelta",
+        "baseSpacing",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "BaseDeltaWrongSpacing"
+          ]
+        },
+        "baseDelta": {
+          "type": "string",
+          "description": "Base delta decoded from an 18-decimal fixed-point contract value.",
+          "example": "1.5"
+        },
+        "baseSpacing": {
+          "type": "string",
+          "description": "Base spacing decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonPriceWrongSpacing": {
+      "title": "ExecutionBustReasonPriceWrongSpacing",
+      "type": "object",
+      "required": [
+        "price",
+        "priceSpacing",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "PriceWrongSpacing"
+          ]
+        },
+        "price": {
+          "type": "string",
+          "description": "Price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "priceSpacing": {
+          "type": "string",
+          "description": "Price spacing decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.01"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonInvalidFillPrice": {
+      "title": "ExecutionBustReasonInvalidFillPrice",
+      "type": "object",
+      "required": [
+        "fillPrice",
+        "orderPrice",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "InvalidFillPrice"
+          ]
+        },
+        "fillPrice": {
+          "type": "string",
+          "description": "Fill price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "orderPrice": {
+          "type": "string",
+          "description": "Order limit price decoded from an 18-decimal fixed-point contract value.",
+          "example": "100"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonFillExceedsOrderBaseDelta": {
+      "title": "ExecutionBustReasonFillExceedsOrderBaseDelta",
+      "type": "object",
+      "required": [
+        "fillAmount",
+        "orderBaseDelta",
+        "orderRole",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "FillExceedsOrderBaseDelta"
+          ]
+        },
+        "fillAmount": {
+          "type": "string",
+          "description": "Fill amount decoded from an 18-decimal fixed-point contract value.",
+          "example": "1"
+        },
+        "orderBaseDelta": {
+          "type": "string",
+          "description": "Order base delta decoded from an 18-decimal fixed-point contract value.",
+          "example": "1"
+        },
+        "orderRole": {
+          "type": "string",
+          "enum": [
+            "account",
+            "counterparty"
+          ],
+          "description": "Whether the failed order was the account or counterparty order.",
+          "example": "account"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonFeatureUnavailable": {
+      "title": "ExecutionBustReasonFeatureUnavailable",
+      "type": "object",
+      "required": [
+        "feature",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "FeatureUnavailable"
+          ]
+        },
+        "feature": {
+          "type": "string",
+          "description": "Feature identifier that is disabled.",
+          "example": "1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonCollateralIsNotQuote": {
+      "title": "ExecutionBustReasonCollateralIsNotQuote",
+      "type": "object",
+      "required": [
+        "collateralPoolId",
+        "collateral",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "CollateralIsNotQuote"
+          ]
+        },
+        "collateralPoolId": {
+          "type": "integer",
+          "description": "Collateral pool identifier.",
+          "example": 7
+        },
+        "collateral": {
+          "type": "string",
+          "description": "Collateral address that is not the quote collateral.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonCollateralCapExceeded": {
+      "title": "ExecutionBustReasonCollateralCapExceeded",
+      "type": "object",
+      "required": [
+        "collateralPoolId",
+        "collateral",
+        "collateralCap",
+        "collateralBalance",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "CollateralCapExceeded"
+          ]
+        },
+        "collateralPoolId": {
+          "type": "integer",
+          "description": "Collateral pool identifier.",
+          "example": 7
+        },
+        "collateral": {
+          "type": "string",
+          "description": "Collateral address whose pool cap was exceeded.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "collateralCap": {
+          "type": "string",
+          "description": "Collateral cap.",
+          "example": "1000"
+        },
+        "collateralBalance": {
+          "type": "string",
+          "description": "Collateral balance.",
+          "example": "1100"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonCollateralPoolCollision": {
+      "title": "ExecutionBustReasonCollateralPoolCollision",
+      "type": "object",
+      "required": [
+        "collateralPoolId",
+        "counterpartyCollateralPoolId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "CollateralPoolCollision"
+          ]
+        },
+        "collateralPoolId": {
+          "type": "integer",
+          "description": "Account collateral pool identifier.",
+          "example": 7
+        },
+        "counterpartyCollateralPoolId": {
+          "type": "integer",
+          "description": "Counterparty collateral pool identifier.",
+          "example": 8
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonOpenInterestExceeded": {
+      "title": "ExecutionBustReasonOpenInterestExceeded",
+      "type": "object",
+      "required": [
+        "marketId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "OpenInterestExceeded"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier whose open-interest cap was exceeded.",
+          "example": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountType": {
+      "title": "ExecutionBustReasonAccountType",
+      "type": "object",
+      "required": [
+        "accountId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "SpotAccount",
+            "NotSpotAccount"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier whose account type failed the check.",
+          "example": 1234
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonNegativeAccountRealBalance": {
+      "title": "ExecutionBustReasonNegativeAccountRealBalance",
+      "type": "object",
+      "required": [
+        "accountId",
+        "realBalance",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "NegativeAccountRealBalance"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier with negative real balance.",
+          "example": 1234
+        },
+        "realBalance": {
+          "type": "string",
+          "description": "Real balance decoded from an 18-decimal fixed-point contract value.",
+          "example": "-1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountInsolvent": {
+      "title": "ExecutionBustReasonAccountInsolvent",
+      "type": "object",
+      "required": [
+        "accountId",
+        "marginBalance",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "AccountInsolvent"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that is insolvent.",
+          "example": 1234
+        },
+        "marginBalance": {
+          "type": "string",
+          "description": "Margin balance decoded from an 18-decimal fixed-point contract value.",
+          "example": "-1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonSameAccountId": {
+      "title": "ExecutionBustReasonSameAccountId",
+      "type": "object",
+      "required": [
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "SameAccountId"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that matched itself, when emitted by the contract.",
+          "example": 1234
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonDecodedLegacy": {
+      "title": "ExecutionBustReasonDecodedLegacy",
+      "type": "object",
+      "required": [
+        "message",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "DecodedReason"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Already-decoded legacy string preserved as a message.",
+          "example": "Account below required margin"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnknown": {
+      "title": "ExecutionBustReasonUnknown",
+      "type": "object",
+      "required": [
+        "message",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "UnknownReason"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Support-facing fallback for undecodable or empty revert bytes.",
+          "example": "Unknown reason, reach out for support"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnmapped": {
+      "title": "ExecutionBustReasonUnmapped",
+      "type": "object",
+      "required": [
+        "reasonName",
+        "args"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "description": "Decoded custom-error name not explicitly modeled by this schema.",
+          "example": "HigherExecutionPrice"
+        },
+        "args": {
+          "type": "object",
+          "description": "Named ABI inputs, or arg0/arg1 fallback names, encoded as strings to avoid precision loss.",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "example": {
+            "executionPrice": "101000000000000000000",
+            "priceLimit": "100000000000000000000"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "ExecutionBust": {
       "title": "ExecutionBust",
       "type": "object",
@@ -808,9 +1845,8 @@
           "example": "43000.00"
         },
         "reason": {
-          "type": "string",
-          "description": "Human Readable Reason String (decoded revert reason bytes)",
-          "example": "08c379a0..."
+          "$ref": "#/definitions/ExecutionBustReason",
+          "description": "Machine-readable decoded revert reason. The raw on-chain revert bytes remain in storage/replication; API and websocket edges decode them into this object before returning execution busts."
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
