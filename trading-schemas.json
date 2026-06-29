@@ -833,7 +833,7 @@
     "Price": {
       "title": "Price",
       "type": "object",
-      "description": "Deprecated AMM-era mixed market/collateral price shape. Use CollateralOraclePrice for collateral Stork oracle prices; use market summary/depth endpoints for market prices.",
+      "description": "Deprecated AMM-era mixed market/collateral price shape. Use AssetOraclePrice for asset Stork oracle prices; use market summary/depth endpoints for market prices.",
       "deprecated": true,
       "required": [
         "symbol",
@@ -863,8 +863,8 @@
       "additionalProperties": true
     },
 
-    "CollateralOraclePrice": {
-      "title": "CollateralOraclePrice",
+    "AssetOraclePrice": {
+      "title": "AssetOraclePrice",
       "type": "object",
       "required": [
         "asset",
@@ -877,7 +877,7 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Collateral Stork oracle price. No AMM/order-book `poolPrice` is included on this replacement feed.",
+          "description": "Asset Stork oracle price. No AMM/order-book `poolPrice` is included on this replacement feed.",
           "example": "1.0000"
         },
         "updatedAt": {

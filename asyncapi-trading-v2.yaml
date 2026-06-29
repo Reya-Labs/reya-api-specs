@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.0.11
+  version: 3.0.7
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -226,7 +226,7 @@ channels:
 
   prices:
     address: /v2/prices
-    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/collateralOraclePrices` for collateral Stork oracle prices. Use market summary/depth channels for market prices.'
+    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/assetOraclePrices` for asset Stork oracle prices. Use market summary/depth channels for market prices.'
     x-deprecated: true
     messages:
       pricesUpdate:
@@ -234,7 +234,7 @@ channels:
 
   price:
     address: /v2/prices/{symbol}
-    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/collateralOraclePrices` for collateral Stork oracle prices. Use market summary/depth channels for market prices.'
+    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/assetOraclePrices` for asset Stork oracle prices. Use market summary/depth channels for market prices.'
     x-deprecated: true
     parameters:
       symbol:
@@ -244,12 +244,12 @@ channels:
       priceUpdate:
         $ref: '#/components/messages/PriceUpdate'
 
-  collateralOraclePrices:
-    address: /v2/collateralOraclePrices
-    description: Collateral-only Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
+  assetOraclePrices:
+    address: /v2/assetOraclePrices
+    description: Asset Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
     messages:
-      collateralOraclePricesUpdate:
-        $ref: '#/components/messages/CollateralOraclePricesUpdate'
+      assetOraclePricesUpdate:
+        $ref: '#/components/messages/AssetOraclePricesUpdate'
 
 operations:
   sendPing:
@@ -463,13 +463,13 @@ operations:
       - $ref: '#/channels/price/messages/priceUpdate'
     summary: Receive price updates for specific symbol
 
-  receiveCollateralOraclePrices:
+  receiveAssetOraclePrices:
     action: receive
     channel:
-      $ref: '#/channels/collateralOraclePrices'
+      $ref: '#/channels/assetOraclePrices'
     messages:
-      - $ref: '#/channels/collateralOraclePrices/messages/collateralOraclePricesUpdate'
-    summary: Receive collateral oracle price updates
+      - $ref: '#/channels/assetOraclePrices/messages/assetOraclePricesUpdate'
+    summary: Receive asset oracle price updates
 
 components:
   correlationIds:
@@ -590,12 +590,12 @@ components:
       payload:
         $ref: '#/components/schemas/PriceUpdatePayload'
 
-    CollateralOraclePricesUpdate:
-      name: collateralOraclePricesUpdate
+    AssetOraclePricesUpdate:
+      name: assetOraclePricesUpdate
       title: Collateral Oracle Prices Update
-      summary: Real-time collateral Stork oracle price updates
+      summary: Real-time asset Stork oracle price updates
       payload:
-        $ref: '#/components/schemas/CollateralOraclePricesUpdatePayload'
+        $ref: '#/components/schemas/AssetOraclePricesUpdatePayload'
 
     PingMessage:
       name: ping
@@ -722,11 +722,11 @@ components:
         - /v2/prices
       description: Channel for all prices updates
 
-    CollateralOraclePricesChannel:
+    AssetOraclePricesChannel:
       type: string
       enum:
-        - /v2/collateralOraclePrices
-      description: Channel for collateral oracle price updates
+        - /v2/assetOraclePrices
+      description: Channel for asset oracle price updates
 
     MarketSummaryChannelPattern:
       type: string
@@ -1058,21 +1058,21 @@ components:
         data:
           $ref: './trading-schemas.json#/definitions/Price'
 
-    CollateralOraclePricesUpdateBody:
+    AssetOraclePricesUpdateBody:
       type: object
-      title: CollateralOraclePricesUpdateBody
+      title: AssetOraclePricesUpdateBody
       additionalProperties: false
       required:
         - channel
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/CollateralOraclePricesChannel'
+          $ref: '#/components/schemas/AssetOraclePricesChannel'
         data:
           type: array
-          title: CollateralOraclePriceList
+          title: AssetOraclePriceList
           items:
-            $ref: './trading-schemas.json#/definitions/CollateralOraclePrice'
+            $ref: './trading-schemas.json#/definitions/AssetOraclePrice'
 
     MarketsSummaryUpdatePayload:
       title: MarketsSummaryUpdatePayload
@@ -1170,11 +1170,11 @@ components:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PriceUpdateBody'
 
-    CollateralOraclePricesUpdatePayload:
-      title: CollateralOraclePricesUpdatePayload
+    AssetOraclePricesUpdatePayload:
+      title: AssetOraclePricesUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/CollateralOraclePricesUpdateBody'
+        - $ref: '#/components/schemas/AssetOraclePricesUpdateBody'
 
     PingMessagePayload:
       type: object
