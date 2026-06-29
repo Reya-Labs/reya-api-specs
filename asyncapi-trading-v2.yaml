@@ -717,8 +717,9 @@ components:
     MarketsSummaryChannel:
       type: string
       enum:
+        - /v2/perpMarkets/summary
         - /v2/markets/summary
-      description: Channel for all markets summary updates
+      description: Channel for all perp market summary updates. `/v2/markets/summary` is deprecated; use `/v2/perpMarkets/summary`.
 
     DeprecatedPricesChannel:
       type: string
@@ -735,8 +736,8 @@ components:
 
     MarketSummaryChannelPattern:
       type: string
-      pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
-      description: Channel pattern for specific market summary updates
+      pattern: '^/v2/(perpMarket|market)/[A-Za-z0-9]+/summary$'
+      description: Channel pattern for specific perp market summary updates. `/v2/market/{symbol}/summary` is deprecated; use `/v2/perpMarket/{symbol}/summary`.
 
     SpotMarketsSummaryChannel:
       type: string
