@@ -1164,31 +1164,6 @@
       },
       "additionalProperties": true
     },
-    "LiquidityParameters": {
-      "title": "LiquidityParameters",
-      "type": "object",
-      "required": [
-        "symbol",
-        "depth",
-        "velocityMultiplier"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "depth": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Parameter determining the liquidity distribution along the AMM pricing curve, in particular expanding or contracting the max exposure parameter that would otherwise be determined by the capital available.",
-          "example": "1000.0"
-        },
-        "velocityMultiplier": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
-          "example": "1.5"
-        }
-      },
-      "additionalProperties": true
-    },
     "WalletConfiguration": {
       "title": "WalletConfiguration",
       "type": "object",

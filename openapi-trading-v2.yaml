@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.8
+  version: 3.0.9
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -55,7 +55,7 @@ paths:
   /perpMarketDefinitions:
     get:
       summary: Get perp market definitions
-      description: Alias of `/marketDefinitions`, mirroring the `/spotMarketDefinitions` naming.
+      description: Canonical perp market definitions endpoint for perpOB. Replaces the removed AMM-era `/marketDefinitions` route.
       operationId: getPerpMarketDefinitions
       tags:
         - Reference Data
@@ -150,26 +150,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AssetDefinition'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /liquidityParameters:
-    get:
-      summary: Get liquidity parameters
-      operationId: getLiquidityParameters
-      tags:
-        - Reference Data
-      responses:
-        '200':
-          description: List of liquidity parameters
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LiquidityParameters'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -758,7 +738,7 @@ paths:
       tags:
         - Order Entry
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -785,9 +765,9 @@ paths:
         mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
         `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
         explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
-        trigger the countdown. `accountId`, `timeoutMs`, and `nonce` are bound into the EIP-712
-        `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds), not
-        the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
+        trigger the countdown. `accountId`, `timeoutMs`, `nonce`, and `deadline` are bound into the
+        EIP-712 `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds),
+        not the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
         milliseconds; omitted when disarming). Also available on the order-entry WebSocket
         (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
       operationId: cancelAllAfter
@@ -899,9 +879,6 @@ components:
 
     GlobalFeeParameters:
       $ref: './trading-schemas.json#/definitions/GlobalFeeParameters'
-
-    LiquidityParameters:
-      $ref: './trading-schemas.json#/definitions/LiquidityParameters'
 
     WalletConfiguration:
       $ref: './trading-schemas.json#/definitions/WalletConfiguration'
