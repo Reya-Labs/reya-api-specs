@@ -1363,7 +1363,8 @@
       "title": "CreateOrderResponse",
       "type": "object",
       "required": [
-        "status"
+        "status",
+        "orderId"
       ],
       "properties": {
         "status": {
