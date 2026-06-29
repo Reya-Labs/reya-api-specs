@@ -750,6 +750,234 @@
       },
       "additionalProperties": true
     },
+    "ExecutionBustReason": {
+      "title": "ExecutionBustReason",
+      "type": "object",
+      "required": [
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "description": "Decoded custom-error name, or a stable fallback name such as UnknownReason.",
+          "example": "AccountBelowIM"
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional free-text fallback for already-decoded legacy strings or unknown revert bytes.",
+          "example": "Unknown reason, reach out for support"
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Account identifier associated with the decoded error.",
+          "example": "12345"
+        },
+        "exchangeId": {
+          "type": "string",
+          "description": "Exchange identifier associated with the decoded error.",
+          "example": "1"
+        },
+        "marketId": {
+          "type": "string",
+          "description": "Market identifier associated with the decoded error.",
+          "example": "4"
+        },
+        "address": {
+          "type": "string",
+          "description": "Address associated with the decoded error.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "signer": {
+          "type": "string",
+          "description": "Signer address associated with the decoded error.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Publisher address associated with the decoded error.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Signer nonce associated with the decoded error.",
+          "example": "42"
+        },
+        "priceTimestamp": {
+          "type": "string",
+          "description": "Timestamp carried by the price update.",
+          "example": "1700000000"
+        },
+        "blockTimestamp": {
+          "type": "string",
+          "description": "Block timestamp observed by the contracts.",
+          "example": "1700000121"
+        },
+        "maxStaleDuration": {
+          "type": "string",
+          "description": "Maximum allowed price staleness in seconds.",
+          "example": "60"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Oracle node identifier associated with the decoded error.",
+          "example": "0xabc"
+        },
+        "delta": {
+          "type": "string",
+          "description": "Signed fixed-18 margin delta decoded as a decimal string.",
+          "example": "-321"
+        },
+        "shortfall": {
+          "type": "string",
+          "description": "Absolute fixed-18 margin shortfall decoded as a decimal string.",
+          "example": "321"
+        },
+        "expiredAt": {
+          "type": "string",
+          "description": "Order expiration timestamp.",
+          "example": "1700000000"
+        },
+        "updatedQuantity": {
+          "type": "string",
+          "description": "Updated nonce quantity associated with the decoded error.",
+          "example": "10"
+        },
+        "maxQuantity": {
+          "type": "string",
+          "description": "Maximum allowed nonce quantity associated with the decoded error.",
+          "example": "5"
+        },
+        "accountMarketType": {
+          "type": "string",
+          "description": "Account-side market type decoded from the error.",
+          "example": "1"
+        },
+        "counterpartyMarketType": {
+          "type": "string",
+          "description": "Counterparty-side market type decoded from the error.",
+          "example": "2"
+        },
+        "accountMarketId": {
+          "type": "string",
+          "description": "Account-side market identifier decoded from the error.",
+          "example": "4"
+        },
+        "counterpartyMarketId": {
+          "type": "string",
+          "description": "Counterparty-side market identifier decoded from the error.",
+          "example": "5"
+        },
+        "baseDelta": {
+          "type": "string",
+          "description": "Fixed-18 base delta decoded as a decimal string.",
+          "example": "1.5"
+        },
+        "baseSpacing": {
+          "type": "string",
+          "description": "Fixed-18 base spacing decoded as a decimal string.",
+          "example": "0.001"
+        },
+        "price": {
+          "type": "string",
+          "description": "Fixed-18 price decoded as a decimal string.",
+          "example": "101"
+        },
+        "referencePrice": {
+          "type": "string",
+          "description": "Fixed-18 reference price decoded as a decimal string.",
+          "example": "100"
+        },
+        "maxDeviation": {
+          "type": "string",
+          "description": "Fixed-18 maximum price deviation decoded as a decimal string.",
+          "example": "0.05"
+        },
+        "priceSpacing": {
+          "type": "string",
+          "description": "Fixed-18 price spacing decoded as a decimal string.",
+          "example": "0.01"
+        },
+        "fillPrice": {
+          "type": "string",
+          "description": "Fixed-18 fill price decoded as a decimal string.",
+          "example": "101"
+        },
+        "orderPrice": {
+          "type": "string",
+          "description": "Fixed-18 order limit price decoded as a decimal string.",
+          "example": "100"
+        },
+        "oraclePrice": {
+          "type": "string",
+          "description": "Fixed-18 oracle price decoded as a decimal string.",
+          "example": "100"
+        },
+        "oracleDeviation": {
+          "type": "string",
+          "description": "Fixed-18 oracle deviation decoded as a decimal string.",
+          "example": "0.05"
+        },
+        "fillAmount": {
+          "type": "string",
+          "description": "Fixed-18 fill amount decoded as a decimal string.",
+          "example": "1"
+        },
+        "orderBaseDelta": {
+          "type": "string",
+          "description": "Fixed-18 order base delta decoded as a decimal string.",
+          "example": "1"
+        },
+        "orderRole": {
+          "type": "string",
+          "description": "Order side associated with the decoded error, such as account or counterparty.",
+          "example": "account"
+        },
+        "feature": {
+          "type": "string",
+          "description": "Feature flag identifier associated with the decoded error.",
+          "example": "1"
+        },
+        "collateralPoolId": {
+          "type": "string",
+          "description": "Collateral pool identifier associated with the decoded error.",
+          "example": "7"
+        },
+        "collateral": {
+          "type": "string",
+          "description": "Collateral address associated with the decoded error.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "collateralCap": {
+          "type": "string",
+          "description": "Collateral cap associated with the decoded error.",
+          "example": "1000"
+        },
+        "collateralBalance": {
+          "type": "string",
+          "description": "Collateral balance associated with the decoded error.",
+          "example": "1100"
+        },
+        "counterpartyCollateralPoolId": {
+          "type": "string",
+          "description": "Counterparty collateral pool identifier associated with the decoded error.",
+          "example": "8"
+        },
+        "realBalance": {
+          "type": "string",
+          "description": "Fixed-18 real balance decoded as a decimal string.",
+          "example": "-1"
+        },
+        "marginBalance": {
+          "type": "string",
+          "description": "Fixed-18 margin balance decoded as a decimal string.",
+          "example": "-1"
+        }
+      },
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Machine-readable decoded execution-bust reason. `reasonName` is always present. Additional fields are named decoded custom-error arguments or derived values, encoded as strings to avoid JavaScript precision loss. Examples: `{ \"reasonName\": \"AccountNotFound\", \"accountId\": \"12345\" }`, `{ \"reasonName\": \"AccountBelowIM\", \"accountId\": \"1234\", \"delta\": \"-321\", \"shortfall\": \"321\" }`, `{ \"reasonName\": \"MarkPriceStale\", \"marketId\": \"4\", \"priceTimestamp\": \"1700000000\", \"blockTimestamp\": \"1700000121\", \"maxStaleDuration\": \"60\" }`."
+    },
     "ExecutionBust": {
       "title": "ExecutionBust",
       "type": "object",
@@ -808,9 +1036,8 @@
           "example": "43000.00"
         },
         "reason": {
-          "type": "string",
-          "description": "Human Readable Reason String (decoded revert reason bytes)",
-          "example": "08c379a0..."
+          "$ref": "#/definitions/ExecutionBustReason",
+          "description": "Machine-readable decoded revert reason. The raw on-chain revert bytes remain in storage/replication; API and websocket edges decode them into this object before returning execution busts."
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
