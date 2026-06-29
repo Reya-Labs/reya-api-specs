@@ -417,7 +417,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. On-chain order expiry (`OrderDetails.expiresAfter`); `0` or absent means good-until-cancelled. Non-zero only for GTT orders. Updated by `modifyOrder`.",
+          "description": "Unix seconds. Present only for GTT orders, where it is the signed on-chain order expiry (`OrderDetails.expiresAfter`). Omitted for GTC, IOC, and order types with no public lifetime.",
           "example": 1676923200
         },
         "reduceOnly": {
