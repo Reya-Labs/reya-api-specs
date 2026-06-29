@@ -833,6 +833,8 @@
     "Price": {
       "title": "Price",
       "type": "object",
+      "description": "Deprecated AMM-era mixed market/collateral price shape. Use CollateralOraclePrice for collateral Stork oracle prices; use market summary/depth endpoints for market prices.",
+      "deprecated": true,
       "required": [
         "symbol",
         "updatedAt",
@@ -851,6 +853,32 @@
           "$ref": "#/definitions/PriceValue",
           "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
           "example": "42999.50"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Last update timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "CollateralOraclePrice": {
+      "title": "CollateralOraclePrice",
+      "type": "object",
+      "required": [
+        "asset",
+        "updatedAt",
+        "oraclePrice"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/definitions/Asset"
+        },
+        "oraclePrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Collateral Stork oracle price. No AMM/order-book `poolPrice` is included on this replacement feed.",
+          "example": "1.0000"
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",

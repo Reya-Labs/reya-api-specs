@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.9
+  version: 3.0.10
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -282,7 +282,9 @@ paths:
   /prices:
     get:
       summary: Get all prices
+      description: 'Deprecated: this AMM-era mixed market/collateral price endpoint includes legacy `poolPrice` semantics and will be removed. Use `GET /collateralOraclePrices` for collateral Stork oracle prices. Use market summary/depth endpoints for market prices.'
       operationId: getPrices
+      deprecated: true
       tags:
         - Market Data
       responses:
@@ -302,7 +304,9 @@ paths:
   /prices/{symbol}:
     get:
       summary: Get price by symbol
+      description: 'Deprecated: this AMM-era mixed market/collateral price endpoint includes legacy `poolPrice` semantics and will be removed. Use `GET /collateralOraclePrices` for collateral Stork oracle prices. Use market summary/depth endpoints for market prices.'
       operationId: getPrice
+      deprecated: true
       tags:
         - Market Data
       parameters:
@@ -314,6 +318,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Price'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /collateralOraclePrices:
+    get:
+      summary: Get collateral oracle prices
+      description: Collateral-only Stork oracle prices. This is the replacement for collateral consumers of the deprecated `/prices` endpoint and deliberately omits the AMM-era `poolPrice` field.
+      operationId: getCollateralOraclePrices
+      tags:
+        - Market Data
+      responses:
+        '200':
+          description: List of collateral oracle prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollateralOraclePrice'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -915,6 +940,9 @@ components:
 
     Price:
       $ref: './trading-schemas.json#/definitions/Price'
+
+    CollateralOraclePrice:
+      $ref: './trading-schemas.json#/definitions/CollateralOraclePrice'
 
     CandleHistoryData:
       $ref: './trading-schemas.json#/definitions/CandleHistoryData'
