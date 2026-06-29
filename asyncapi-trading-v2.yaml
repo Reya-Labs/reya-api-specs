@@ -80,14 +80,14 @@ channels:
 
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
-    description: Alias of `/v2/markets/summary` (mirrors `/v2/spotMarkets/summary`). Real-time updates for all perp market summaries
+    description: Preferred perp market summary channel; replaces deprecated `/v2/markets/summary` and mirrors `/v2/spotMarkets/summary`. Real-time updates for all perp market summaries
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
 
   perpMarketSummary:
     address: /v2/perpMarket/{symbol}/summary
-    description: Alias of `/v2/market/{symbol}/summary` (mirrors `/v2/spotMarket/{symbol}/summary`). Real-time updates for a specific perp market's summary
+    description: Preferred perp market summary channel; replaces deprecated `/v2/market/{symbol}/summary` and mirrors `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)
@@ -720,7 +720,7 @@ components:
         - /v2/markets/summary
       description: Channel for all markets summary updates
 
-    PricesChannel:
+    DeprecatedPricesChannel:
       type: string
       enum:
         - /v2/prices
@@ -799,7 +799,7 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
       description: Channel pattern for wallet account balances
 
-    PriceChannelPattern:
+    DeprecatedPriceChannelPattern:
       type: string
       pattern: '^/v2/prices/[A-Za-z0-9]+$'
       description: 'Deprecated legacy price channel pattern. Use `/v2/assetOraclePrices`.'
@@ -1044,7 +1044,7 @@ components:
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/PricesChannel'
+          $ref: '#/components/schemas/DeprecatedPricesChannel'
         data:
           type: array
           title: PriceList
@@ -1060,7 +1060,7 @@ components:
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/PriceChannelPattern'
+          $ref: '#/components/schemas/DeprecatedPriceChannelPattern'
         data:
           $ref: './trading-schemas.json#/definitions/Price'
 

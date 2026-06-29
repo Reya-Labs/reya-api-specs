@@ -218,7 +218,7 @@ paths:
   /perpMarkets/summary:
     get:
       summary: Get perp market summaries
-      description: Alias of `/markets/summary`, mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
+      description: Preferred perp market summary route; replaces deprecated `/markets/summary` and mirrors the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
       operationId: getPerpMarketsSummary
       tags:
         - Market Data
@@ -261,7 +261,7 @@ paths:
   /perpMarket/{symbol}/summary:
     get:
       summary: Get perp market summary
-      description: Alias of `/market/{symbol}/summary`, mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+      description: Preferred perp market summary route; replaces deprecated `/market/{symbol}/summary` and mirrors the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
       operationId: getPerpMarketSummary
       tags:
         - Market Data
@@ -690,8 +690,8 @@ paths:
         If the resting order has a non-zero `clientOrderId`, restate it; omit `clientOrderId` only
         when the resting order has none.
         **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
-        `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted optional
-        numeric fields encode `0` in the signed `OrderDetails`, never "inherit from the resting order".
+        `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
+        never "inherit from the resting order".
         The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, `triggerPx` (a
         `STOP_LOSS`/`TAKE_PROFIT` trigger can be re-priced in place); the rest (`exchangeId`,
         `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
