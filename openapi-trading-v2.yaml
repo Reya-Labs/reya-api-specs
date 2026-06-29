@@ -687,6 +687,8 @@ paths:
         Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`.
         Target by `orderId` when present, otherwise by a non-zero `clientOrderId`; if both are supplied,
         `orderId` is canonical for lookup and `clientOrderId` is still treated as the restated immutable.
+        If the resting order has a non-zero `clientOrderId`, restate it; omit `clientOrderId` only
+        when the resting order has none.
         **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
         `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted optional
         numeric fields encode `0` in the signed `OrderDetails`, never "inherit from the resting order".
@@ -701,8 +703,8 @@ paths:
         `MODIFY_ORDER_OTHER_ERROR`. A request whose post-modify state equals the
         order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease
         at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
-        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT), so `expiresAfter` must remain
-        `0` / omitted for GTC and a non-zero future timestamp for GTT. A post-only modification that
+        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT), so `expiresAfter` must be
+        `0` / omitted for GTC and a non-zero future timestamp greater than `deadline` for GTT. A post-only modification that
         would cross is rejected with no mutation; a non-post-only modification that crosses executes —
         the response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
         with `createOrder`. Omit `triggerPx` for a `LIMIT` order. The fresh EIP-712 signature (same
@@ -1009,7 +1011,7 @@ tags:
   - name: Specs
     description: OpenAPI and AsyncAPI specs
   - name: Reference Data
-    description: Market definitions, global parameters, liquidity parameters, etc.
+    description: Market definitions, fee parameters, asset configuration, etc.
   - name: Market Data
     description: Prices, market-level trades, depth, candles, etc.
   - name: Wallet Data

@@ -371,6 +371,11 @@
           "type": "string",
           "example": "490346525705109504"
         },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Client-provided order ID, as a decimal string (`uint64`). Present when the order has a non-zero client id; omitted otherwise.",
+          "example": "123456789"
+        },
         "qty": {
           "$ref": "#/definitions/Qty",
           "example": "1.0"
@@ -657,11 +662,11 @@
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "makerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -675,8 +680,9 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "makerAccountId": {
@@ -684,7 +690,7 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
           "description": "Order ID for the taker",
           "example": "63552420354981888"
@@ -705,8 +711,9 @@
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.0"
         },
         "type": {
@@ -1414,7 +1421,7 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a resting order in place. The order keeps its `orderId` and `clientOrderId`. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`; if both are supplied, `orderId` is canonical for lookup and `clientOrderId` is still treated as the restated immutable client id. Supplying neither, or supplying `clientOrderId: \"0\"` without `orderId`, is rejected with `INPUT_VALIDATION_ERROR`; a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND_ERROR`. **Full restate:** the request carries the SAME fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value at its post-modify state, even unchanged ones; omitted optional numeric fields encode `0` in the signed `OrderDetails`, never \"inherit from the resting order\". The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx` — `expiresAfter` may be omitted to encode `0` / no expiry, and for a `STOP_LOSS` / `TAKE_PROFIT` order the trigger price can be re-priced in place (no cancel+recreate). The remaining signed `OrderDetails` fields (`exchangeId`, `isBuy`/side, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are IMMUTABLE: restate each at the resting order's value — the matching engine verifies each equals the resting order and rejects a mismatch with `INPUT_VALIDATION_ERROR` (the matching engine's internal `MODIFY_IMMUTABLE_MISMATCH` is surfaced to clients as `INPUT_VALIDATION_ERROR`; the human-readable `message` names the offending field). `orderType` is immutable — a modify re-prices a trigger but never converts an order between `LIMIT` and `STOP_LOSS` / `TAKE_PROFIT`. **Availability:** editing a `STOP_LOSS` / `TAKE_PROFIT` order (including its `triggerPx`) depends on native SL/TP trigger orders landing in the matching engine; until then, modify accepts only `LIMIT` orders and a `STOP_LOSS` / `TAKE_PROFIT` modify is rejected with `MODIFY_ORDER_OTHER_ERROR`. Omit `triggerPx` for a `LIMIT` order. The EIP-712 signature is verified over exactly the restated fields (the same `Order` / `OrderDetails` envelope as `createOrder`), so it needs no resting-order lookup; a fresh `nonce` is required. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not remaining, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). `timeInForce` is immutable — a modify cannot flip GTC↔GTT; the restated `timeInForce` must match the resting order and `expiresAfter` must stay consistent with it (`0` / omitted for GTC, a non-zero future timestamp for GTT). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`; if both are supplied, `orderId` is the lookup key and `clientOrderId` is still the restated immutable client id. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omitted optional numeric fields encode `0` rather than inheriting. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. If the resting order has a non-zero `clientOrderId`, restate it; omit `clientOrderId` only when the resting order has none. `timeInForce` is immutable: GTC uses `expiresAfter` 0/omitted, while GTT must carry a non-zero future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -1440,7 +1447,7 @@
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest), as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. When `orderId` is present, this field may be omitted if the resting order has no client id, or restated to match the resting order's client id; a mismatch is rejected with `INPUT_VALIDATION_ERROR`. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
+          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. If the resting order has a non-zero client id, this field must be restated and must match it; omit only when the resting order has no client id. The modification cannot assign a new `clientOrderId`.",
           "example": "123456789"
         },
         "symbol": {
@@ -1499,7 +1506,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. The post-modify order expiry (`OrderDetails.expiresAfter`). Optional on the wire — omitted encodes `0` (no expiry / GTC) in the signed order details and never means inherit the resting value. Must stay consistent with the order's `timeInForce` (`0` or omitted for GTC, non-zero for GTT): modifications that would flip an order between GTC and GTT are rejected with `INPUT_VALIDATION_ERROR` (`timeInForce` is not modifiable). For non-zero values, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order (same convention as `createOrder`).",
+          "description": "Unix seconds. Post-modify order expiry (`OrderDetails.expiresAfter`). Omit only for GTC/no-expiry orders; omission signs `0` and never inherits the resting value. GTT modifications must send a non-zero future value greater than `deadline`.",
           "example": 1676923200
         },
         "signature": {
@@ -1538,7 +1545,7 @@
         },
         "execQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Quantity executed by this modification (taker fills triggered when it crossed). `0` or absent when the modified order rested.",
+          "description": "Quantity filled immediately by this modification. Present only when the modification crossed and executed.",
           "example": "0.5"
         },
         "cumQty": {
