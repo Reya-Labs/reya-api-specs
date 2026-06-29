@@ -122,7 +122,7 @@
     "OrderStatus": {
       "title": "OrderStatus",
       "type": "string",
-      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
+      "enum": ["OPEN", "FILLED", "CANCELLED"],
       "description": "Order status"
     },
     "CancelReason": {
