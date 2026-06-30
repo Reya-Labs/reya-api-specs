@@ -1439,28 +1439,35 @@
         "signerWallet",
         "deadline"
       ],
-      "anyOf": [
-        {
-          "properties": {
-            "orderId": {
-              "type": "string"
+      "not": {
+        "description": "At least one target identifier is required.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
             }
           },
-          "required": [
-            "orderId"
-          ]
-        },
-        {
-          "properties": {
-            "clientOrderId": {
-              "type": "string"
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
             }
-          },
-          "required": [
-            "clientOrderId"
-          ]
-        }
-      ],
+          }
+        ]
+      },
       "properties": {
         "orderId": {
           "type": "string",
@@ -1617,28 +1624,35 @@
         "nonce",
         "deadline"
       ],
-      "anyOf": [
-        {
-          "properties": {
-            "orderId": {
-              "type": "string"
+      "not": {
+        "description": "At least one target identifier is required.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
             }
           },
-          "required": [
-            "orderId"
-          ]
-        },
-        {
-          "properties": {
-            "clientOrderId": {
-              "type": "string"
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
             }
-          },
-          "required": [
-            "clientOrderId"
-          ]
-        }
-      ],
+          }
+        ]
+      },
       "properties": {
         "orderId": {
           "type": "string",
