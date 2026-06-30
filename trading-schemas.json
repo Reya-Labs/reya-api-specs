@@ -387,7 +387,7 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
         "firstFillId": {
@@ -827,7 +827,7 @@
         },
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Execution sequence number, increases by 1 for every spot execution bust in reya chain",
+          "description": "Execution sequence number, increases by 1 for every execution bust in reya chain",
           "example": 152954
         },
         "fillId": {
@@ -1385,7 +1385,7 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
         "orderId": {
