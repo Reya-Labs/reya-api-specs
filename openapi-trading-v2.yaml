@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.6
+  version: 3.0.7
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -55,7 +55,7 @@ paths:
   /perpMarketDefinitions:
     get:
       summary: Get perp market definitions
-      description: Alias of `/marketDefinitions`, mirroring the `/spotMarketDefinitions` naming.
+      description: Canonical perp market definitions endpoint for perpOB. Replaces the removed AMM-era `/marketDefinitions` route.
       operationId: getPerpMarketDefinitions
       tags:
         - Reference Data
@@ -155,26 +155,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /liquidityParameters:
-    get:
-      summary: Get liquidity parameters
-      operationId: getLiquidityParameters
-      tags:
-        - Reference Data
-      responses:
-        '200':
-          description: List of liquidity parameters
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LiquidityParameters'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /globalFeeParameters:
     get:
       summary: Get global fee parameters
@@ -213,32 +193,10 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /markets/summary:
-    get:
-      summary: Get market summaries
-      description: 'Deprecated: use `/perpMarkets/summary` instead. Statistics and throttled market data for all markets. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
-      operationId: getMarketsSummary
-      deprecated: true
-      tags:
-        - Market Data
-      responses:
-        '200':
-          description: List of market summaries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /perpMarkets/summary:
     get:
       summary: Get perp market summaries
-      description: Alias of `/markets/summary`, mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
+      description: Perp market summary route mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
       operationId: getPerpMarketsSummary
       tags:
         - Market Data
@@ -256,32 +214,10 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /market/{symbol}/summary:
-    get:
-      summary: Get market summary
-      description: 'Deprecated: use `/perpMarket/{symbol}/summary` instead. Statistics and throttled data for a specific market. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
-      operationId: getMarketSummary
-      deprecated: true
-      tags:
-        - Market Data
-      parameters:
-        - $ref: '#/components/parameters/SymbolParam'
-      responses:
-        '200':
-          description: Market summary
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MarketSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /perpMarket/{symbol}/summary:
     get:
       summary: Get perp market summary
-      description: Alias of `/market/{symbol}/summary`, mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+      description: Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
       operationId: getPerpMarketSummary
       tags:
         - Market Data
@@ -302,7 +238,9 @@ paths:
   /prices:
     get:
       summary: Get all prices
+      description: 'Deprecated: this AMM-era mixed market/collateral price endpoint includes legacy `poolPrice` semantics and will be removed. Use `GET /assetOraclePrices` for asset Stork oracle prices. Use market summary/depth endpoints for market prices.'
       operationId: getPrices
+      deprecated: true
       tags:
         - Market Data
       responses:
@@ -322,7 +260,9 @@ paths:
   /prices/{symbol}:
     get:
       summary: Get price by symbol
+      description: 'Deprecated: this AMM-era mixed market/collateral price endpoint includes legacy `poolPrice` semantics and will be removed. Use `GET /assetOraclePrices` for asset Stork oracle prices. Use market summary/depth endpoints for market prices.'
       operationId: getPrice
+      deprecated: true
       tags:
         - Market Data
       parameters:
@@ -334,6 +274,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Price'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assetOraclePrices:
+    get:
+      summary: Get asset oracle prices
+      description: Asset Stork oracle prices. This is the replacement for asset-oracle consumers of the deprecated `/prices` endpoint and deliberately omits the AMM-era `poolPrice` field.
+      operationId: getAssetOraclePrices
+      tags:
+        - Market Data
+      responses:
+        '200':
+          description: List of asset oracle prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetOraclePrice'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -482,7 +443,7 @@ paths:
   /wallet/{address}/executionBusts:
     get:
       summary: Get wallet execution busts
-      description: Returns up to 100 execution busts (failed fills) for a given wallet, covering both spot and perp markets.
+      description: Returns up to 100 execution busts (failed fills) for a given wallet, covering both spot and perp markets. Use the `symbol` suffix to distinguish spot from perp busts.
       operationId: getWalletExecutionBusts
       tags:
         - Wallet Data
@@ -647,8 +608,9 @@ paths:
         All order types route through the matching engine on a unified `marketId` namespace;
         the legacy off-chain conditional-order (DB-backed) path is retired. `STOP_LOSS` /
         `TAKE_PROFIT` carry `orderType` + `triggerPx` end-to-end and are accepted today as
-        forward-compatible facade orders — the ME stores the trigger fields and rests them as
-        GTC limits. **Availability:** native trigger behaviour (an ME-resident trigger queue
+        forward-compatible facade orders — the ME stores the trigger fields and exposes the
+        order for account state/cancel flows without adding executable book liquidity.
+        **Availability:** native trigger behaviour (an ME-resident trigger queue
         that fires on `triggerPx`) is not yet live; it depends on the ME trigger-queue landing.
         Until then a `STOP_LOSS` / `TAKE_PROFIT` create is accepted but does not yet trigger
         on its `triggerPx`.
@@ -680,10 +642,17 @@ paths:
       summary: Modify order
       description: |
         Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`.
-        Target exactly one of `orderId` / `clientOrderId`. **Full restate:** the body carries the same
-        fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate
-        every value, even unchanged ones; there is no omitted-means-inherited shorthand. The five
-        modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, `triggerPx` (a
+        Target by `orderId` when present, otherwise by a non-zero `clientOrderId`.
+        JSON Schema validates target presence only; the server enforces the non-zero rule for
+        sole `clientOrderId` targets.
+        The same `clientOrderId` field restates the resting order's immutable client id for signing.
+        If both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId`
+        is the restated immutable. If the resting order has no client id, omit `clientOrderId`;
+        do not send a placeholder value.
+        **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
+        `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
+        never "inherit from the resting order".
+        The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, `triggerPx` (a
         `STOP_LOSS`/`TAKE_PROFIT` trigger can be re-priced in place); the rest (`exchangeId`,
         `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
         `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
@@ -694,11 +663,13 @@ paths:
         `MODIFY_ORDER_OTHER_ERROR`. A request whose post-modify state equals the
         order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease
         at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
-        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT). A post-only modification that
+        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT), so `expiresAfter` is
+        omitted for GTC and set to a future timestamp greater than `deadline` for GTT. A post-only modification that
         would cross is rejected with no mutation; a non-post-only modification that crosses executes —
         the response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
-        with `createOrder`. The fresh EIP-712 signature (same `Order` / `OrderDetails` envelope as
-        `createOrder`) is verified over exactly the restated fields; a fresh `nonce` is required.
+        with `createOrder`. Omit `triggerPx` for a `LIMIT` order. The fresh EIP-712 signature (same
+        `Order` / `OrderDetails` envelope as `createOrder`) is verified over exactly the restated
+        fields; a fresh `nonce` is required.
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `modifyOrder`).
       operationId: modifyOrder
       tags:
@@ -758,7 +729,7 @@ paths:
       tags:
         - Order Entry
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -785,9 +756,9 @@ paths:
         mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
         `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
         explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
-        trigger the countdown. `accountId`, `timeoutMs`, and `nonce` are bound into the EIP-712
-        `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds), not
-        the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
+        trigger the countdown. `accountId`, `timeoutMs`, `nonce`, and `deadline` are bound into the
+        EIP-712 `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds),
+        not the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
         milliseconds; omitted when disarming). Also available on the order-entry WebSocket
         (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
       operationId: cancelAllAfter
@@ -900,9 +871,6 @@ components:
     GlobalFeeParameters:
       $ref: './trading-schemas.json#/definitions/GlobalFeeParameters'
 
-    LiquidityParameters:
-      $ref: './trading-schemas.json#/definitions/LiquidityParameters'
-
     WalletConfiguration:
       $ref: './trading-schemas.json#/definitions/WalletConfiguration'
 
@@ -938,6 +906,9 @@ components:
 
     Price:
       $ref: './trading-schemas.json#/definitions/Price'
+
+    AssetOraclePrice:
+      $ref: './trading-schemas.json#/definitions/AssetOraclePrice'
 
     CandleHistoryData:
       $ref: './trading-schemas.json#/definitions/CandleHistoryData'
@@ -1000,7 +971,7 @@ tags:
   - name: Specs
     description: OpenAPI and AsyncAPI specs
   - name: Reference Data
-    description: Market definitions, global parameters, liquidity parameters, etc.
+    description: Market definitions, fee parameters, asset configuration, etc.
   - name: Market Data
     description: Prices, market-level trades, depth, candles, etc.
   - name: Wallet Data
