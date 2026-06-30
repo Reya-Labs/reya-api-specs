@@ -1468,6 +1468,38 @@
           }
         ]
       },
+      "allOf": [
+        {
+          "not": {
+            "description": "A sole clientOrderId target must be non-zero.",
+            "allOf": [
+              {
+                "not": {
+                  "properties": {
+                    "orderId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "orderId"
+                  ]
+                }
+              },
+              {
+                "properties": {
+                  "clientOrderId": {
+                    "type": "string",
+                    "pattern": "^0+$"
+                  }
+                },
+                "required": [
+                  "clientOrderId"
+                ]
+              }
+            ]
+          }
+        }
+      ],
       "properties": {
         "orderId": {
           "type": "string",
@@ -1653,6 +1685,38 @@
           }
         ]
       },
+      "allOf": [
+        {
+          "not": {
+            "description": "A sole clientOrderId target must be non-zero.",
+            "allOf": [
+              {
+                "not": {
+                  "properties": {
+                    "orderId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "orderId"
+                  ]
+                }
+              },
+              {
+                "properties": {
+                  "clientOrderId": {
+                    "type": "string",
+                    "pattern": "^0+$"
+                  }
+                },
+                "required": [
+                  "clientOrderId"
+                ]
+              }
+            ]
+          }
+        }
+      ],
       "properties": {
         "orderId": {
           "type": "string",
