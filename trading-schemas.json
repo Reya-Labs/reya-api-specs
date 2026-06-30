@@ -137,7 +137,7 @@
         "MASS_CANCEL",
         "CANCEL_ALL_AFTER"
       ],
-      "description": "Why an order reached a terminal `CANCELLED` status. `cancelReason` / `cancelReasonMessage` are present if and only if `status` is `CANCELLED`; they are omitted entirely (not `null`, not `\"\"`) otherwise. Matching-engine `UNSPECIFIED` or unknown reasons map to omission. `NO_LIQUIDITY` (IOC found no resting liquidity) and `IOC_REMAINDER` (IOC partially filled and the remaining quantity was cancelled because no more executable opposite liquidity was available) are returned on `createOrder` / `modifyOrder` responses; `GTT_EXPIRED`, `USER_CANCEL`, `MASS_CANCEL` and `CANCEL_ALL_AFTER` are delivered on the `walletOrderChanges` stream. `SELF_TRADE_PREVENTION` cancels the aggressor (taker) only; your resting order is left untouched. If an IOC partially fills and its remaining quantity is then cancelled by self-trade prevention, the response keeps the fill quantities and reports `cancelReason: SELF_TRADE_PREVENTION`; `IOC_REMAINDER` is used only when matching stops without a self-cross."
+      "description": "Why an order reached a terminal `CANCELLED` status. `cancelReason` / `cancelReasonMessage` are present if and only if `status` is `CANCELLED`; they are omitted entirely (not `null`, not `\"\"`) otherwise. Matching-engine `UNSPECIFIED` or unknown reasons map to omission. `NO_LIQUIDITY` (IOC found no resting liquidity) and `IOC_REMAINDER` (IOC partially filled and the remaining quantity was cancelled because no more executable opposite liquidity was available) are returned on `createOrder` / `modifyOrder` responses; `GTT_EXPIRED`, `USER_CANCEL`, `MASS_CANCEL` and `CANCEL_ALL_AFTER` are delivered on the `walletOrderChanges` stream. `SELF_TRADE_PREVENTION` can appear on `createOrder` / `modifyOrder` responses and on `walletOrderChanges` when a modified resting order crosses as taker. It cancels the aggressor (taker) only; your resting order is left untouched. If an IOC partially fills and its remaining quantity is then cancelled by self-trade prevention, the response keeps the fill quantities and reports `cancelReason: SELF_TRADE_PREVENTION`; `IOC_REMAINDER` is used only when matching stops without a self-cross."
     },
     "TierType": {
       "title": "TierType",
@@ -762,10 +762,10 @@
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "exchangeId",
         "makerAccountId",
-        "orderId",
+        "takerOrderId",
         "makerOrderId",
         "qty",
         "side",
@@ -779,8 +779,9 @@
           "$ref": "#/definitions/Symbol",
           "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "exchangeId": {
@@ -792,9 +793,9 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
-          "description": "Order ID for the taker",
+          "description": "Taker order ID",
           "example": "63552420354981888"
         },
         "makerOrderId": {
@@ -1306,7 +1307,7 @@
         },
         "qty": {
           "$ref": "#/definitions/Qty",
-          "description": "Unsigned order quantity. Required for `LIMIT` orders. Omit for `STOP_LOSS` / `TAKE_PROFIT` orders; trigger orders sign `OrderDetails.quantity = 0` and derive executable size when the trigger fires. Combined with `isBuy`, forms the signed `OrderDetails.quantity` for LIMIT orders.",
+          "description": "Unsigned order quantity. Required for `LIMIT` orders. Omit for `STOP_LOSS` / `TAKE_PROFIT` orders; trigger orders derive executable size when the trigger fires. Combined with `isBuy`, forms the signed `OrderDetails.quantity` for LIMIT orders.",
           "example": "0.1"
         },
         "orderType": {
@@ -1421,7 +1422,7 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is the lookup key and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omission never means inherit. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. `timeInForce` is immutable: GTC omits `expiresAfter`, while GTT must carry a future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
+      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The JSON Schema validates target presence only; the server enforces the non-zero rule for sole `clientOrderId` targets. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is the lookup key and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omission never means inherit. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. `timeInForce` is immutable: GTC omits `expiresAfter`, while GTT must carry a future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -1440,7 +1441,7 @@
         "deadline"
       ],
       "not": {
-        "description": "At least one target identifier is required.",
+        "description": "At least one target identifier is required. This schema validates target presence only; the server rejects a sole zero/all-zero `clientOrderId`.",
         "allOf": [
           {
             "not": {
@@ -1476,7 +1477,7 @@
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. Do not send a placeholder value. The modification cannot assign a new `clientOrderId`.",
+          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero; JSON Schema validates presence only and the server enforces the non-zero rule. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. Do not send a placeholder value. The modification cannot assign a new `clientOrderId`.",
           "example": "123456789"
         },
         "symbol": {
@@ -1625,7 +1626,7 @@
         "deadline"
       ],
       "not": {
-        "description": "At least one target identifier is required.",
+        "description": "At least one target identifier is required. This schema validates target presence only; the server rejects a sole zero/all-zero `clientOrderId`.",
         "allOf": [
           {
             "not": {
@@ -1656,12 +1657,12 @@
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID to cancel. Provide `orderId`, or a non-zero `clientOrderId` when `orderId` is absent; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "description": "Internal matching engine order ID to cancel. Provide `orderId`, or a non-zero `clientOrderId` when `orderId` is absent; JSON Schema validates target presence only and the server enforces the non-zero `clientOrderId` rule. If both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. This is the same clientOrderId provided in CreateOrderRequest.",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero; JSON Schema validates presence only and the server enforces the non-zero rule. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {

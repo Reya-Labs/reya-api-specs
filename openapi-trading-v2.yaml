@@ -642,6 +642,8 @@ paths:
       description: |
         Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`.
         Target by `orderId` when present, otherwise by a non-zero `clientOrderId`.
+        JSON Schema validates target presence only; the server enforces the non-zero rule for
+        sole `clientOrderId` targets.
         The same `clientOrderId` field restates the resting order's immutable client id for signing.
         If both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId`
         is the restated immutable. If the resting order has no client id, omit `clientOrderId`;
