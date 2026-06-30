@@ -1656,12 +1656,12 @@
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID to cancel. At least one of `orderId` or `clientOrderId` must be provided; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "description": "Internal matching engine order ID to cancel. Provide `orderId`, or a non-zero `clientOrderId` when `orderId` is absent; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {
