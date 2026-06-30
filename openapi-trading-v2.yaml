@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 2.3.8
+  version: 2.3.9
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -635,6 +635,43 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/orderHistory:
+    get:
+      summary: Get wallet order history
+      description: |
+        Returns up to 100 historical order state-change events for a wallet, newest first. Today the
+        result set is spot-only (matching-engine sourced); perp will start landing here once the perp
+        order indexer is wired in. The row shape will not change between spot-only and the
+        unified result.
+
+        Each row is one state transition emitted by the matching engine (`OPEN`, `PARTIALLY_FILLED`,
+        `FILLED`, `CANCELLED`, `REJECTED`). The row shape matches the `Order` events published on the
+        `/v2/wallet/{address}/orderChanges` WebSocket channel, so live + historical entries can be
+        coalesced client-side.
+
+        Pagination is cursor-based on `lastUpdateAt`. Pass the `endTime` query parameter (milliseconds,
+        inclusive upper bound) set to the oldest live entry's `lastUpdateAt` to fetch the previous
+        page. Deduplicate boundary entries by `(orderId, sequenceNumber)` when joining with the live
+        WS feed.
+      operationId: getWalletOrderHistory
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+      responses:
+        '200':
+          description: Paginated list of order state-change events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/configuration:
     get:
       summary: Get wallet configuration
@@ -837,6 +874,12 @@ components:
 
     Order:
       $ref: './trading-schemas.json#/definitions/Order'
+
+    OrderList:
+      $ref: './trading-schemas.json#/definitions/OrderList'
+
+    OrderChangesSnapshot:
+      $ref: './trading-schemas.json#/definitions/OrderChangesSnapshot'
 
     Account:
       $ref: './trading-schemas.json#/definitions/Account'
