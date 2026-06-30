@@ -160,12 +160,24 @@ channels:
 
   walletOrderChanges:
     address: /v2/wallet/{address}/orderChanges
-    description: Real-time order change updates for wallet
+    description: |
+      Real-time order change updates for a wallet.
+
+      Two server-to-client message types arrive on this logical channel:
+      `orderChangesSubscribed` is the initial `subscribed` confirmation and
+      carries an `OrderChangesSnapshot` payload (current open orders +
+      `snapshotSequenceNumber` cursor); `orderChangeUpdate` is every
+      subsequent `channel_data` frame and carries one `Order` whose
+      `sequenceNumber` is strictly greater than `snapshotSequenceNumber`.
+      The cursor lets clients splice the live feed against the
+      `/wallet/{address}/orderHistory` REST endpoint without overlap or gap.
     parameters:
       address:
         description: Ethereum wallet address
         location: $message.payload#/address
     messages:
+      orderChangesSubscribed:
+        $ref: '#/components/messages/OrderChangesSubscribed'
       orderChangeUpdate:
         $ref: '#/components/messages/OrderChangeUpdate'
 
@@ -395,6 +407,7 @@ operations:
     channel:
       $ref: '#/channels/walletOrderChanges'
     messages:
+      - $ref: '#/channels/walletOrderChanges/messages/orderChangesSubscribed'
       - $ref: '#/channels/walletOrderChanges/messages/orderChangeUpdate'
     summary: Receive order change updates for wallet
 
@@ -502,6 +515,16 @@ components:
       summary: Real-time order change update for a wallet
       payload:
         $ref: '#/components/schemas/OrderChangeUpdatePayload'
+
+    OrderChangesSubscribed:
+      name: subscribed
+      title: Order Changes Subscribed
+      summary: |
+        Initial `subscribed` confirmation for the orderChanges channel. The
+        envelope is the generic subscribe-response shape; the `contents`
+        carries the typed `OrderChangesSnapshot` payload.
+      payload:
+        $ref: '#/components/schemas/OrderChangesSubscribedPayload'
 
     MarketPerpExecutionUpdate:
       name: marketPerpExecutionUpdate
@@ -873,6 +896,22 @@ components:
           title: OrderList
           items:
             $ref: './trading-schemas.json#/definitions/Order'
+
+    OrderChangesSubscribedPayload:
+      type: object
+      title: OrderChangesSubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/WalletOrderChangesChannelPattern'
+        contents:
+          $ref: './trading-schemas.json#/definitions/OrderChangesSnapshot'
 
     MarketPerpExecutionUpdateBody:
       type: object
