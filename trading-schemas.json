@@ -1440,7 +1440,7 @@
         "deadline"
       ],
       "not": {
-        "description": "Provide `orderId` or a non-zero `clientOrderId` target.",
+        "description": "At least one target identifier is required.",
         "allOf": [
           {
             "not": {
@@ -1455,11 +1455,15 @@
             }
           },
           {
-            "properties": {
-              "clientOrderId": {
-                "type": "string",
-                "pattern": "^0*$"
-              }
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
             }
           }
         ]
@@ -1621,7 +1625,7 @@
         "deadline"
       ],
       "not": {
-        "description": "Provide `orderId` or a non-zero `clientOrderId` target.",
+        "description": "At least one target identifier is required.",
         "allOf": [
           {
             "not": {
@@ -1636,11 +1640,15 @@
             }
           },
           {
-            "properties": {
-              "clientOrderId": {
-                "type": "string",
-                "pattern": "^0*$"
-              }
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
             }
           }
         ]
