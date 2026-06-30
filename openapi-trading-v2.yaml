@@ -641,10 +641,11 @@ paths:
       summary: Modify order
       description: |
         Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`.
-        Target by `orderId` when present, otherwise by a non-zero `clientOrderId`; if both are supplied,
-        `orderId` is canonical for lookup and `clientOrderId` is still treated as the restated immutable.
-        If the resting order has a non-zero `clientOrderId`, restate it; omit `clientOrderId` only
-        when the resting order has none.
+        Target by `orderId` when present, otherwise by a non-zero `clientOrderId`.
+        The same `clientOrderId` field restates the resting order's immutable client id for signing.
+        If both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId`
+        is the restated immutable. If the resting order has no client id, omit `clientOrderId`;
+        `clientOrderId: "0"` is accepted only alongside `orderId` and is never a standalone target.
         **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
         `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
         never "inherit from the resting order".
