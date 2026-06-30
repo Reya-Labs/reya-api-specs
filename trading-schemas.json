@@ -1439,6 +1439,28 @@
         "signerWallet",
         "deadline"
       ],
+      "anyOf": [
+        {
+          "properties": {
+            "orderId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "orderId"
+          ]
+        },
+        {
+          "properties": {
+            "clientOrderId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "clientOrderId"
+          ]
+        }
+      ],
       "properties": {
         "orderId": {
           "type": "string",
@@ -1594,6 +1616,28 @@
         "accountId",
         "nonce",
         "deadline"
+      ],
+      "anyOf": [
+        {
+          "properties": {
+            "orderId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "orderId"
+          ]
+        },
+        {
+          "properties": {
+            "clientOrderId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "clientOrderId"
+          ]
+        }
       ],
       "properties": {
         "orderId": {
