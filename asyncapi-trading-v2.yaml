@@ -58,36 +58,16 @@ channels:
     bindings:
       ws: {}
 
-  marketsSummary:
-    address: /v2/markets/summary
-    description: 'Deprecated: use `/v2/perpMarkets/summary` instead. Real-time updates for all market summaries. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
-    x-deprecated: true
-    messages:
-      marketsSummaryUpdate:
-        $ref: '#/components/messages/MarketsSummaryUpdate'
-
-  marketSummary:
-    address: /v2/market/{symbol}/summary
-    description: 'Deprecated: use `/v2/perpMarket/{symbol}/summary` instead. Real-time updates for a specific market''s summary. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
-    x-deprecated: true
-    parameters:
-      symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
-    messages:
-      marketSummaryUpdate:
-        $ref: '#/components/messages/MarketSummaryUpdate'
-
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
-    description: Preferred perp market summary channel; replaces deprecated `/v2/markets/summary` and mirrors `/v2/spotMarkets/summary`. Real-time updates for all perp market summaries
+    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all perp market summaries
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
 
   perpMarketSummary:
     address: /v2/perpMarket/{symbol}/summary
-    description: Preferred perp market summary channel; replaces deprecated `/v2/market/{symbol}/summary` and mirrors `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary
+    description: Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)
@@ -317,31 +297,13 @@ operations:
       - $ref: '#/channels/control/messages/errorMessage'
     summary: Receive error messages
 
-  receiveMarketsSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketsSummary'
-    messages:
-      - $ref: '#/channels/marketsSummary/messages/marketsSummaryUpdate'
-    summary: 'Deprecated: use receivePerpMarketsSummary instead. Receive market summaries updates.'
-    x-deprecated: true
-
-  receiveMarketSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketSummary'
-    messages:
-      - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
-    summary: 'Deprecated: use receivePerpMarketSummary instead. Receive specific market summary updates.'
-    x-deprecated: true
-
   receivePerpMarketsSummary:
     action: receive
     channel:
       $ref: '#/channels/perpMarketsSummary'
     messages:
       - $ref: '#/channels/perpMarketsSummary/messages/marketsSummaryUpdate'
-    summary: Receive perp market summaries updates (alias of receiveMarketsSummary)
+    summary: Receive perp market summaries updates
 
   receivePerpMarketSummary:
     action: receive
@@ -349,7 +311,7 @@ operations:
       $ref: '#/channels/perpMarketSummary'
     messages:
       - $ref: '#/channels/perpMarketSummary/messages/marketSummaryUpdate'
-    summary: Receive specific perp market summary updates (alias of receiveMarketSummary)
+    summary: Receive specific perp market summary updates
 
   receiveSpotMarketsSummary:
     action: receive
@@ -718,8 +680,7 @@ components:
       type: string
       enum:
         - /v2/perpMarkets/summary
-        - /v2/markets/summary
-      description: Channel for all perp market summary updates. `/v2/markets/summary` is deprecated; use `/v2/perpMarkets/summary`.
+      description: Channel for all perp market summary updates.
 
     DeprecatedPricesChannel:
       type: string
@@ -736,8 +697,8 @@ components:
 
     MarketSummaryChannelPattern:
       type: string
-      pattern: '^/v2/(perpMarket|market)/[A-Za-z0-9]+/summary$'
-      description: Channel pattern for specific perp market summary updates. `/v2/market/{symbol}/summary` is deprecated; use `/v2/perpMarket/{symbol}/summary`.
+      pattern: '^/v2/perpMarket/[A-Za-z0-9]+/summary$'
+      description: Channel pattern for specific perp market summary updates.
 
     SpotMarketsSummaryChannel:
       type: string

@@ -193,32 +193,10 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /markets/summary:
-    get:
-      summary: Get market summaries
-      description: 'Deprecated: use `/perpMarkets/summary` instead. Statistics and throttled market data for all markets. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
-      operationId: getMarketsSummary
-      deprecated: true
-      tags:
-        - Market Data
-      responses:
-        '200':
-          description: List of market summaries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /perpMarkets/summary:
     get:
       summary: Get perp market summaries
-      description: Preferred perp market summary route; replaces deprecated `/markets/summary` and mirrors the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
+      description: Perp market summary route mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
       operationId: getPerpMarketsSummary
       tags:
         - Market Data
@@ -236,32 +214,10 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /market/{symbol}/summary:
-    get:
-      summary: Get market summary
-      description: 'Deprecated: use `/perpMarket/{symbol}/summary` instead. Statistics and throttled data for a specific market. Recalculated every 0.5s. This un-prefixed route still works but will be removed once integrators have migrated to the `perp*` naming.'
-      operationId: getMarketSummary
-      deprecated: true
-      tags:
-        - Market Data
-      parameters:
-        - $ref: '#/components/parameters/SymbolParam'
-      responses:
-        '200':
-          description: Market summary
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MarketSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /perpMarket/{symbol}/summary:
     get:
       summary: Get perp market summary
-      description: Preferred perp market summary route; replaces deprecated `/market/{symbol}/summary` and mirrors the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+      description: Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
       operationId: getPerpMarketSummary
       tags:
         - Market Data
