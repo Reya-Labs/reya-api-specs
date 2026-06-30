@@ -645,7 +645,7 @@ paths:
         The same `clientOrderId` field restates the resting order's immutable client id for signing.
         If both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId`
         is the restated immutable. If the resting order has no client id, omit `clientOrderId`;
-        `clientOrderId: "0"` is accepted only alongside `orderId` and is never a standalone target.
+        do not send a placeholder value.
         **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
         `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
         never "inherit from the resting order".
@@ -660,8 +660,8 @@ paths:
         `MODIFY_ORDER_OTHER_ERROR`. A request whose post-modify state equals the
         order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease
         at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
-        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT), so `expiresAfter` must be
-        `0` / omitted for GTC and a non-zero future timestamp greater than `deadline` for GTT. A post-only modification that
+        `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT), so `expiresAfter` is
+        omitted for GTC and set to a future timestamp greater than `deadline` for GTT. A post-only modification that
         would cross is rejected with no mutation; a non-post-only modification that crosses executes —
         the response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
         with `createOrder`. Omit `triggerPx` for a `LIMIT` order. The fresh EIP-712 signature (same

@@ -1321,7 +1321,7 @@
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Trigger price, required and non-zero for STOP_LOSS/TAKE_PROFIT, must be zero/absent for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`.",
+          "description": "Trigger price, required for STOP_LOSS/TAKE_PROFIT and omitted for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`.",
           "example": "50000.0"
         },
         "reduceOnly": {
@@ -1355,12 +1355,12 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Omit only for GTC/IOC/no-expiry orders; omission signs `0`. GTT orders MUST set a non-zero future `expiresAfter` greater than `deadline` (`deadline <= expiresAfter`). Coupled to `timeInForce`; mismatched combinations are rejected with `INPUT_VALIDATION_ERROR`. Note: a GTT fill matched within a few seconds of `expiresAfter` can revert on-chain with `OrderExpired` if it mines after expiry, so choose a lifetime with adequate margin.",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Omit only for GTC/IOC/no-expiry orders. GTT orders MUST set a future `expiresAfter` greater than `deadline` (`deadline <= expiresAfter`). Coupled to `timeInForce`; mismatched combinations are rejected with `INPUT_VALIDATION_ERROR`. Note: a GTT fill matched within a few seconds of `expiresAfter` can revert on-chain with `OrderExpired` if it mines after expiry, so choose a lifetime with adequate margin.",
           "example": 1676923200
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Carried as a string (full `uint64` range [0, 2^64-1]) to preserve precision, like `orderId` and `nonce`.",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Omit when the order has no client id; provided values must be non-zero and are carried as strings to preserve precision, like `orderId` and `nonce`.",
           "example": "123456789"
         }
       },
@@ -1421,7 +1421,7 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is the lookup key and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; `clientOrderId: \"0\"` is accepted only alongside `orderId` and is never a standalone target. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omission never means inherit. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. `timeInForce` is immutable: GTC uses `expiresAfter` 0/omitted, while GTT must carry a non-zero future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
+      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is the lookup key and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omission never means inherit. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. `timeInForce` is immutable: GTC omits `expiresAfter`, while GTT must carry a future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -1476,7 +1476,7 @@
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. `clientOrderId: \"0\"` is accepted only alongside `orderId` and is equivalent to omitting the field. The modification cannot assign a new `clientOrderId`.",
+          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. Do not send a placeholder value. The modification cannot assign a new `clientOrderId`.",
           "example": "123456789"
         },
         "symbol": {
@@ -1535,7 +1535,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Post-modify order expiry (`OrderDetails.expiresAfter`). Omit only for GTC/no-expiry orders; omission signs `0` and never inherits the resting value. GTT modifications must send a non-zero future value greater than `deadline`.",
+          "description": "Unix seconds. Post-modify order expiry (`OrderDetails.expiresAfter`). Omit only for GTC/no-expiry orders; omission never inherits the resting value. GTT modifications must send a future value greater than `deadline`.",
           "example": 1676923200
         },
         "signature": {
