@@ -1,77 +1,58 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://api.reya.xyz/schemas/trading-schemas.json",
   "definitions": {
     "Symbol": {
       "title": "Symbol",
-      "$id": "#Symbol",
-      "x-parser-schema-id": "Symbol",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "WETHRUSD"],
+      "example": "BTCRUSDPERP",
       "description": "Trading symbol (e.g., BTCRUSDPERP, WETHRUSD)"
     },
     "Asset": {
       "title": "Asset",
-      "$id": "#Asset",
-      "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "WETHRUSD"]
+      "example": "RUSD"
     },
     "Address": {
       "title": "Address",
-      "$id": "#Address",
-      "x-parser-schema-id": "Address",
       "type": "string",
       "pattern": "^0x[a-fA-F0-9]{40}$",
-      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"]
+      "example": "0x6c51275fd01d5dbd2da194e92f920f8598306df2"
     },
     "UnsignedDecimal": {
       "title": "UnsignedDecimal",
-      "$id": "#UnsignedDecimal",
-      "x-parser-schema-id": "UnsignedDecimal",
       "type": "string",
       "pattern": "^\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
-      "examples": ["1.0", "0.001", "154.741", "1.2345e10", "6.789e-5"]
+      "example": "1.0"
     },
     "SignedDecimal": {
       "title": "SignedDecimal",
-      "$id": "#Decimal",
-      "x-parser-schema-id": "SignedDecimal",
       "type": "string",
       "pattern": "^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
-      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75", "-1.12628295e-9", "3.14159e+8"]
+      "example": "43000.00"
     },
     "PriceValue": {
       "title": "PriceValue",
-      "$id": "#PriceValue",
-      "x-parser-schema-id": "PriceValue",
       "$ref": "#/definitions/SignedDecimal"
     },
     "Qty": {
       "title": "Qty",
-      "$id": "#Qty",
-      "x-parser-schema-id": "Qty",
       "$ref": "#/definitions/UnsignedDecimal"
     },
     "UnsignedInteger": {
       "title": "UnsignedInteger",
-      "$id": "#UnsignedInteger",
-      "x-parser-schema-id": "UnsignedInteger",
       "type": "integer",
       "minimum": 0,
-      "examples": [1747927089946, 1756733379000]
+      "example": 1747927089946
     },
     "RequestErrorCode": {
       "title": "RequestErrorCode",
-      "$id": "#RequestErrorCode",
-      "x-parser-schema-id": "RequestErrorCode",
       "type": "string",
       "enum": [
-        "SYMBOL_NOT_FOUND",
-        "NO_ACCOUNTS_FOUND",
-        "NO_PRICES_FOUND_FOR_SYMBOL",
+        "SYMBOL_NOT_FOUND_ERROR",
+        "NO_ACCOUNTS_FOUND_ERROR",
+        "NO_PRICES_FOUND_FOR_SYMBOL_ERROR",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
         "CANCEL_ORDER_OTHER_ERROR",
@@ -80,14 +61,26 @@
         "INVALID_NONCE_ERROR",
         "UNAVAILABLE_MATCHING_ENGINE_ERROR",
         "UNAUTHORIZED_SIGNATURE_ERROR",
-        "NUMERIC_OVERFLOW_ERROR"
+        "NUMERIC_OVERFLOW_ERROR",
+        "CANCEL_ALL_AFTER_OTHER_ERROR",
+        "ORDER_NOT_FOUND_ERROR",
+        "POST_ONLY_WOULD_CROSS_ERROR",
+        "MODIFY_QTY_BELOW_FILLED_ERROR",
+        "EMPTY_MODIFY_ERROR",
+        "MODIFY_ORDER_OTHER_ERROR",
+        "RATE_LIMITED_ERROR",
+        "INSUFFICIENT_BALANCE_ERROR",
+        "OPEN_ORDER_CAP_ERROR",
+        "PRICE_QTY_BOUNDS_ERROR",
+        "SERVICE_DISABLED_ERROR",
+        "UNAUTHORIZED_ACCOUNT_ERROR",
+        "TRADING_HALTED_ERROR",
+        "DUPLICATE_CLIENT_ORDER_ID_ERROR"
       ],
-      "description": "Standardized error codes for API responses"
+      "description": "Standardized error codes for API responses. The `*_OTHER_ERROR` family (`CREATE_ORDER_OTHER_ERROR`, `CANCEL_ORDER_OTHER_ERROR`, `CANCEL_ALL_AFTER_OTHER_ERROR`, `MODIFY_ORDER_OTHER_ERROR`) is the per-operation catch-all for a matching-engine-side failure that has no more specific code — the human-readable `message` carries the detail. Modify-specific failures also surface as `INPUT_VALIDATION_ERROR` (bad/immutable restate), `ORDER_NOT_FOUND_ERROR`, `EMPTY_MODIFY_ERROR`, `MODIFY_QTY_BELOW_FILLED_ERROR`, or `POST_ONLY_WOULD_CROSS_ERROR`. Branch-able failure reasons lifted out of the `*_OTHER_ERROR` catch-alls so clients can pick a retry/UX strategy without parsing the free-text `message`: `RATE_LIMITED_ERROR` (request throttled — back off and retry; create/modify/cancel), `INSUFFICIENT_BALANCE_ERROR` (collateral too low for the order; create/modify), `OPEN_ORDER_CAP_ERROR` (the account's resting GTC open-order limit is reached; create), `PRICE_QTY_BOUNDS_ERROR` (price or quantity outside the market's accepted bounds; create/modify), `SERVICE_DISABLED_ERROR` (order entry is disabled for this market/instrument — operational kill-switch or market not enabled; create/modify), `UNAUTHORIZED_ACCOUNT_ERROR` (a valid signer that does not own the target order — distinct from `UNAUTHORIZED_SIGNATURE_ERROR`, which is a bad/unauthorized signature; cancel/modify), `TRADING_HALTED_ERROR` (the market is halted; create/modify), and `DUPLICATE_CLIENT_ORDER_ID_ERROR` (the `clientOrderId` is already in use by a live order; create)."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
-      "$id": "#ServerErrorCode",
-      "x-parser-schema-id": "ServerErrorCode",
       "type": "string",
       "enum": [
         "INTERNAL_SERVER_ERROR"
@@ -96,74 +89,71 @@
     },
     "Side": {
       "title": "Side",
-      "$id": "#Side",
-      "x-parser-schema-id": "Side",
       "type": "string",
       "enum": ["B", "A"],
       "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
     },
     "TimeInForce": {
       "title": "TimeInForce",
-      "$id": "#TimeInForce",
-      "x-parser-schema-id": "TimeInForce",
       "type": "string",
-      "enum": ["IOC", "GTC"],
-      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
+      "enum": ["IOC", "GTC", "GTT"],
+      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel, GTT = Good Till Time)",
       "example": "GTC"
     },
     "OrderType": {
       "title": "OrderType",
-      "$id": "#OrderType",
-      "x-parser-schema-id": "OrderType",
       "type": "string",
-      "enum": ["LIMIT", "TP", "SL"],
-      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
-      "example": "TP"
+      "enum": ["LIMIT", "STOP_LOSS", "TAKE_PROFIT"],
+      "description": "Order type aligned with the on-chain `OrderDetails.orderType` enum: LIMIT = limit order, STOP_LOSS = stop-loss trigger order, TAKE_PROFIT = take-profit trigger order.",
+      "example": "TAKE_PROFIT"
     },
     "ExecutionType": {
       "title": "ExecutionType",
-      "$id": "#ExecutionType",
-      "x-parser-schema-id": "ExecutionType",
       "type": "string",
-      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "DUST"],
       "description": "Type of execution"
     },
     "AccountType": {
       "title": "AccountType",
-      "$id": "#AccountType",
-      "x-parser-schema-id": "AccountType",
       "type": "string",
       "enum": ["MAINPERP", "SUBPERP", "SPOT"],
       "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
     },
     "OrderStatus": {
       "title": "OrderStatus",
-      "$id": "#OrderStatus",
-      "x-parser-schema-id": "OrderStatus",
       "type": "string",
-      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
+      "enum": ["OPEN", "FILLED", "CANCELLED"],
       "description": "Order status"
+    },
+    "CancelReason": {
+      "title": "CancelReason",
+      "type": "string",
+      "enum": [
+        "NO_LIQUIDITY",
+        "IOC_REMAINDER",
+        "SELF_TRADE_PREVENTION",
+        "GTT_EXPIRED",
+        "USER_CANCEL",
+        "MASS_CANCEL",
+        "CANCEL_ALL_AFTER",
+        "FEED_RESET"
+      ],
+      "description": "Why an order reached a terminal `CANCELLED` status. `cancelReason` / `cancelReasonMessage` are present if and only if `status` is `CANCELLED`; they are omitted entirely (not `null`, not `\"\"`) otherwise. Matching-engine `UNSPECIFIED` or unknown reasons map to omission. `NO_LIQUIDITY` (IOC executed zero quantity because no fillable liquidity was available at its limit) and `IOC_REMAINDER` (IOC partially filled and the remaining quantity was cancelled because no more executable opposite liquidity was available) are returned on `createOrder` / `modifyOrder` responses; `GTT_EXPIRED`, `USER_CANCEL`, `MASS_CANCEL` and `CANCEL_ALL_AFTER` are delivered on the `walletOrderChanges` stream. `SELF_TRADE_PREVENTION` can appear on `createOrder` / `modifyOrder` responses and on `walletOrderChanges` when a modified resting order crosses as taker. It cancels the aggressor (taker) only; your resting order is left untouched. If an IOC partially fills and its remaining quantity is then cancelled by self-trade prevention, the response keeps the fill quantities and reports `cancelReason: SELF_TRADE_PREVENTION`; `IOC_REMAINDER` is used only when matching stops without a self-cross. `FEED_RESET` is generated by the API layer (not the matching engine): when the market-data feed is reset — e.g. a matching-engine reseed — every resting order is delivered on the `walletOrderChanges` stream as `CANCELLED` with `cancelReason: FEED_RESET`, immediately followed by fresh order events that re-publish your current open orders. It does not mean your orders were cancelled on the exchange; treat it as a signal to discard and rebuild your local order view, reconciling against `GET /v2/wallet/{address}/openOrders` if needed."
     },
     "TierType": {
       "title": "TierType",
-      "$id": "#TierType",
-      "x-parser-schema-id": "TierType",
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
     },
     "DepthType": {
       "title": "DepthType",
-      "$id": "#DepthType",
-      "x-parser-schema-id": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
       "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
     },
     "RequestError": {
       "title": "RequestError",
-      "$id": "#RequestError",
-      "x-parser-schema-id": "RequestError",
       "type": "object",
       "required": [
         "error",
@@ -183,8 +173,6 @@
     },
     "ServerError": {
       "title": "ServerError",
-      "$id": "#ServerError",
-      "x-parser-schema-id": "ServerError",
       "type": "object",
       "required": [
         "error",
@@ -204,19 +192,14 @@
     },
     "MarketSummary": {
       "title": "MarketSummary",
-      "$id": "#MarketSummary",
-      "x-parser-schema-id": "MarketSummary",
       "type": "object",
       "required": [
         "symbol",
         "updatedAt",
-        "longOiQty",
-        "shortOiQty",
         "oiQty",
         "fundingRate",
         "longFundingValue",
         "shortFundingValue",
-        "fundingRateVelocity",
         "volume24h"
       ],
       "properties": {
@@ -227,16 +210,6 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Time when the market summary was last calculated (milliseconds)",
           "example": 1747927089946
-        },
-        "longOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Long open interest in lots",
-          "example": "154.741"
-        },
-        "shortOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Short open interest in lots",
-          "example": "154.706"
         },
         "oiQty": {
           "$ref": "#/definitions/UnsignedDecimal",
@@ -258,11 +231,6 @@
           "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
-        "fundingRateVelocity": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Funding rate velocity",
-          "example": "-0.00000006243"
-        },
         "volume24h": {
           "$ref": "#/definitions/UnsignedDecimal",
           "example": "917833.49891"
@@ -271,14 +239,14 @@
           "$ref": "#/definitions/SignedDecimal",
           "example": "92.6272285500004"
         },
-        "throttledOraclePrice": {
+        "markPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last oracle price, at the moment of the last market summary update",
+          "description": "Last mark price, at the moment of the last market summary update",
           "example": "2666.48162040777"
         },
-        "throttledPoolPrice": {
+        "throttledMidPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last pool price, at the moment of the last market summary update",
+          "description": "Last mid price, at the moment of the last market summary update",
           "example": "2666.48166680625"
         },
         "pricesUpdatedAt": {
@@ -291,8 +259,6 @@
     },
     "SpotMarketSummary": {
       "title": "SpotMarketSummary",
-      "$id": "#SpotMarketSummary",
-      "x-parser-schema-id": "SpotMarketSummary",
       "type": "object",
       "required": [
         "symbol",
@@ -328,8 +294,6 @@
     },
     "Position": {
       "title": "Position",
-      "$id": "#Position",
-      "x-parser-schema-id": "Position",
       "type": "object",
       "required": [
         "exchangeId",
@@ -379,8 +343,6 @@
     },
     "Order": {
       "title": "Order",
-      "$id": "#Order",
-      "x-parser-schema-id": "Order",
       "type": "object",
       "required": [
         "exchangeId",
@@ -408,7 +370,12 @@
         },
         "orderId": {
           "type": "string",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Client-provided order ID, as a decimal string (`uint64`). Present when the order has a non-zero client id; omitted otherwise.",
+          "example": "123456789"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
@@ -421,7 +388,7 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
         "firstFillId": {
@@ -454,9 +421,19 @@
           "description": "Order time in force, exclusively used for LIMIT orders",
           "example": "GTC"
         },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Present only for GTT orders, where it is the signed on-chain order expiry (`OrderDetails.expiresAfter`). Omitted for GTC, IOC, and order types with no public lifetime.",
+          "example": 1676923200
+        },
         "reduceOnly": {
           "type": "boolean",
           "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "example": false
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`.",
           "example": false
         },
         "status": {
@@ -471,14 +448,21 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Last update timestamp (milliseconds)",
           "example": 1747927089946
+        },
+        "cancelReason": {
+          "$ref": "#/definitions/CancelReason",
+          "description": "Machine-readable reason the order was cancelled. Present only when `status` is `CANCELLED`; absent otherwise."
+        },
+        "cancelReasonMessage": {
+          "type": "string",
+          "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
+          "example": "Order cancelled because it would have matched your own resting order"
         }
       },
       "additionalProperties": true
     },
     "AccountBalance": {
       "title": "AccountBalance",
-      "$id": "#AccountBalance",
-      "x-parser-schema-id": "AccountBalance",
       "type": "object",
       "required": [
         "accountId",
@@ -510,8 +494,6 @@
     },
     "PerpExecutionList": {
       "title": "PerpExecutionList",
-      "$id": "#PerpExecutionList",
-      "x-parser-schema-id": "PerpExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -532,16 +514,14 @@
     },
     "PerpExecution": {
       "title": "PerpExecution",
-      "$id": "#PerpExecution",
-      "x-parser-schema-id": "PerpExecution",
       "type": "object",
       "required": [
         "exchangeId",
         "symbol",
-        "accountId",
+        "takerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -555,30 +535,57 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "takerOrderId": {
+          "type": "string",
+          "description": "Order ID for the taker. Absent for legacy V2 executions and omitted when not meaningful.",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker. Absent for legacy V2 executions and omitted when not meaningful.",
+          "example": "63552420037263360"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
           "example": "1.0"
         },
         "side": {
-          "$ref": "#/definitions/Side"
+          "$ref": "#/definitions/Side",
+          "description": "Execution side from the taker perspective for ORDER_MATCH executions."
         },
         "price": {
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Total execution fee in rUSD",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.50"
         },
-        "openingFee": {
+        "makerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the total fee in rUSD. Absent for position-extending executions.",
+          "description": "Signed maker fee impact in rUSD. Negative means rebate. Absent for legacy V2 executions.",
+          "example": "-0.10"
+        },
+        "takerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.",
           "example": "0.25"
+        },
+        "makerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and legacy V2 executions.",
+          "example": "-0.05"
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -593,28 +600,46 @@
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
         },
-        "realizedPnl": {
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce — a stable identifier to join this execution to its ME fill (PRO-182).",
+          "example": "42"
+        },
+        "takerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.",
+          "description": "Realized taker PnL from this execution in rUSD (takerPriceVariationPnl + takerFundingPnl). Absent for position-extending executions.",
           "example": "12.50"
         },
-        "priceVariationPnl": {
+        "makerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from price movement in rUSD. Absent for position-extending executions.",
+          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "-12.50"
+        },
+        "takerPriceVariationPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from price movement in rUSD. Absent for position-extending executions.",
           "example": "15.00"
         },
-        "fundingPnl": {
+        "makerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from funding payments in rUSD. Absent for position-extending executions.",
+          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "-15.00"
+        },
+        "takerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from funding payments in rUSD. Absent for position-extending executions.",
           "example": "-2.50"
+        },
+        "makerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "example": "2.50"
         }
       },
       "additionalProperties": true
     },
     "SpotExecutionList": {
       "title": "SpotExecutionList",
-      "$id": "#SpotExecutionList",
-      "x-parser-schema-id": "SpotExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -635,16 +660,14 @@
     },
     "SpotExecution": {
       "title": "SpotExecution",
-      "$id": "#SpotExecution",
-      "x-parser-schema-id": "SpotExecution",
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "makerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -658,8 +681,9 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "makerAccountId": {
@@ -667,7 +691,7 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
           "description": "Order ID for the taker",
           "example": "63552420354981888"
@@ -688,8 +712,9 @@
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.0"
         },
         "type": {
@@ -704,14 +729,17 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every spot execution in reya chain",
           "example": 152954
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce — a stable identifier to join this execution to its ME fill (PRO-182).",
+          "example": "42"
         }
       },
       "additionalProperties": true
     },
-    "SpotExecutionBustList": {
-      "title": "SpotExecutionBustList",
-      "$id": "#SpotExecutionBustList",
-      "x-parser-schema-id": "SpotExecutionBustList",
+    "ExecutionBustList": {
+      "title": "ExecutionBustList",
       "type": "object",
       "required": [
         "data",
@@ -721,7 +749,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SpotExecutionBust"
+            "$ref": "#/definitions/ExecutionBust"
           }
         },
         "meta": {
@@ -730,17 +758,15 @@
       },
       "additionalProperties": true
     },
-    "SpotExecutionBust": {
-      "title": "SpotExecutionBust",
-      "$id": "#SpotExecutionBust",
-      "x-parser-schema-id": "SpotExecutionBust",
+    "ExecutionBust": {
+      "title": "ExecutionBust",
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "exchangeId",
         "makerAccountId",
-        "orderId",
+        "takerOrderId",
         "makerOrderId",
         "qty",
         "side",
@@ -751,10 +777,12 @@
       ],
       "properties": {
         "symbol": {
-          "$ref": "#/definitions/Symbol"
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "exchangeId": {
@@ -766,9 +794,9 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
-          "description": "Order ID for the taker",
+          "description": "Taker order ID",
           "example": "63552420354981888"
         },
         "makerOrderId": {
@@ -790,8 +818,8 @@
         },
         "reason": {
           "type": "string",
-          "description": "Hex-encoded revert reason bytes",
-          "example": "08c379a0..."
+          "description": "Human-readable reason string decoded from revert reason bytes.",
+          "example": "Unknown reason, reach out for support"
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -800,17 +828,22 @@
         },
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Execution sequence number, increases by 1 for every spot execution bust in reya chain",
+          "description": "Execution sequence number, increases by 1 for every execution bust in reya chain",
           "example": 152954
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce — a stable identifier to join this bust to its ME fill (PRO-182).",
+          "example": "42"
         }
       },
       "additionalProperties": true
     },
     "Price": {
       "title": "Price",
-      "$id": "#Price",
-      "x-parser-schema-id": "Price",
       "type": "object",
+      "description": "Deprecated AMM-era mixed market/collateral price shape. Use AssetOraclePrice for asset Stork oracle prices; use market summary/depth endpoints for market prices.",
+      "deprecated": true,
       "required": [
         "symbol",
         "updatedAt",
@@ -839,10 +872,34 @@
       "additionalProperties": true
     },
 
+    "AssetOraclePrice": {
+      "title": "AssetOraclePrice",
+      "type": "object",
+      "required": [
+        "asset",
+        "updatedAt",
+        "oraclePrice"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/definitions/Asset"
+        },
+        "oraclePrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Asset Stork oracle price. No AMM/order-book `poolPrice` is included on this replacement feed.",
+          "example": "1.0000"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Last update timestamp (milliseconds)",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
+
     "MarketDefinition": {
       "title": "MarketDefinition",
-      "$id": "#MarketDefinition",
-      "x-parser-schema-id": "MarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -903,8 +960,6 @@
     },
     "SpotMarketDefinition": {
       "title": "SpotMarketDefinition",
-      "$id": "#SpotMarketDefinition",
-      "x-parser-schema-id": "SpotMarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -954,8 +1009,6 @@
     },
     "Account": {
       "title": "Account",
-      "$id": "#Account",
-      "x-parser-schema-id": "Account",
       "type": "object",
       "required": [
         "accountId",
@@ -979,8 +1032,6 @@
     },
     "AssetDefinition": {
       "title": "AssetDefinition",
-      "$id": "#AssetDefinition",
-      "x-parser-schema-id": "AssetDefinition",
       "type": "object",
       "required": [
         "asset",
@@ -1029,8 +1080,6 @@
     },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
-      "$id": "#CandleHistoryData",
-      "x-parser-schema-id": "CandleHistoryData",
       "type": "object",
       "required": [
         "t",
@@ -1085,8 +1134,6 @@
     },
     "FeeTierParameters": {
       "title": "FeeTierParameters",
-      "$id": "#FeeTierParameters",
-      "x-parser-schema-id": "FeeTierParameters",
       "type": "object",
       "required": [
         "tierId",
@@ -1123,8 +1170,6 @@
     },
     "GlobalFeeParameters": {
       "title": "GlobalFeeParameters",
-      "$id": "#GlobalFeeParameters",
-      "x-parser-schema-id": "GlobalFeeParameters",
       "type": "object",
       "required": [
         "ogDiscount",
@@ -1156,37 +1201,8 @@
       },
       "additionalProperties": true
     },
-    "LiquidityParameters": {
-      "title": "LiquidityParameters",
-      "$id": "#LiquidityParameters",
-      "x-parser-schema-id": "LiquidityParameters",
-      "type": "object",
-      "required": [
-        "symbol",
-        "depth",
-        "velocityMultiplier"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "depth": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Parameter determining the liquidity distribution along the AMM pricing curve, in particular expanding or contracting the max exposure parameter that would otherwise be determined by the capital available.",
-          "example": "1000.0"
-        },
-        "velocityMultiplier": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
-          "example": "1.5"
-        }
-      },
-      "additionalProperties": true
-    },
     "WalletConfiguration": {
       "title": "WalletConfiguration",
-      "$id": "#WalletConfiguration",
-      "x-parser-schema-id": "WalletConfiguration",
       "type": "object",
       "required": [
         "feeTierId",
@@ -1220,8 +1236,6 @@
     },
     "PaginationMeta": {
       "title": "PaginationMeta",
-      "$id": "#PaginationMeta",
-      "x-parser-schema-id": "PaginationMeta",
       "type": "object",
       "required": [
         "limit",
@@ -1253,84 +1267,102 @@
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
-      "$id": "#CreateOrderRequest",
-      "x-parser-schema-id": "CreateOrderRequest",
+      "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty`. Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `expiresAfter` (order lifetime — enforced on-chain at execution). Convention: if `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "exchangeId",
+        "symbol",
         "accountId",
         "isBuy",
         "limitPx",
         "orderType",
         "signature",
         "nonce",
-        "signerWallet"
+        "signerWallet",
+        "deadline"
       ],
       "properties": {
         "exchangeId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.exchangeId`.",
           "example": 1
         },
         "symbol": {
-          "$ref": "#/definitions/Symbol"
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. The server resolves this to the on-chain `OrderDetails.marketId`, which uses a unified namespace: perp market ids are raw core ids, spot market ids are `coreMarketId + 1e10`."
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.accountId`.",
           "example": 12345
         },
         "isBuy": {
           "type": "boolean",
-          "description": "Whether this is a buy order",
+          "description": "Whether this is a buy order. Combined with `qty`, determines the signed `OrderDetails.quantity` (int256): positive for buy/long, negative for sell/short.",
           "example": true
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Worst acceptable execution price. Must be a positive number (> 0). Maps to on-chain `OrderDetails.limitPrice` (uint256).",
           "example": "50000.0"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
+          "description": "Unsigned order quantity. Required for `LIMIT` orders. Omit for `STOP_LOSS` / `TAKE_PROFIT` orders; trigger orders derive executable size when the trigger fires. Combined with `isBuy`, forms the signed `OrderDetails.quantity` for LIMIT orders.",
           "example": "0.1"
         },
         "orderType": {
           "$ref": "#/definitions/OrderType",
+          "description": "On-chain `OrderDetails.orderType`: LIMIT, STOP_LOSS, or TAKE_PROFIT.",
           "example": "LIMIT"
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "Order time in force, exclusively used for LIMIT orders",
+          "description": "Order time in force (exclusively used for LIMIT orders). Maps to on-chain `OrderDetails.timeInForce` (0 = GTC, 1 = IOC, 2 = GTT). This field is signed but not enforced on-chain.",
           "example": "GTC"
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Trigger price, only for TP/SL orders",
+          "description": "Trigger price, required for STOP_LOSS/TAKE_PROFIT and omitted for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`.",
           "example": "50000.0"
         },
         "reduceOnly": {
           "type": "boolean",
-          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "description": "Reduce-only intent. Perp only; spot markets must set this to false. Maps to on-chain `OrderDetails.reduceOnly`.",
+          "example": false
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "Post-only (maker-only) intent: the order must rest and never cross as a taker. Valid on GTC/GTT; rejected on IOC. An order that would cross at insertion is rejected with `POST_ONLY_WOULD_CROSS_ERROR`. Maps to on-chain `OrderDetails.postOnly`.",
           "example": false
         },
         "signature": {
           "type": "string",
-          "description": "See signatures and nonces section for more details on how to generate.",
+          "description": "EIP-712 signature over the `Order(uint256 verifyingChainId, uint256 deadline, OrderDetails order)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "Order nonce, see signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. Maps to on-chain `OrderDetails.nonce`.",
           "example": "1234567890"
         },
         "signerWallet": {
-          "$ref": "#/definitions/Address"
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Maps to on-chain `OrderDetails.signer`."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine.",
+          "example": 1676923200
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for PERP IOC orders and all SPOT orders). In seconds since epoch. The order will only be filled before this timestamp.",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Omit only for GTC/IOC/no-expiry orders. GTT orders MUST set a future `expiresAfter` greater than `deadline` (`deadline <= expiresAfter`). Coupled to `timeInForce`; mismatched combinations are rejected with `INPUT_VALIDATION_ERROR`. Note: a GTT fill matched within a few seconds of `expiresAfter` can revert on-chain with `OrderExpired` if it mines after expiry, so choose a lifetime with adequate margin.",
           "example": 1676923200
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
+          "type": "string",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Omit when the order has no client id; provided values must be non-zero and are carried as strings to preserve precision, like `orderId` and `nonce`.",
           "example": "123456789"
         }
       },
@@ -1338,11 +1370,10 @@
     },
     "CreateOrderResponse": {
       "title": "CreateOrderResponse",
-      "$id": "#CreateOrderResponse",
-      "x-parser-schema-id": "CreateOrderResponse",
       "type": "object",
       "required": [
-        "status"
+        "status",
+        "orderId"
       ],
       "properties": {
         "status": {
@@ -1355,18 +1386,222 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
         "orderId": {
           "type": "string",
-          "description": "Created order ID (currently generated for all order types except IOC)",
-          "example": "123456789-123123123"
+          "description": "Engine-assigned order ID, generated for all order types including IOC. A no-cross IOC still receives an ID and is returned with status CANCELLED (it never rests).",
+          "example": "490346525705109504"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID echoed back from the request",
+          "type": "string",
+          "description": "Client-provided order ID echoed back from the request, as a decimal string (`uint64`).",
           "example": "123456789"
+        },
+        "cancelReason": {
+          "$ref": "#/definitions/CancelReason",
+          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`, and a self-crossing IOC with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+        },
+        "cancelReasonMessage": {
+          "type": "string",
+          "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
+          "example": "Order cancelled: no fillable liquidity available at the limit"
+        },
+        "firstFillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. For a non-IOC (resting) taker, the same first nonce also appears on the order's taker update in the orderChanges channel; an IOC taker is not published to orderChanges, so this response is the only place its fill range is delivered.",
+          "example": "7205759403792794624"
+        },
+        "fillCount": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry (so it is >= 1 whenever present).",
+          "example": 2
+        }
+      },
+      "additionalProperties": true
+    },
+    "ModifyOrderRequest": {
+      "title": "ModifyOrderRequest",
+      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The JSON Schema validates target presence only; the server enforces the non-zero rule for sole `clientOrderId` targets. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is the lookup key and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omission never means inherit. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. `timeInForce` is immutable: GTC omits `expiresAfter`, while GTT must carry a future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "accountId",
+        "isBuy",
+        "limitPx",
+        "qty",
+        "orderType",
+        "timeInForce",
+        "reduceOnly",
+        "postOnly",
+        "signature",
+        "nonce",
+        "signerWallet",
+        "deadline"
+      ],
+      "not": {
+        "description": "At least one target identifier is required. This schema validates target presence only; the server rejects a sole zero/all-zero `clientOrderId`.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
+            }
+          }
+        ]
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Internal matching engine order ID of the order to modify. If present, this is the canonical lookup key; `clientOrderId`, when also present, restates the resting order's immutable client id.",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero; JSON Schema validates presence only and the server enforces the non-zero rule. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. Do not send a placeholder value. The modification cannot assign a new `clientOrderId`.",
+          "example": "123456789"
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order."
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID that owns the order. Immutable; must match the resting order.",
+          "example": 12345
+        },
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.exchangeId`. Immutable — restate the resting order's value (a mismatch is rejected with `INPUT_VALIDATION_ERROR`).",
+          "example": 1
+        },
+        "isBuy": {
+          "type": "boolean",
+          "description": "Order side. Immutable — restate the resting order's value. Combined with `qty`, sets the signed `OrderDetails.quantity` (int256). A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
+          "example": true
+        },
+        "orderType": {
+          "$ref": "#/definitions/OrderType",
+          "description": "On-chain `OrderDetails.orderType`. Immutable — restate the resting order's value; a modify never converts between `LIMIT` and `STOP_LOSS`/`TAKE_PROFIT`. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. Availability: modifying a `STOP_LOSS`/`TAKE_PROFIT` order depends on native SL/TP trigger orders landing in the matching engine; until then only `LIMIT` orders are modifiable and a `STOP_LOSS`/`TAKE_PROFIT` modify is rejected with `MODIFY_ORDER_OTHER_ERROR`.",
+          "example": "LIMIT"
+        },
+        "timeInForce": {
+          "$ref": "#/definitions/TimeInForce",
+          "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 2 = GTT for resting orders). Immutable and REQUIRED — restate the resting order's value; a modify cannot flip GTC↔GTT. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
+          "example": "GTC"
+        },
+        "triggerPx": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — for a `STOP_LOSS`/`TAKE_PROFIT` order the trigger can be re-priced in place (no cancel+recreate); restate the post-modify value. Omit for a `LIMIT` order. The matching engine applies the restated value (it is not immutable-matched). Availability: depends on native SL/TP trigger orders landing in the matching engine (see `orderType`); until then a `LIMIT` order omits `triggerPx`.",
+          "example": "49000.0"
+        },
+        "reduceOnly": {
+          "type": "boolean",
+          "description": "On-chain `OrderDetails.reduceOnly`. Immutable — restate the resting order's value. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
+          "example": false
+        },
+        "limitPx": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0); the off-chain validator and the matching engine both reject `<= 0`. Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately.",
+          "example": "50000.0"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "The post-modify TOTAL order quantity (not remaining). Always required — send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
+          "example": "0.1"
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "The post-modify post-only (maker-only) flag. Always required — send the complete intended value even when it is unchanged from the resting order. If true and the post-modify order would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is unchanged.",
+          "example": false
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Post-modify order expiry (`OrderDetails.expiresAfter`). Omit only for GTC/no-expiry orders; omission never inherits the resting value. GTT modifications must send a future value greater than `deadline`.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "description": "Fresh EIP-712 signature over the full post-modify order state — the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "example": "1234567890"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Not modifiable; must match the resting order's signer."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Distinct from `expiresAfter` (order lifetime).",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true
+    },
+    "ModifyOrderResponse": {
+      "title": "ModifyOrderResponse",
+      "description": "Result of a modification. The response fields match `CreateOrderResponse`; `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
+      "type": "object",
+      "required": [
+        "status",
+        "orderId"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/OrderStatus"
+        },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Quantity filled immediately by this modification. Present only when the modification crossed and executed.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total executed quantity across the order's lifetime, including fills from before the modification.",
+          "example": "0.5"
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Order ID — unchanged by the modification (the same ID the order had before).",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Client-provided order ID preserved from order creation, as a decimal string (`uint64`).",
+          "example": "123456789"
+        },
+        "cancelReason": {
+          "$ref": "#/definitions/CancelReason",
+          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED` — for a self-crossing non-post-only modify this is `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+        },
+        "cancelReasonMessage": {
+          "type": "string",
+          "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
+          "example": "Order cancelled because it would have matched your own resting order"
         },
         "firstFillId": {
           "type": "string",
@@ -1383,45 +1618,76 @@
     },
     "CancelOrderRequest": {
       "title": "CancelOrderRequest",
-      "$id": "#CancelOrderRequest",
-      "x-parser-schema-id": "CancelOrderRequest",
       "type": "object",
       "required": [
-        "signature"
+        "symbol",
+        "signature",
+        "accountId",
+        "nonce",
+        "deadline"
       ],
+      "not": {
+        "description": "At least one target identifier is required. This schema validates target presence only; the server rejects a sole zero/all-zero `clientOrderId`.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
+            }
+          }
+        ]
+      },
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID to cancel. At least one of `orderId` or `clientOrderId` must be provided; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "description": "Internal matching engine order ID to cancel. Provide `orderId`, or a non-zero `clientOrderId` when `orderId` is absent; JSON Schema validates target presence only and the server enforces the non-zero `clientOrderId` rule. If both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
+          "type": "string",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero; JSON Schema validates presence only and the server enforces the non-zero rule. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Account ID that owns the order. Required for spot markets.",
+          "description": "Account ID that owns the order.",
           "example": 12345
         },
         "symbol": {
           "$ref": "#/definitions/Symbol",
-          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
+          "description": "Market symbol for the order."
         },
         "signature": {
           "type": "string",
-          "description": "See signatures section for more details on how to generate.",
+          "description": "EIP-712 signature over the `OrderCancel(uint64 verifyingChainId, uint64 deadline, OrderCancelDetails cancel)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x5678..."
         },
         "nonce": {
           "type": "string",
-          "description": "See signatures and nonces section for more details. Compulsory for spot orders.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See `docs/eip712.md`.",
           "example": "1234567890"
         },
-        "expiresAfter": {
+        "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for SPOT orders). In seconds since epoch.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `OrderCancel` envelope and enforced by the API at entry.",
           "example": 1676923200
         }
       },
@@ -1429,8 +1695,6 @@
     },
     "CancelOrderResponse": {
       "title": "CancelOrderResponse",
-      "$id": "#CancelOrderResponse",
-      "x-parser-schema-id": "CancelOrderResponse",
       "type": "object",
       "required": [
         "status",
@@ -1443,11 +1707,11 @@
         "orderId": {
           "type": "string",
           "description": "Cancelled order ID",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
         },
         "clientOrderId": {
-          "type": "integer",
-          "description": "Client-provided order ID echoed back from the request",
+          "type": "string",
+          "description": "Client-provided order ID echoed back from the request, as a decimal string (`uint64`).",
           "example": "123456789"
         }
       },
@@ -1455,14 +1719,12 @@
     },
     "MassCancelRequest": {
       "title": "MassCancelRequest",
-      "$id": "#MassCancelRequest",
-      "x-parser-schema-id": "MassCancelRequest",
       "type": "object",
       "required": [
         "signature",
         "nonce",
         "accountId",
-        "expiresAfter"
+        "deadline"
       ],
       "properties": {
         "accountId": {
@@ -1476,17 +1738,17 @@
         },
         "signature": {
           "type": "string",
-          "description": "See signatures and nonces section for more details on how to generate.",
+          "description": "EIP-712 signature over the `MassCancel(uint64 verifyingChainId, uint64 deadline, MassCancelDetails massCancel)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "See signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See `docs/eip712.md`.",
           "example": "1234567890"
         },
-        "expiresAfter": {
+        "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp. In seconds since epoch.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `MassCancel` envelope and enforced by the API at entry.",
           "example": 1676923200
         }
       },
@@ -1495,8 +1757,6 @@
     },
     "MassCancelResponse": {
       "title": "MassCancelResponse",
-      "$id": "#MassCancelResponse",
-      "x-parser-schema-id": "MassCancelResponse",
       "type": "object",
       "required": [
         "cancelledCount"
@@ -1505,15 +1765,84 @@
         "cancelledCount": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Number of orders that were cancelled",
-          "example": true
+          "example": 5
+        }
+      },
+      "additionalProperties": true
+    },
+    "CancelAllAfterRequest": {
+      "title": "CancelAllAfterRequest",
+      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels the account's open orders if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Scope: all open orders EXCEPT protective stops (`STOP_LOSS` / `TAKE_PROFIT`) — the dead-man's-switch deliberately leaves protective stops in place (they are safety orders only the user should cancel explicitly), unlike an explicit `POST /v2/cancelAll` which cancels everything. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "type": "object",
+      "required": [
+        "accountId",
+        "timeoutMs",
+        "signature",
+        "nonce",
+        "signerWallet",
+        "deadline"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID whose open orders are covered by the countdown.",
+          "example": 12345
+        },
+        "timeoutMs": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Values outside `{0} ∪ [5000, 60000]` are rejected with `INPUT_VALIDATION_ERROR` (the server validates the band). Signed into the `CancelAllAfter` envelope.",
+          "example": 30000
+        },
+        "signature": {
+          "type": "string",
+          "description": "EIP-712 signature over the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "example": "1234567890"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. REQUIRED on `cancelAllAfter` (a deliberate hybrid: like `createOrder`, the claimed signer is declared and must equal the address recovered from the signature). This differs from the EIP-712 siblings `cancelOrder` / `cancelAll`, which carry NO `signerWallet` and recover the signer purely from the signature."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `CancelAllAfter` envelope and enforced by the API at entry. NOT the countdown trigger time; the countdown is `timeoutMs` relative to server receipt.",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true
+    },
+    "CancelAllAfterResponse": {
+      "title": "CancelAllAfterResponse",
+      "type": "object",
+      "required": [
+        "accountId",
+        "timeoutMs"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID the countdown applies to, echoed from the request.",
+          "example": 12345
+        },
+        "timeoutMs": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Effective countdown duration in milliseconds; `0` means the switch is now disarmed.",
+          "example": 30000
+        },
+        "triggerAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Advisory milliseconds POSIX timestamp at which the cancel-all fires if the countdown is not refreshed before then. The client sends a RELATIVE `timeoutMs`; the matching engine stamps the absolute deadline on ITS OWN clock (`now_me + timeoutMs`) and echoes it here, so the value is anchored to the engine clock (no API↔ME skew) — treat it as an estimate for display, not an exact wall-clock guarantee. Omitted when `timeoutMs` is `0` (disarmed).",
+          "example": 1747927119946
         }
       },
       "additionalProperties": true
     },
     "Level": {
       "title": "Level",
-      "$id": "#Level",
-      "x-parser-schema-id": "Level",
       "type": "object",
       "required": [
         "px",
@@ -1535,8 +1864,6 @@
     },
     "Depth": {
       "title": "Depth",
-      "$id": "#Depth",
-      "x-parser-schema-id": "Depth",
       "type": "object",
       "required": [
         "symbol",
