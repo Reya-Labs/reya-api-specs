@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.0.11
+  version: 3.0.9
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -58,36 +58,16 @@ channels:
     bindings:
       ws: {}
 
-  marketsSummary:
-    address: /v2/markets/summary
-    description: 'Deprecated: use `/v2/perpMarkets/summary` instead. Real-time updates for all market summaries. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
-    x-deprecated: true
-    messages:
-      marketsSummaryUpdate:
-        $ref: '#/components/messages/MarketsSummaryUpdate'
-
-  marketSummary:
-    address: /v2/market/{symbol}/summary
-    description: 'Deprecated: use `/v2/perpMarket/{symbol}/summary` instead. Real-time updates for a specific market''s summary. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
-    x-deprecated: true
-    parameters:
-      symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
-    messages:
-      marketSummaryUpdate:
-        $ref: '#/components/messages/MarketSummaryUpdate'
-
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
-    description: Alias of `/v2/markets/summary` (mirrors `/v2/spotMarkets/summary`). Real-time updates for all perp market summaries
+    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all perp market summaries
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
 
   perpMarketSummary:
     address: /v2/perpMarket/{symbol}/summary
-    description: Alias of `/v2/market/{symbol}/summary` (mirrors `/v2/spotMarket/{symbol}/summary`). Real-time updates for a specific perp market's summary
+    description: Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)
@@ -226,7 +206,7 @@ channels:
 
   prices:
     address: /v2/prices
-    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/collateralOraclePrices` for collateral Stork oracle prices. Use market summary/depth channels for market prices.'
+    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/assetOraclePrices` for asset Stork oracle prices. Use market summary/depth channels for market prices.'
     x-deprecated: true
     messages:
       pricesUpdate:
@@ -234,7 +214,7 @@ channels:
 
   price:
     address: /v2/prices/{symbol}
-    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/collateralOraclePrices` for collateral Stork oracle prices. Use market summary/depth channels for market prices.'
+    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/assetOraclePrices` for asset Stork oracle prices. Use market summary/depth channels for market prices.'
     x-deprecated: true
     parameters:
       symbol:
@@ -244,12 +224,12 @@ channels:
       priceUpdate:
         $ref: '#/components/messages/PriceUpdate'
 
-  collateralOraclePrices:
-    address: /v2/collateralOraclePrices
-    description: Collateral-only Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
+  assetOraclePrices:
+    address: /v2/assetOraclePrices
+    description: Asset Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
     messages:
-      collateralOraclePricesUpdate:
-        $ref: '#/components/messages/CollateralOraclePricesUpdate'
+      assetOraclePricesUpdate:
+        $ref: '#/components/messages/AssetOraclePricesUpdate'
 
 operations:
   sendPing:
@@ -317,31 +297,13 @@ operations:
       - $ref: '#/channels/control/messages/errorMessage'
     summary: Receive error messages
 
-  receiveMarketsSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketsSummary'
-    messages:
-      - $ref: '#/channels/marketsSummary/messages/marketsSummaryUpdate'
-    summary: 'Deprecated: use receivePerpMarketsSummary instead. Receive market summaries updates.'
-    x-deprecated: true
-
-  receiveMarketSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketSummary'
-    messages:
-      - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
-    summary: 'Deprecated: use receivePerpMarketSummary instead. Receive specific market summary updates.'
-    x-deprecated: true
-
   receivePerpMarketsSummary:
     action: receive
     channel:
       $ref: '#/channels/perpMarketsSummary'
     messages:
       - $ref: '#/channels/perpMarketsSummary/messages/marketsSummaryUpdate'
-    summary: Receive perp market summaries updates (alias of receiveMarketsSummary)
+    summary: Receive perp market summaries updates
 
   receivePerpMarketSummary:
     action: receive
@@ -349,7 +311,7 @@ operations:
       $ref: '#/channels/perpMarketSummary'
     messages:
       - $ref: '#/channels/perpMarketSummary/messages/marketSummaryUpdate'
-    summary: Receive specific perp market summary updates (alias of receiveMarketSummary)
+    summary: Receive specific perp market summary updates
 
   receiveSpotMarketsSummary:
     action: receive
@@ -449,27 +411,31 @@ operations:
 
   receivePrices:
     action: receive
+    description: 'Deprecated: use `receiveAssetOraclePrices` (`/v2/assetOraclePrices`) instead.'
+    x-deprecated: true
     channel:
       $ref: '#/channels/prices'
     messages:
       - $ref: '#/channels/prices/messages/pricesUpdate'
-    summary: Receive price updates for all symbols
+    summary: Receive deprecated price updates for all symbols
 
   receivePrice:
     action: receive
+    description: 'Deprecated: use `receiveAssetOraclePrices` (`/v2/assetOraclePrices`) instead.'
+    x-deprecated: true
     channel:
       $ref: '#/channels/price'
     messages:
       - $ref: '#/channels/price/messages/priceUpdate'
-    summary: Receive price updates for specific symbol
+    summary: Receive deprecated price updates for a specific symbol
 
-  receiveCollateralOraclePrices:
+  receiveAssetOraclePrices:
     action: receive
     channel:
-      $ref: '#/channels/collateralOraclePrices'
+      $ref: '#/channels/assetOraclePrices'
     messages:
-      - $ref: '#/channels/collateralOraclePrices/messages/collateralOraclePricesUpdate'
-    summary: Receive collateral oracle price updates
+      - $ref: '#/channels/assetOraclePrices/messages/assetOraclePricesUpdate'
+    summary: Receive asset oracle price updates
 
 components:
   correlationIds:
@@ -590,12 +556,12 @@ components:
       payload:
         $ref: '#/components/schemas/PriceUpdatePayload'
 
-    CollateralOraclePricesUpdate:
-      name: collateralOraclePricesUpdate
-      title: Collateral Oracle Prices Update
-      summary: Real-time collateral Stork oracle price updates
+    AssetOraclePricesUpdate:
+      name: assetOraclePricesUpdate
+      title: Asset Oracle Prices Update
+      summary: Real-time asset Stork oracle price updates
       payload:
-        $ref: '#/components/schemas/CollateralOraclePricesUpdatePayload'
+        $ref: '#/components/schemas/AssetOraclePricesUpdatePayload'
 
     PingMessage:
       name: ping
@@ -713,25 +679,26 @@ components:
     MarketsSummaryChannel:
       type: string
       enum:
-        - /v2/markets/summary
-      description: Channel for all markets summary updates
+        - /v2/perpMarkets/summary
+      description: Channel for all perp market summary updates.
 
-    PricesChannel:
+    DeprecatedPricesChannel:
       type: string
       enum:
         - /v2/prices
-      description: Channel for all prices updates
+      description: 'Deprecated legacy price channel. Use `/v2/assetOraclePrices`.'
+      x-deprecated: true
 
-    CollateralOraclePricesChannel:
+    AssetOraclePricesChannel:
       type: string
       enum:
-        - /v2/collateralOraclePrices
-      description: Channel for collateral oracle price updates
+        - /v2/assetOraclePrices
+      description: Channel for asset oracle price updates
 
     MarketSummaryChannelPattern:
       type: string
-      pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
-      description: Channel pattern for specific market summary updates
+      pattern: '^/v2/perpMarket/[A-Za-z0-9]+/summary$'
+      description: Channel pattern for specific perp market summary updates.
 
     SpotMarketsSummaryChannel:
       type: string
@@ -794,10 +761,11 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
       description: Channel pattern for wallet account balances
 
-    PriceChannelPattern:
+    DeprecatedPriceChannelPattern:
       type: string
       pattern: '^/v2/prices/[A-Za-z0-9]+$'
-      description: Channel pattern for specific price updates
+      description: 'Deprecated legacy price channel pattern. Use `/v2/assetOraclePrices`.'
+      x-deprecated: true
 
     BaseUpdateEnvelope:
       type: object
@@ -1038,7 +1006,7 @@ components:
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/PricesChannel'
+          $ref: '#/components/schemas/DeprecatedPricesChannel'
         data:
           type: array
           title: PriceList
@@ -1054,25 +1022,25 @@ components:
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/PriceChannelPattern'
+          $ref: '#/components/schemas/DeprecatedPriceChannelPattern'
         data:
           $ref: './trading-schemas.json#/definitions/Price'
 
-    CollateralOraclePricesUpdateBody:
+    AssetOraclePricesUpdateBody:
       type: object
-      title: CollateralOraclePricesUpdateBody
+      title: AssetOraclePricesUpdateBody
       additionalProperties: false
       required:
         - channel
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/CollateralOraclePricesChannel'
+          $ref: '#/components/schemas/AssetOraclePricesChannel'
         data:
           type: array
-          title: CollateralOraclePriceList
+          title: AssetOraclePriceList
           items:
-            $ref: './trading-schemas.json#/definitions/CollateralOraclePrice'
+            $ref: './trading-schemas.json#/definitions/AssetOraclePrice'
 
     MarketsSummaryUpdatePayload:
       title: MarketsSummaryUpdatePayload
@@ -1170,11 +1138,11 @@ components:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/PriceUpdateBody'
 
-    CollateralOraclePricesUpdatePayload:
-      title: CollateralOraclePricesUpdatePayload
+    AssetOraclePricesUpdatePayload:
+      title: AssetOraclePricesUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/CollateralOraclePricesUpdateBody'
+        - $ref: '#/components/schemas/AssetOraclePricesUpdateBody'
 
     PingMessagePayload:
       type: object
@@ -1222,7 +1190,7 @@ components:
         channel:
           type: string
           description: Channel path to subscribe to
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
         id:
           type: string
           description: Optional request identifier
@@ -1241,7 +1209,7 @@ components:
         channel:
           type: string
           description: Channel path to unsubscribe from
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
         id:
           type: string
           description: Optional request identifier
@@ -1260,7 +1228,7 @@ components:
         channel:
           type: string
           description: Channel that was subscribed to
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
         contents:
           type: object
           title: SubscriptionContents
@@ -1280,7 +1248,7 @@ components:
         channel:
           type: string
           description: Channel that was unsubscribed from
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
       required:
         - type
         - channel
@@ -1299,7 +1267,7 @@ components:
         channel:
           type: string
           description: Optional channel related to the error
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
       required:
         - type
         - message

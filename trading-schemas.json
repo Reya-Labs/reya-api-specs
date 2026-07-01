@@ -12,7 +12,7 @@
       "title": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "example": "BTCRUSDPERP"
+      "example": "RUSD"
     },
     "Address": {
       "title": "Address",
@@ -50,9 +50,9 @@
       "title": "RequestErrorCode",
       "type": "string",
       "enum": [
-        "SYMBOL_NOT_FOUND",
-        "NO_ACCOUNTS_FOUND",
-        "NO_PRICES_FOUND_FOR_SYMBOL",
+        "SYMBOL_NOT_FOUND_ERROR",
+        "NO_ACCOUNTS_FOUND_ERROR",
+        "NO_PRICES_FOUND_FOR_SYMBOL_ERROR",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
         "CANCEL_ORDER_OTHER_ERROR",
@@ -63,7 +63,7 @@
         "UNAUTHORIZED_SIGNATURE_ERROR",
         "NUMERIC_OVERFLOW_ERROR",
         "CANCEL_ALL_AFTER_OTHER_ERROR",
-        "ORDER_NOT_FOUND",
+        "ORDER_NOT_FOUND_ERROR",
         "POST_ONLY_WOULD_CROSS_ERROR",
         "MODIFY_QTY_BELOW_FILLED_ERROR",
         "EMPTY_MODIFY_ERROR",
@@ -77,7 +77,7 @@
         "TRADING_HALTED_ERROR",
         "DUPLICATE_CLIENT_ORDER_ID_ERROR"
       ],
-      "description": "Standardized error codes for API responses. The `*_OTHER_ERROR` family (`CREATE_ORDER_OTHER_ERROR`, `CANCEL_ORDER_OTHER_ERROR`, `CANCEL_ALL_AFTER_OTHER_ERROR`) is the per-operation catch-all for a matching-engine-side failure that has no more specific code — the human-readable `message` carries the detail. Modify-specific failures surface as `INPUT_VALIDATION_ERROR` (bad/immutable restate), `ORDER_NOT_FOUND`, `EMPTY_MODIFY_ERROR`, `MODIFY_QTY_BELOW_FILLED_ERROR`, `POST_ONLY_WOULD_CROSS_ERROR`, or `MODIFY_ORDER_OTHER_ERROR`. Branch-able failure reasons lifted out of the `*_OTHER_ERROR` catch-alls so clients can pick a retry/UX strategy without parsing the free-text `message`: `RATE_LIMITED_ERROR` (request throttled — back off and retry; create/modify/cancel), `INSUFFICIENT_BALANCE_ERROR` (collateral too low for the order; create/modify), `OPEN_ORDER_CAP_ERROR` (the account's resting GTC open-order limit is reached; create), `PRICE_QTY_BOUNDS_ERROR` (price or quantity outside the market's accepted bounds; create/modify), `SERVICE_DISABLED_ERROR` (order entry is disabled for this market/instrument — operational kill-switch or market not enabled; create/modify), `UNAUTHORIZED_ACCOUNT_ERROR` (a valid signer that does not own the target order — distinct from `UNAUTHORIZED_SIGNATURE_ERROR`, which is a bad/unauthorized signature; cancel/modify), `TRADING_HALTED_ERROR` (the market is halted; create), and `DUPLICATE_CLIENT_ORDER_ID_ERROR` (the `clientOrderId` is already in use by a live order; create)."
+      "description": "Standardized error codes for API responses. The `*_OTHER_ERROR` family (`CREATE_ORDER_OTHER_ERROR`, `CANCEL_ORDER_OTHER_ERROR`, `CANCEL_ALL_AFTER_OTHER_ERROR`, `MODIFY_ORDER_OTHER_ERROR`) is the per-operation catch-all for a matching-engine-side failure that has no more specific code — the human-readable `message` carries the detail. Modify-specific failures also surface as `INPUT_VALIDATION_ERROR` (bad/immutable restate), `ORDER_NOT_FOUND_ERROR`, `EMPTY_MODIFY_ERROR`, `MODIFY_QTY_BELOW_FILLED_ERROR`, or `POST_ONLY_WOULD_CROSS_ERROR`. Branch-able failure reasons lifted out of the `*_OTHER_ERROR` catch-alls so clients can pick a retry/UX strategy without parsing the free-text `message`: `RATE_LIMITED_ERROR` (request throttled — back off and retry; create/modify/cancel), `INSUFFICIENT_BALANCE_ERROR` (collateral too low for the order; create/modify), `OPEN_ORDER_CAP_ERROR` (the account's resting GTC open-order limit is reached; create), `PRICE_QTY_BOUNDS_ERROR` (price or quantity outside the market's accepted bounds; create/modify), `SERVICE_DISABLED_ERROR` (order entry is disabled for this market/instrument — operational kill-switch or market not enabled; create/modify), `UNAUTHORIZED_ACCOUNT_ERROR` (a valid signer that does not own the target order — distinct from `UNAUTHORIZED_SIGNATURE_ERROR`, which is a bad/unauthorized signature; cancel/modify), `TRADING_HALTED_ERROR` (the market is halted; create/modify), and `DUPLICATE_CLIENT_ORDER_ID_ERROR` (the `clientOrderId` is already in use by a live order; create)."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
@@ -122,7 +122,7 @@
     "OrderStatus": {
       "title": "OrderStatus",
       "type": "string",
-      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
+      "enum": ["OPEN", "FILLED", "CANCELLED"],
       "description": "Order status"
     },
     "CancelReason": {
@@ -137,7 +137,7 @@
         "MASS_CANCEL",
         "CANCEL_ALL_AFTER"
       ],
-      "description": "Why an order reached a terminal `CANCELLED` status. Present only when `status` is `CANCELLED`. `NO_LIQUIDITY` (IOC found no resting liquidity) and `IOC_REMAINDER` (IOC partially filled and the remaining quantity was cancelled because no more executable opposite liquidity was available) are returned on `createOrder` / `modifyOrder` responses; `GTT_EXPIRED`, `USER_CANCEL`, `MASS_CANCEL` and `CANCEL_ALL_AFTER` are delivered on the `walletOrderChanges` stream. `SELF_TRADE_PREVENTION` (the order would have matched your own resting order) cancels the **aggressor (taker) only** - your resting order is left untouched, so there is no resting-side STP event. It appears on the response when a self-crossing IOC or modify cancels the taker, and on the `walletOrderChanges` stream when a self-crossing GTC aggressor is cancelled. If an IOC partially fills and its remaining quantity is then cancelled by self-trade prevention, the response keeps the fill quantities and reports `cancelReason: SELF_TRADE_PREVENTION`; `IOC_REMAINDER` is used only when the remaining quantity is cancelled because matching stops without a self-cross."
+      "description": "Why an order reached a terminal `CANCELLED` status. `cancelReason` / `cancelReasonMessage` are present if and only if `status` is `CANCELLED`; they are omitted entirely (not `null`, not `\"\"`) otherwise. Matching-engine `UNSPECIFIED` or unknown reasons map to omission. `NO_LIQUIDITY` (IOC executed zero quantity because no fillable liquidity was available at its limit) and `IOC_REMAINDER` (IOC partially filled and the remaining quantity was cancelled because no more executable opposite liquidity was available) are returned on `createOrder` / `modifyOrder` responses; `GTT_EXPIRED`, `USER_CANCEL`, `MASS_CANCEL` and `CANCEL_ALL_AFTER` are delivered on the `walletOrderChanges` stream. `SELF_TRADE_PREVENTION` can appear on `createOrder` / `modifyOrder` responses and on `walletOrderChanges` when a modified resting order crosses as taker. It cancels the aggressor (taker) only; your resting order is left untouched. If an IOC partially fills and its remaining quantity is then cancelled by self-trade prevention, the response keeps the fill quantities and reports `cancelReason: SELF_TRADE_PREVENTION`; `IOC_REMAINDER` is used only when matching stops without a self-cross."
     },
     "TierType": {
       "title": "TierType",
@@ -371,6 +371,11 @@
           "type": "string",
           "example": "490346525705109504"
         },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Client-provided order ID, as a decimal string (`uint64`). Present when the order has a non-zero client id; omitted otherwise.",
+          "example": "123456789"
+        },
         "qty": {
           "$ref": "#/definitions/Qty",
           "example": "1.0"
@@ -382,7 +387,7 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
         "firstFillId": {
@@ -417,7 +422,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. On-chain order expiry (`OrderDetails.expiresAfter`); `0` or absent means good-until-cancelled. Non-zero only for GTT orders. Updated by `modifyOrder`.",
+          "description": "Unix seconds. Present only for GTT orders, where it is the signed on-chain order expiry (`OrderDetails.expiresAfter`). Omitted for GTC, IOC, and order types with no public lifetime.",
           "example": 1676923200
         },
         "reduceOnly": {
@@ -657,11 +662,11 @@
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "makerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -675,8 +680,9 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "makerAccountId": {
@@ -684,7 +690,7 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
           "description": "Order ID for the taker",
           "example": "63552420354981888"
@@ -705,8 +711,9 @@
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.0"
         },
         "type": {
@@ -1792,10 +1799,10 @@
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "exchangeId",
         "makerAccountId",
-        "orderId",
+        "takerOrderId",
         "makerOrderId",
         "qty",
         "side",
@@ -1809,8 +1816,9 @@
           "$ref": "#/definitions/Symbol",
           "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "exchangeId": {
@@ -1822,9 +1830,9 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
-          "description": "Order ID for the taker",
+          "description": "Taker order ID",
           "example": "63552420354981888"
         },
         "makerOrderId": {
@@ -1855,7 +1863,7 @@
         },
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Execution sequence number, increases by 1 for every spot execution bust in reya chain",
+          "description": "Execution sequence number, increases by 1 for every execution bust in reya chain",
           "example": 152954
         },
         "fillId": {
@@ -1869,7 +1877,7 @@
     "Price": {
       "title": "Price",
       "type": "object",
-      "description": "Deprecated AMM-era mixed market/collateral price shape. Use CollateralOraclePrice for collateral Stork oracle prices; use market summary/depth endpoints for market prices.",
+      "description": "Deprecated AMM-era mixed market/collateral price shape. Use AssetOraclePrice for asset Stork oracle prices; use market summary/depth endpoints for market prices.",
       "deprecated": true,
       "required": [
         "symbol",
@@ -1899,8 +1907,8 @@
       "additionalProperties": true
     },
 
-    "CollateralOraclePrice": {
-      "title": "CollateralOraclePrice",
+    "AssetOraclePrice": {
+      "title": "AssetOraclePrice",
       "type": "object",
       "required": [
         "asset",
@@ -1913,7 +1921,7 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Collateral Stork oracle price. No AMM/order-book `poolPrice` is included on this replacement feed.",
+          "description": "Asset Stork oracle price. No AMM/order-book `poolPrice` is included on this replacement feed.",
           "example": "1.0000"
         },
         "updatedAt": {
@@ -2335,7 +2343,7 @@
         },
         "qty": {
           "$ref": "#/definitions/Qty",
-          "description": "Unsigned order quantity. Combined with `isBuy`, forms the signed `OrderDetails.quantity`.",
+          "description": "Unsigned order quantity. Required for `LIMIT` orders. Omit for `STOP_LOSS` / `TAKE_PROFIT` orders; trigger orders derive executable size when the trigger fires. Combined with `isBuy`, forms the signed `OrderDetails.quantity` for LIMIT orders.",
           "example": "0.1"
         },
         "orderType": {
@@ -2350,7 +2358,7 @@
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Trigger price, required and non-zero for STOP_LOSS/TAKE_PROFIT, must be zero/absent for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`.",
+          "description": "Trigger price, required for STOP_LOSS/TAKE_PROFIT and omitted for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`.",
           "example": "50000.0"
         },
         "reduceOnly": {
@@ -2384,12 +2392,12 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. `0` (the default if omitted) means good-until-cancelled. Coupled to `timeInForce`; mismatched combinations are rejected with `INPUT_VALIDATION_ERROR`: GTC and IOC MUST use `0` (a non-zero value is rejected — GTC never expires), and GTT MUST set a non-zero `expiresAfter` greater than `deadline` (`deadline <= expiresAfter`). Note: a GTT fill matched within a few seconds of `expiresAfter` can revert on-chain with `OrderExpired` if it mines after expiry, so choose a lifetime with adequate margin.",
+          "description": "Unix seconds. Order lifetime — signed into `OrderDetails.expiresAfter` and enforced on-chain at execution. Omit only for GTC/IOC/no-expiry orders. GTT orders MUST set a future `expiresAfter` greater than `deadline` (`deadline <= expiresAfter`). Coupled to `timeInForce`; mismatched combinations are rejected with `INPUT_VALIDATION_ERROR`. Note: a GTT fill matched within a few seconds of `expiresAfter` can revert on-chain with `OrderExpired` if it mines after expiry, so choose a lifetime with adequate margin.",
           "example": 1676923200
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Carried as a string (full `uint64` range [0, 2^64-1]) to preserve precision, like `orderId` and `nonce`.",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Omit when the order has no client id; provided values must be non-zero and are carried as strings to preserve precision, like `orderId` and `nonce`.",
           "example": "123456789"
         }
       },
@@ -2399,7 +2407,8 @@
       "title": "CreateOrderResponse",
       "type": "object",
       "required": [
-        "status"
+        "status",
+        "orderId"
       ],
       "properties": {
         "status": {
@@ -2412,7 +2421,7 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
         "orderId": {
@@ -2427,12 +2436,12 @@
         },
         "cancelReason": {
           "$ref": "#/definitions/CancelReason",
-          "description": "Machine-readable reason the order was cancelled. Present only when `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`, and a self-crossing IOC with `SELF_TRADE_PREVENTION`. Absent otherwise."
+          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`, and a self-crossing IOC with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
         },
         "cancelReasonMessage": {
           "type": "string",
           "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
-          "example": "Order cancelled: no resting liquidity to fill against"
+          "example": "Order cancelled: no fillable liquidity available at the limit"
         },
         "firstFillId": {
           "type": "string",
@@ -2449,7 +2458,7 @@
     },
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
-      "description": "Modifies a resting order in place. The order keeps its `orderId` and `clientOrderId`. Target exactly one of `orderId` / `clientOrderId`; supplying both or neither is rejected with `INPUT_VALIDATION_ERROR`, and a target that does not resolve to a live resting order is rejected with `ORDER_NOT_FOUND`. **Full restate:** the request carries the SAME fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value at its post-modify state, even unchanged ones; there is no omitted-means-inherited shorthand. The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx` — for a `STOP_LOSS` / `TAKE_PROFIT` order the trigger price can be re-priced in place (no cancel+recreate). The remaining signed `OrderDetails` fields (`exchangeId`, `isBuy`/side, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`, `signerWallet`) are IMMUTABLE: restate each at the resting order's value — the matching engine verifies each equals the resting order and rejects a mismatch with `INPUT_VALIDATION_ERROR` (the matching engine's internal `MODIFY_IMMUTABLE_MISMATCH` is surfaced to clients as `INPUT_VALIDATION_ERROR`; the human-readable `message` names the offending field). `orderType` is immutable — a modify re-prices a trigger but never converts an order between `LIMIT` and `STOP_LOSS` / `TAKE_PROFIT`. **Availability:** editing a `STOP_LOSS` / `TAKE_PROFIT` order (including its `triggerPx`) depends on native SL/TP trigger orders landing in the matching engine; until then, modify accepts only `LIMIT` orders and a `STOP_LOSS` / `TAKE_PROFIT` modify is rejected with `MODIFY_ORDER_OTHER_ERROR`. A `LIMIT` order's `triggerPx` is `0`. The EIP-712 signature is verified over exactly the restated fields (the same `Order` / `OrderDetails` envelope as `createOrder`), so it needs no resting-order lookup; a fresh `nonce` is required. A request whose post-modify state is identical to the order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or `qty` increase loses it (re-queued at the new level). `qty` is the TOTAL order quantity, not remaining, and must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). `timeInForce` is immutable — a modify cannot flip GTC↔GTT; the restated `timeInForce` must match the resting order and `expiresAfter` must stay consistent with it (`0` for GTC, a non-zero future timestamp for GTT). If the post-modify order is post-only and would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is left untouched, priority intact. If it is not post-only and the new `limitPx` crosses, the modification executes immediately — the response reports the executed quantity (`execQty`) and resulting `status`, with per-fill detail delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Modifies a live resting order in place. Target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The JSON Schema validates target presence only; the server enforces the non-zero rule for sole `clientOrderId` targets. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is the lookup key and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The request is a full restate of the post-modify `OrderDetails`: every signed field is sent at its intended post-modify value, and omission never means inherit. Modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, and `triggerPx`; all other signed fields are immutable and must match the resting order. `timeInForce` is immutable: GTC omits `expiresAfter`, while GTT must carry a future `expiresAfter` greater than `deadline`. Modify is LIMIT-only until native SL/TP trigger modify is available; omit `triggerPx` for LIMIT. `qty` is total order quantity and must be greater than `cumQty`. An identical restate returns `EMPTY_MODIFY_ERROR`; a post-only cross returns `POST_ONLY_WOULD_CROSS_ERROR`; a non-post-only cross may fill immediately. A fresh nonce and EIP-712 signature over the restated order are required.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -2462,21 +2471,49 @@
         "timeInForce",
         "reduceOnly",
         "postOnly",
-        "expiresAfter",
         "signature",
         "nonce",
         "signerWallet",
         "deadline"
       ],
+      "not": {
+        "description": "At least one target identifier is required. This schema validates target presence only; the server rejects a sole zero/all-zero `clientOrderId`.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
+            }
+          }
+        ]
+      },
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID of the order to modify. Exactly one of `orderId` or `clientOrderId` must be provided.",
+          "description": "Internal matching engine order ID of the order to modify. If present, this is the canonical lookup key; `clientOrderId`, when also present, restates the resting order's immutable client id.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID of the order to modify (the same `clientOrderId` supplied in CreateOrderRequest), as a decimal string (`uint64`). Exactly one of `orderId` or `clientOrderId` must be provided. The value `\"0\"` is the \"no tag\" sentinel and is NOT a valid sole target — an order created without a client order id can only be modified by `orderId`. Supplying both `orderId` and `clientOrderId`, or neither, is rejected with `INPUT_VALIDATION_ERROR`. The modification cannot assign a new `clientOrderId`; the resting order's value is preserved.",
+          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero; JSON Schema validates presence only and the server enforces the non-zero rule. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. Do not send a placeholder value. The modification cannot assign a new `clientOrderId`.",
           "example": "123456789"
         },
         "symbol": {
@@ -2510,8 +2547,8 @@
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — for a `STOP_LOSS`/`TAKE_PROFIT` order the trigger can be re-priced in place (no cancel+recreate); restate the post-modify value. `0` for a `LIMIT` order. The matching engine applies the restated value (it is not immutable-matched). Availability: depends on native SL/TP trigger orders landing in the matching engine (see `orderType`); until then a `LIMIT` order's `triggerPx` stays `0`. Optional on the wire — an absent `triggerPx` is treated as `0`.",
-          "example": "0"
+          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — for a `STOP_LOSS`/`TAKE_PROFIT` order the trigger can be re-priced in place (no cancel+recreate); restate the post-modify value. Omit for a `LIMIT` order. The matching engine applies the restated value (it is not immutable-matched). Availability: depends on native SL/TP trigger orders landing in the matching engine (see `orderType`); until then a `LIMIT` order omits `triggerPx`.",
+          "example": "49000.0"
         },
         "reduceOnly": {
           "type": "boolean",
@@ -2535,7 +2572,7 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. The post-modify order expiry (`OrderDetails.expiresAfter`). Always required — send the complete intended value even when it is unchanged from the resting order; `0` means no expiry and is a valid post-modify state. Must stay consistent with the order's `timeInForce` (`0` for GTC, non-zero for GTT): modifications that would flip an order between GTC and GTT are rejected with `INPUT_VALIDATION_ERROR` (`timeInForce` is not modifiable). For non-zero values, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order (same convention as `createOrder`).",
+          "description": "Unix seconds. Post-modify order expiry (`OrderDetails.expiresAfter`). Omit only for GTC/no-expiry orders; omission never inherits the resting value. GTT modifications must send a future value greater than `deadline`.",
           "example": 1676923200
         },
         "signature": {
@@ -2562,7 +2599,7 @@
     },
     "ModifyOrderResponse": {
       "title": "ModifyOrderResponse",
-      "description": "Result of a modification, same shape as `CreateOrderResponse` plus `execQty` / `cumQty`. `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
+      "description": "Result of a modification. The response fields match `CreateOrderResponse`; `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
       "type": "object",
       "required": [
         "status",
@@ -2574,7 +2611,7 @@
         },
         "execQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Quantity executed by this modification (taker fills triggered when it crossed). `0` or absent when the modified order rested.",
+          "description": "Quantity filled immediately by this modification. Present only when the modification crossed and executed.",
           "example": "0.5"
         },
         "cumQty": {
@@ -2594,7 +2631,7 @@
         },
         "cancelReason": {
           "$ref": "#/definitions/CancelReason",
-          "description": "Machine-readable reason the modified order was cancelled. Present only when `status` is `CANCELLED` — for a self-crossing non-post-only modify this is `SELF_TRADE_PREVENTION`. Absent otherwise."
+          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED` — for a self-crossing non-post-only modify this is `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
         },
         "cancelReasonMessage": {
           "type": "string",
@@ -2624,15 +2661,44 @@
         "nonce",
         "deadline"
       ],
+      "not": {
+        "description": "At least one target identifier is required. This schema validates target presence only; the server rejects a sole zero/all-zero `clientOrderId`.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
+            }
+          }
+        ]
+      },
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID to cancel. At least one of `orderId` or `clientOrderId` must be provided; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "description": "Internal matching engine order ID to cancel. Provide `orderId`, or a non-zero `clientOrderId` when `orderId` is absent; JSON Schema validates target presence only and the server enforces the non-zero `clientOrderId` rule. If both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero; JSON Schema validates presence only and the server enforces the non-zero rule. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {
