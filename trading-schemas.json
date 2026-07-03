@@ -446,7 +446,7 @@
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Last update timestamp (milliseconds)",
+          "description": "Last update timestamp in milliseconds. For orderChanges WebSocket events and orderHistory REST rows this is the matching-engine event timestamp used by orderHistory startTime/endTime filters.",
           "example": 1747927089946
         },
         "cancelReason": {
@@ -457,6 +457,26 @@
           "type": "string",
           "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
           "example": "Order cancelled because it would have matched your own resting order"
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderHistoryList": {
+      "title": "OrderHistoryList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
@@ -2290,12 +2310,12 @@
         },
         "endTime": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Timestamp of last result, in milliseconds",
+          "description": "Timestamp of the last result in response order, in milliseconds. Descending endpoints return newest-first, so this is the oldest returned timestamp and can be used as the next page's endTime boundary.",
           "example": 1756733679000
         },
         "startTime": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Timestamp of first result, in milliseconds",
+          "description": "Timestamp of the first result in response order, in milliseconds. Descending endpoints return newest-first, so this is the newest returned timestamp.",
           "example": 1756733579000
         }
       },
