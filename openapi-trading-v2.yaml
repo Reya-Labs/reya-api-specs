@@ -873,8 +873,8 @@ components:
         `lastUpdateAt`. Results are returned newest-first and capped at a
         maximum that varies by endpoint. Because this bound is inclusive,
         passing the oldest timestamp from the previous page can repeat boundary
-        rows. For orderHistory, deduplicate overlap by `Order.sequenceNumber`;
-        otherwise subtract 1ms when same-ms boundary ties are not relevant.
+        rows; clients can deduplicate overlap or subtract 1ms when same-ms
+        boundary ties are not relevant.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
