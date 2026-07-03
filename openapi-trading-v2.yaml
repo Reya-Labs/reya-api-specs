@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.11
+  version: 3.0.12
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -510,6 +510,52 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/orderHistory:
+    get:
+      summary: Get wallet order history
+      description: |
+        Returns up to 100 historical matching-engine order state updates for a
+        wallet, newest first. Each row is one public `Order` projection emitted
+        by the matching engine for one of the wallet's accounts, covering both
+        spot and perp markets once the matching-engine order-history writer is
+        enabled for the environment.
+
+        This endpoint is for retail/account-history views and support tooling.
+        It is not intended for market-maker ingestion, audit logs, or
+        high-throughput reconciliation. The backing service stores bounded
+        history per account and can automatically exclude high-throughput
+        accounts from persistence; market makers should capture their own
+        durable order timeline from the `orderChanges` WebSocket stream.
+
+        Pagination follows the same descending time-window convention as the
+        wallet execution endpoints. `startTime` and `endTime` are millisecond
+        POSIX timestamps matched against each row's matching-engine event time
+        (`lastUpdateAt`). Results are returned newest-first; `meta.startTime`
+        is the newest returned row timestamp and `meta.endTime` is the oldest
+        returned row timestamp. Because `endTime` is an inclusive upper bound,
+        clients that pass the previous `meta.endTime` may receive boundary
+        rows again and should deduplicate overlap. Clients that do not need to
+        preserve same-millisecond boundary ties may page backward with
+        `endTime = meta.endTime - 1`.
+      operationId: getWalletOrderHistory
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+      responses:
+        '200':
+          description: Paginated list of order state updates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderHistoryList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/positions:
     get:
       summary: Get wallet positions
@@ -807,8 +853,10 @@ components:
       required: false
       description: >-
         Return results at or after this time (inclusive lower bound).
-        Millisecond POSIX timestamp, matched against each execution's on-chain
-        block timestamp.
+        Millisecond POSIX timestamp, matched against the endpoint's record
+        timestamp. Execution and bust endpoints use on-chain block timestamps;
+        orderHistory uses the matching-engine event timestamp exposed as
+        `lastUpdateAt`.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733379000
@@ -819,10 +867,14 @@ components:
       required: false
       description: >-
         Return results at or before this time (inclusive upper bound).
-        Millisecond POSIX timestamp, matched against each execution's on-chain
-        block timestamp. Results are returned newest-first and capped at a
-        maximum that varies by endpoint; to page backward through history,
-        pass the oldest timestamp from the previous page.
+        Millisecond POSIX timestamp, matched against the endpoint's record
+        timestamp. Execution and bust endpoints use on-chain block timestamps;
+        orderHistory uses the matching-engine event timestamp exposed as
+        `lastUpdateAt`. Results are returned newest-first and capped at a
+        maximum that varies by endpoint. Because this bound is inclusive,
+        passing the oldest timestamp from the previous page can repeat boundary
+        rows; clients should deduplicate overlap or subtract 1ms when same-ms
+        boundary ties are not relevant.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733679000
@@ -885,6 +937,9 @@ components:
 
     Order:
       $ref: './trading-schemas.json#/definitions/Order'
+
+    OrderHistoryList:
+      $ref: './trading-schemas.json#/definitions/OrderHistoryList'
 
     Account:
       $ref: './trading-schemas.json#/definitions/Account'
