@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.12
+  version: 3.0.13
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -534,9 +534,9 @@ paths:
         is the newest returned row timestamp and `meta.endTime` is the oldest
         returned row timestamp. Because `endTime` is an inclusive upper bound,
         clients that pass the previous `meta.endTime` may receive boundary
-        rows again and should deduplicate overlap. Clients that do not need to
-        preserve same-millisecond boundary ties may page backward with
-        `endTime = meta.endTime - 1`.
+        rows again and should deduplicate overlap by `Order.sequenceNumber`.
+        Clients that do not need to preserve same-millisecond boundary ties may
+        page backward with `endTime = meta.endTime - 1`.
       operationId: getWalletOrderHistory
       tags:
         - Wallet Data
@@ -873,7 +873,7 @@ components:
         `lastUpdateAt`. Results are returned newest-first and capped at a
         maximum that varies by endpoint. Because this bound is inclusive,
         passing the oldest timestamp from the previous page can repeat boundary
-        rows; clients should deduplicate overlap or subtract 1ms when same-ms
+        rows; clients can deduplicate overlap or subtract 1ms when same-ms
         boundary ties are not relevant.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'

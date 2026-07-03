@@ -344,6 +344,7 @@
     "Order": {
       "title": "Order",
       "type": "object",
+      "description": "Represents a public order state. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges WS, orderHistory REST), `lastUpdateAt` reflects the matching-engine event time and a single order may produce multiple rows as it moves through the public `OPEN`, `FILLED`, and `CANCELLED` statuses. Matching-engine partial-fill states surface as `OPEN`; request-level rejects are returned as errors rather than order-status rows. Event-style emissions include `sequenceNumber`; resting snapshots omit it.",
       "required": [
         "exchangeId",
         "symbol",
@@ -371,6 +372,11 @@
         "orderId": {
           "type": "string",
           "example": "490346525705109504"
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Monotonic matching-engine order-event sequence. Present on orderHistory REST rows and orderChanges WS event rows; omitted on openOrders and other resting-order snapshots. Use it to deduplicate inclusive orderHistory page-boundary overlap and to splice orderHistory with the orderChanges live stream.",
+          "example": 152954
         },
         "clientOrderId": {
           "type": "string",
@@ -457,6 +463,30 @@
           "type": "string",
           "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
           "example": "Order cancelled because it would have matched your own resting order"
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderChangesSnapshot": {
+      "title": "OrderChangesSnapshot",
+      "type": "object",
+      "description": "Initial payload returned in the `subscribed` confirmation for the `/v2/wallet/{address}/orderChanges` WS channel. Combines the current open-orders snapshot with a `snapshotSequenceNumber` cursor; subsequent orderChanges WS messages carry orders with a greater `sequenceNumber`, so clients can splice the live feed against the orderHistory REST endpoint.",
+      "required": [
+        "data",
+        "snapshotSequenceNumber"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "description": "Current open-orders snapshot. Snapshot orders do not include `sequenceNumber`; the snapshot boundary is represented by `snapshotSequenceNumber`.",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "snapshotSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Matching-engine order-event sequence at which the snapshot was taken. Subsequent orderChanges WS messages on this subscription have `Order.sequenceNumber` greater than this cursor.",
+          "example": 152954
         }
       },
       "additionalProperties": true
