@@ -1925,39 +1925,6 @@
       },
       "additionalProperties": true
     },
-    "Price": {
-      "title": "Price",
-      "type": "object",
-      "description": "Deprecated AMM-era mixed market/collateral price shape. Use AssetOraclePrice for asset Stork oracle prices; use market summary/depth endpoints for market prices.",
-      "deprecated": true,
-      "required": [
-        "symbol",
-        "updatedAt",
-        "oraclePrice"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "oraclePrice": {
-          "$ref": "#/definitions/PriceValue",
-          "description": "Price given by the Stork feeds, used both as the peg price for prices on Reya, as well as Mark Prices. The Stork price feed is usually the perp prices across three major CEXs",
-          "example": "43000.00"
-        },
-        "poolPrice": {
-          "$ref": "#/definitions/PriceValue",
-          "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
-          "example": "42999.50"
-        },
-        "updatedAt": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Last update timestamp (milliseconds)",
-          "example": 1747927089946
-        }
-      },
-      "additionalProperties": true
-    },
-
     "AssetOraclePrice": {
       "title": "AssetOraclePrice",
       "type": "object",
