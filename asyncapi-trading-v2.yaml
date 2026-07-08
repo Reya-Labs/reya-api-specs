@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.0.13
+  version: 3.0.14
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -215,26 +215,6 @@ channels:
       accountBalanceUpdate:
         $ref: '#/components/messages/AccountBalanceUpdate'
 
-  prices:
-    address: /v2/prices
-    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/assetOraclePrices` for asset Stork oracle prices. Use market summary/depth channels for market prices.'
-    x-deprecated: true
-    messages:
-      pricesUpdate:
-        $ref: '#/components/messages/PricesUpdate'
-
-  price:
-    address: /v2/prices/{symbol}
-    description: 'Deprecated: AMM-era mixed market/collateral price updates with legacy `poolPrice` semantics. Use `/v2/assetOraclePrices` for asset Stork oracle prices. Use market summary/depth channels for market prices.'
-    x-deprecated: true
-    parameters:
-      symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
-    messages:
-      priceUpdate:
-        $ref: '#/components/messages/PriceUpdate'
-
   assetOraclePrices:
     address: /v2/assetOraclePrices
     description: Asset Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
@@ -421,26 +401,6 @@ operations:
       - $ref: '#/channels/walletAccountBalances/messages/accountBalanceUpdate'
     summary: Receive account balance updates for wallet
 
-  receivePrices:
-    action: receive
-    description: 'Deprecated: use `receiveAssetOraclePrices` (`/v2/assetOraclePrices`) instead.'
-    x-deprecated: true
-    channel:
-      $ref: '#/channels/prices'
-    messages:
-      - $ref: '#/channels/prices/messages/pricesUpdate'
-    summary: Receive deprecated price updates for all symbols
-
-  receivePrice:
-    action: receive
-    description: 'Deprecated: use `receiveAssetOraclePrices` (`/v2/assetOraclePrices`) instead.'
-    x-deprecated: true
-    channel:
-      $ref: '#/channels/price'
-    messages:
-      - $ref: '#/channels/price/messages/priceUpdate'
-    summary: Receive deprecated price updates for a specific symbol
-
   receiveAssetOraclePrices:
     action: receive
     channel:
@@ -563,20 +523,6 @@ components:
       summary: Real-time account balance update for wallet
       payload:
         $ref: '#/components/schemas/AccountBalanceUpdatePayload'
-
-    PricesUpdate:
-      name: pricesUpdate
-      title: Prices Update
-      summary: Real-time price updates for all symbols
-      payload:
-        $ref: '#/components/schemas/PricesUpdatePayload'
-
-    PriceUpdate:
-      name: priceUpdate
-      title: Price Update
-      summary: Real-time price update for a specific symbol
-      payload:
-        $ref: '#/components/schemas/PriceUpdatePayload'
 
     AssetOraclePricesUpdate:
       name: assetOraclePricesUpdate
@@ -704,13 +650,6 @@ components:
         - /v2/perpMarkets/summary
       description: Channel for all perp market summary updates.
 
-    DeprecatedPricesChannel:
-      type: string
-      enum:
-        - /v2/prices
-      description: 'Deprecated legacy price channel. Use `/v2/assetOraclePrices`.'
-      x-deprecated: true
-
     AssetOraclePricesChannel:
       type: string
       enum:
@@ -782,12 +721,6 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
       description: Channel pattern for wallet account balances
-
-    DeprecatedPriceChannelPattern:
-      type: string
-      pattern: '^/v2/prices/[A-Za-z0-9]+$'
-      description: 'Deprecated legacy price channel pattern. Use `/v2/assetOraclePrices`.'
-      x-deprecated: true
 
     BaseUpdateEnvelope:
       type: object
@@ -1035,35 +968,6 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/AccountBalance'
 
-    PricesUpdateBody:
-      type: object
-      title: PricesUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/DeprecatedPricesChannel'
-        data:
-          type: array
-          title: PriceList
-          items:
-            $ref: './trading-schemas.json#/definitions/Price'
-
-    PriceUpdateBody:
-      type: object
-      title: PriceUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/DeprecatedPriceChannelPattern'
-        data:
-          $ref: './trading-schemas.json#/definitions/Price'
-
     AssetOraclePricesUpdateBody:
       type: object
       title: AssetOraclePricesUpdateBody
@@ -1163,18 +1067,6 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/AccountBalanceUpdateBody'
-
-    PricesUpdatePayload:
-      title: PricesUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PricesUpdateBody'
-
-    PriceUpdatePayload:
-      title: PriceUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PriceUpdateBody'
 
     AssetOraclePricesUpdatePayload:
       title: AssetOraclePricesUpdatePayload

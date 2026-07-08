@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.13
+  version: 3.0.14
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -235,54 +235,10 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /prices:
-    get:
-      summary: Get all prices
-      description: 'Deprecated: this AMM-era mixed market/collateral price endpoint includes legacy `poolPrice` semantics and will be removed. Use `GET /assetOraclePrices` for asset Stork oracle prices. Use market summary/depth endpoints for market prices.'
-      operationId: getPrices
-      deprecated: true
-      tags:
-        - Market Data
-      responses:
-        '200':
-          description: List of prices
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Price'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /prices/{symbol}:
-    get:
-      summary: Get price by symbol
-      description: 'Deprecated: this AMM-era mixed market/collateral price endpoint includes legacy `poolPrice` semantics and will be removed. Use `GET /assetOraclePrices` for asset Stork oracle prices. Use market summary/depth endpoints for market prices.'
-      operationId: getPrice
-      deprecated: true
-      tags:
-        - Market Data
-      parameters:
-        - $ref: '#/components/parameters/SymbolParam'
-      responses:
-        '200':
-          description: Price information
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Price'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /assetOraclePrices:
     get:
       summary: Get asset oracle prices
-      description: Asset Stork oracle prices. This is the replacement for asset-oracle consumers of the deprecated `/prices` endpoint and deliberately omits the AMM-era `poolPrice` field.
+      description: Asset Stork oracle prices. This feed deliberately omits the AMM-era `poolPrice` field.
       operationId: getAssetOraclePrices
       tags:
         - Market Data
@@ -958,9 +914,6 @@ components:
 
     ExecutionBustList:
       $ref: './trading-schemas.json#/definitions/ExecutionBustList'
-
-    Price:
-      $ref: './trading-schemas.json#/definitions/Price'
 
     AssetOraclePrice:
       $ref: './trading-schemas.json#/definitions/AssetOraclePrice'
