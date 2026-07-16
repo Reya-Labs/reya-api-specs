@@ -475,6 +475,9 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/PerpExecutionCursorParam'
+        - $ref: '#/components/parameters/PerpExecutionLimitParam'
+        - $ref: '#/components/parameters/PerpExecutionAccountIdsParam'
       responses:
         '200':
           description: List of perpetual executions
@@ -890,6 +893,47 @@ components:
           - ORDER_MATCH
           - LIQUIDATION
         example: LIQUIDATION
+
+    PerpExecutionCursorParam:
+      name: cursor
+      in: query
+      required: false
+      description: >-
+        Selects event-sequence pagination for wallet perp executions. Use
+        `latest` for the first page, then pass the decimal `meta.nextCursor`
+        returned by the previous page. Decimal cursors are exclusive. Omit this
+        parameter to retain timestamp pagination.
+      schema:
+        type: string
+        pattern: '^(latest|[1-9][0-9]*)$'
+      example: latest
+
+    PerpExecutionLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Page size. Defaults to 100 and cannot exceed 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+
+    PerpExecutionAccountIdsParam:
+      name: accountIds
+      in: query
+      required: false
+      description: >-
+        Active perpetual account IDs owned by the path wallet. Omit to select
+        all active perpetual accounts. IDs must be unique.
+      style: form
+      explode: false
+      schema:
+        type: array
+        minItems: 1
+        items:
+          type: integer
+          minimum: 1
 
     ResolutionParam:
       name: resolution
