@@ -654,12 +654,16 @@ paths:
         **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
         `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
         never "inherit from the resting order".
-        The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, `triggerPx` (a
-        `STOP_LOSS`/`TAKE_PROFIT` trigger can be re-priced in place); the rest (`exchangeId`,
+        The modifiable fields are class-split: for a `LIMIT` modify they are `limitPx`, `qty`, `postOnly`,
+        `expiresAfter` (and `triggerPx` is forbidden); for a `STOP_LOSS`/`TAKE_PROFIT` modify ONLY
+        `limitPx` and `triggerPx` are modifiable — `qty` stays omitted (wire quantity 0; the signed
+        quantity restates the full-position sentinel), and `postOnly=false`, `expiresAfter` omitted
+        (never expires) and the GTC time-in-force are restated immutables (changing any returns
+        `INPUT_VALIDATION_ERROR` from the ME's immutable-match). The rest (`exchangeId`,
         `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
         `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
         is rejected with `INPUT_VALIDATION_ERROR` (the ME's internal `MODIFY_IMMUTABLE_MISMATCH` is
-        surfaced as `INPUT_VALIDATION_ERROR`). A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in
+        surfaced as `INPUT_VALIDATION_ERROR`). A `STOP_LOSS`/`TAKE_PROFIT` order is re-priced in
         place (full restate): `triggerPx` is REQUIRED on a trigger modify — a trigger modify that
         omits it is rejected with `INPUT_VALIDATION_ERROR`. `qty` is omitted on a
         `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT`
