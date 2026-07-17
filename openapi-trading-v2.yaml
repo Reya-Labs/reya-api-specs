@@ -662,7 +662,7 @@ paths:
         surfaced as `INPUT_VALIDATION_ERROR`). A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in
         place (full restate): `triggerPx` is REQUIRED on a trigger modify — a trigger modify that
         omits it is rejected with `INPUT_VALIDATION_ERROR`. `qty` is omitted on a
-        `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates 0) and required for a `LIMIT`
+        `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT`
         modify. A request whose post-modify state equals the
         order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease
         at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
