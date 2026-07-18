@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.14
+  version: 3.0.15
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -608,14 +608,14 @@ paths:
         Create a new order (IOC, GTC, GTT, SL, TP). Supports both spot and perp markets.
 
         All order types route through the matching engine on a unified `marketId` namespace;
-        the legacy off-chain conditional-order (DB-backed) path is retired. `STOP_LOSS` /
-        `TAKE_PROFIT` carry `orderType` + `triggerPx` end-to-end and are accepted today as
-        forward-compatible facade orders — the ME stores the trigger fields and exposes the
-        order for account state/cancel flows without adding executable book liquidity.
-        **Availability:** native trigger behaviour (an ME-resident trigger queue
-        that fires on `triggerPx`) is not yet live; it depends on the ME trigger-queue landing.
-        Until then a `STOP_LOSS` / `TAKE_PROFIT` create is accepted but does not yet trigger
-        on its `triggerPx`.
+        the legacy off-chain conditional-order (DB-backed) path is retired. A `STOP_LOSS` /
+        `TAKE_PROFIT` create carries `orderType` + `triggerPx` end-to-end and is **armed and
+        tracked** by the matching engine: the trigger is stored (never resting in the book as
+        executable liquidity), remains modifiable and cancellable, and surfaces as `OPEN` on
+        `openOrders`, the `walletOrderChanges` stream, and order history.
+        **Availability:** an armed trigger does **not** yet fire on its `triggerPx`; trigger
+        evaluation and the resulting child order arrive in a later release. Triggers are
+        **perp-only** — a `STOP_LOSS` / `TAKE_PROFIT` on a spot market is rejected.
 
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
       operationId: createOrder
@@ -654,15 +654,20 @@ paths:
         **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
         `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
         never "inherit from the resting order".
-        The five modifiable fields are `limitPx`, `qty`, `postOnly`, `expiresAfter`, `triggerPx` (a
-        `STOP_LOSS`/`TAKE_PROFIT` trigger can be re-priced in place); the rest (`exchangeId`,
+        The modifiable fields are class-split: for a `LIMIT` modify they are `limitPx`, `qty`, `postOnly`,
+        `expiresAfter` (and `triggerPx` is forbidden); for a `STOP_LOSS`/`TAKE_PROFIT` modify ONLY
+        `limitPx` and `triggerPx` are modifiable — `qty` stays omitted (wire quantity 0; the signed
+        quantity restates the full-position sentinel), and `postOnly=false`, `expiresAfter` omitted
+        (never expires) and the GTC time-in-force are restated immutables (changing any returns
+        `INPUT_VALIDATION_ERROR` from the ME's immutable-match). The rest (`exchangeId`,
         `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
         `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
         is rejected with `INPUT_VALIDATION_ERROR` (the ME's internal `MODIFY_IMMUTABLE_MISMATCH` is
-        surfaced as `INPUT_VALIDATION_ERROR`). **Availability:** editing a `STOP_LOSS`/`TAKE_PROFIT`
-        order depends on native SL/TP trigger orders landing in the matching engine; until then modify
-        accepts only `LIMIT` orders and a `STOP_LOSS`/`TAKE_PROFIT` modify is rejected with
-        `MODIFY_ORDER_OTHER_ERROR`. A request whose post-modify state equals the
+        surfaced as `INPUT_VALIDATION_ERROR`). A `STOP_LOSS`/`TAKE_PROFIT` order is re-priced in
+        place (full restate): `triggerPx` is REQUIRED on a trigger modify — a trigger modify that
+        omits it is rejected with `INPUT_VALIDATION_ERROR`. `qty` is omitted on a
+        `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT`
+        modify. A request whose post-modify state equals the
         order's current state is rejected with `EMPTY_MODIFY_ERROR`. Queue priority: a `qty` decrease
         at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
         `qty` increase loses it. `timeInForce` is immutable (no GTC↔GTT), so `expiresAfter` is
@@ -754,7 +759,8 @@ paths:
       description: |
         Arm, refresh, or disarm an account-scoped dead-man's-switch countdown. While armed, all open
         orders for `accountId` — the same scope as `POST /v2/cancelAll` with no `symbol` filter, EXCEPT
-        protective stops (`STOP_LOSS` / `TAKE_PROFIT`), which are deliberately left in place — are
+        protective stops (`STOP_LOSS` / `TAKE_PROFIT`), which are deliberately left in place
+        (enforced by the matching engine's trigger store) — are
         mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
         `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
         explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
