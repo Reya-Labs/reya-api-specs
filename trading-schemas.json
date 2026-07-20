@@ -2192,6 +2192,7 @@
         "tierId",
         "takerFee",
         "makerFee",
+        "volume30d",
         "volume14d",
         "tierType"
       ],
@@ -2210,9 +2211,15 @@
           "description": "Maker fee rate (fee will be qty * makerFee)",
           "example": "0.0002"
         },
+        "volume30d": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "30-day volume level required for this fee tier to be applied to a wallet",
+          "example": "10000.0"
+        },
         "volume14d": {
           "$ref": "#/definitions/UnsignedDecimal",
-          "description": "14-day volume level required this fee tier to be applied to a wallet",
+          "description": "Deprecated compatibility alias for volume30d",
+          "deprecated": true,
           "example": "10000.0"
         },
         "tierType": {
