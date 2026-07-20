@@ -110,8 +110,8 @@
     "ExecutionType": {
       "title": "ExecutionType",
       "type": "string",
-      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "DUST"],
-      "description": "Type of execution"
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "MARKET_CLOSE"],
+      "description": "Type of execution. MARKET_CLOSE is the terminal execution used to close residual positions when a market is force-closed."
     },
     "AccountType": {
       "title": "AccountType",
