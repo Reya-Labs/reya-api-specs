@@ -2193,7 +2193,6 @@
         "takerFee",
         "makerFee",
         "volume30d",
-        "volume14d",
         "tierType"
       ],
       "properties": {
@@ -2214,12 +2213,6 @@
         "volume30d": {
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "30-day volume level required for this fee tier to be applied to a wallet",
-          "example": "10000.0"
-        },
-        "volume14d": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Deprecated compatibility alias for volume30d",
-          "deprecated": true,
           "example": "10000.0"
         },
         "tierType": {
