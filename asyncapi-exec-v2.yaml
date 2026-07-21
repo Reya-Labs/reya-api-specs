@@ -34,6 +34,10 @@ servers:
     host: ws-exec.reya.xyz
     protocol: wss
     description: Production WebSocket order entry server
+  devnet:
+    host: ws-exec-devnet.reya-cronos.network
+    protocol: wss
+    description: Devnet WebSocket order entry server for Perp OB integration
   staging:
     host: ws-exec-staging.reya.xyz
     protocol: wss

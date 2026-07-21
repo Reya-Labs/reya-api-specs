@@ -12,6 +12,8 @@ info:
 servers:
   - url: https://api.reya.xyz/v2
     description: Production server
+  - url: https://api-devnet.reya-cronos.network/v2
+    description: Devnet server for Perp OB integration
   - url: https://api-test.reya.xyz/v2
     description: Testnet server
 
