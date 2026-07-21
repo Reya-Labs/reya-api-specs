@@ -41,6 +41,18 @@ for (const expected of [
 }
 
 const accountUpdateData = yamlBlock(infoAsyncApi, '    AccountUpdateData:');
+const accountUpdatePayload = yamlBlock(infoAsyncApi, '    AccountUpdatePayload:');
+assert.ok(accountUpdatePayload.includes('additionalProperties: false'));
+for (const field of ['type', 'timestamp', 'channel', 'data']) {
+  assert.ok(
+    accountUpdatePayload.includes(`- ${field}`),
+    `AccountUpdatePayload must require: ${field}`,
+  );
+}
+assert.ok(
+  !accountUpdatePayload.includes('allOf:'),
+  'AccountUpdatePayload must not compose sealed object schemas with allOf',
+);
 for (const [field, expectedType] of [
   ['accountId', 'type: string'],
   ['owner', "$ref: './trading-schemas.json#/definitions/Address'"],

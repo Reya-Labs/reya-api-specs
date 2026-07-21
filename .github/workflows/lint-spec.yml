@@ -19,6 +19,8 @@ on:
       - 'asyncapi-trading-v2.yaml'
       - 'asyncapi-exec-v2.yaml'
       - 'trading-schemas.json'
+      - 'scripts/verify-perpob-contracts.mjs'
+      - '.github/workflows/lint-spec.yml'
   workflow_dispatch:
 
 permissions:

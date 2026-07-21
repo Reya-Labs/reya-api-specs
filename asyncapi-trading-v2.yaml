@@ -1003,23 +1003,6 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/AccountBalance'
 
-    AccountUpdateBody:
-      type: object
-      title: AccountUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/WalletAccountsChannelPattern'
-        data:
-          type: array
-          title: AccountUpdateList
-          description: The account whose creation or owner binding changed.
-          items:
-            $ref: '#/components/schemas/AccountUpdateData'
-
     AccountUpdateData:
       type: object
       title: AccountUpdateData
@@ -1166,10 +1149,29 @@ components:
         - $ref: '#/components/schemas/AccountBalanceUpdateBody'
 
     AccountUpdatePayload:
+      type: object
       title: AccountUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/AccountUpdateBody'
+      additionalProperties: false
+      required:
+        - type
+        - timestamp
+        - channel
+        - data
+      properties:
+        type:
+          $ref: '#/components/schemas/ChannelDataMessageType'
+        timestamp:
+          type: number
+          description: Update timestamp (milliseconds)
+          example: 1747927089946
+        channel:
+          $ref: '#/components/schemas/WalletAccountsChannelPattern'
+        data:
+          type: array
+          title: AccountUpdateList
+          description: The account whose creation or owner binding changed.
+          items:
+            $ref: '#/components/schemas/AccountUpdateData'
 
     AssetOraclePricesUpdatePayload:
       title: AssetOraclePricesUpdatePayload
