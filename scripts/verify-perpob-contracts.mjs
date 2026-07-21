@@ -29,6 +29,9 @@ assert.ok(
   openApi.includes('url: https://api-devnet.reya-cronos.network/v2'),
   'OpenAPI must include the current devnet server',
 );
+const asyncExecSpecOperation = yamlBlock(openApi, '  /asyncapi-exec-spec.yaml:');
+assert.ok(asyncExecSpecOperation.includes('operationId: getAsyncExecApiSpec'));
+assert.ok(asyncExecSpecOperation.includes('application/yaml:'));
 
 for (const expected of [
   'host: websocket-devnet.reya-cronos.network',
