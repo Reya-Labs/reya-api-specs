@@ -150,7 +150,7 @@
       "title": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
-      "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
+      "description": "Depth message type. SNAPSHOT = the complete aggregated book delivered on subscribe. UPDATE = a diff carrying only the price levels that changed since the previous frame (one UPDATE may include multiple levels across both bids and asks); each level's qty is the absolute new total at that price and qty 0 removes the level. Apply UPDATE frames in order to the SNAPSHOT to maintain the book."
     },
     "RequestError": {
       "title": "RequestError",

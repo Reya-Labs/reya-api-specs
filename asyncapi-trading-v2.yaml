@@ -9,7 +9,7 @@ info:
 
     Channels fall into two delivery classes with different backpressure behaviour:
 
-    - **Stateful channels** — market depth (`/v2/market/{symbol}/depth`) and wallet order changes (`/v2/wallet/{address}/orderChanges`) — deliver an ordered stream anchored to an initial snapshot. The server enforces per-connection backpressure: a consumer that falls too far behind is disconnected with WebSocket close code `1013` and reason `slow consumer — resubscribe for fresh snapshot`. Separately, after an internal feed resynchronization (for example a matching-engine restart), affected subscribers are closed with close code `1012` and reason `feed resync — resubscribe for fresh snapshot (reset)`.
+    - **Stateful channels** — market depth (`/v2/market/{symbol}/depth`) and wallet order changes (`/v2/wallet/{address}/orderChanges`) — deliver an ordered stream anchored to an initial snapshot. The server enforces per-connection backpressure: a consumer that falls too far behind is disconnected with WebSocket close code `1013` and reason `slow consumer — resubscribe for fresh snapshot`. Separately, after an internal feed resynchronization (for example a matching-engine restart), affected subscribers are closed with close code `1012`; the reason string begins `feed resync — resubscribe for fresh snapshot` and carries a runtime-appended suffix — ` (reset)` or ` (gap)` — identifying the internal cause. Clients must key recovery on the close **code** `1012` and treat the reason string as advisory only (do not parse the suffix).
     - **Conflating channels** — asset oracle prices (`/v2/assetOraclePrices`) — coalesce under backpressure per symbol/asset: intermediate ticks may be dropped, but the latest value per symbol is always eventually delivered.
 
     Recovery is identical for both `1013` and `1012`: reconnect and resubscribe. The normal subscribe path replies with a fresh, consistent snapshot that reflects the resulting state. Events that occurred during the disconnection window are **not** replayed — clients must not expect gap-fill of individual updates; per-fill attribution lives in the execution channels (`.../perpExecutions`, `.../spotExecutions`) and the corresponding REST endpoints.
@@ -118,19 +118,39 @@ channels:
   marketDepth:
     address: /v2/market/{symbol}/depth
     description: |
-      Real-time L2 order book depth snapshots for a specific market.
+      Real-time L2 order book depth for a specific market.
 
-      This is a stateful channel: subscribing delivers a full snapshot and every
-      subsequent `channel_data` frame carries the current aggregated book. The
-      server enforces per-connection backpressure — a consumer that falls behind
-      is disconnected with close code `1013` (reason `slow consumer — resubscribe
-      for fresh snapshot`). After an internal feed resynchronization (e.g. a
-      matching-engine restart) subscribers are closed with close code `1012`
-      (reason `feed resync — resubscribe for fresh snapshot (reset)`). Recovery
-      for both is the same: reconnect and resubscribe; the subscribe path returns
-      a fresh consistent snapshot and updates from the disconnection window are
-      not replayed. See the API overview for the shared connection-lifecycle
-      contract.
+      This is a stateful channel with snapshot + diff semantics. The `type` field
+      on every frame (`SNAPSHOT` or `UPDATE`) tells the client how to apply it:
+
+      - Subscribing delivers a single full `SNAPSHOT` frame carrying the complete
+        aggregated book (`bids` sorted descending by `px`, `asks` ascending).
+      - Every subsequent `channel_data` frame is an `UPDATE` **diff** that carries
+        **only the price levels that changed** since the previous frame — not the
+        whole book.
+      - Each level's `qty` is ABSOLUTE: it is the level's new aggregated total at
+        that `px`, not a signed delta. Overwrite the level at that `px` with the
+        received `qty`.
+      - A `qty` of `0` means the level was fully consumed — delete that `px` from
+        the book.
+      - A single `UPDATE` frame may carry multiple changed levels, and levels for
+        both `bids` and `asks` may appear together in the same frame.
+
+      To maintain a correct local book: seed it from the `SNAPSHOT`, then apply
+      each `UPDATE` frame in the order received — for every level, replace the
+      total at its `px` (or delete the `px` when `qty` is `0`).
+
+      The server enforces per-connection backpressure — a consumer that falls
+      behind is disconnected with close code `1013` (reason `slow consumer —
+      resubscribe for fresh snapshot`). After an internal feed resynchronization
+      (e.g. a matching-engine restart) subscribers are closed with close code
+      `1012`; the reason string begins `feed resync — resubscribe for fresh
+      snapshot` and carries a runtime-appended suffix (` (reset)` or ` (gap)`)
+      identifying the internal cause — key recovery on the close **code** `1012`
+      and treat the reason as advisory. Recovery for both `1013` and `1012` is the
+      same: reconnect and resubscribe; the subscribe path returns a fresh
+      consistent `SNAPSHOT` and updates from the disconnection window are not
+      replayed. See the API overview for the shared connection-lifecycle contract.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
@@ -183,9 +203,12 @@ channels:
       consumer that falls behind is disconnected with close code `1013` (reason
       `slow consumer — resubscribe for fresh snapshot`); after an internal feed
       resynchronization (e.g. a matching-engine restart) subscribers are closed
-      with close code `1012` (reason `feed resync — resubscribe for fresh snapshot
-      (reset)`). Recovery for both is the same: reconnect and resubscribe; the
-      subscribe path returns a fresh consistent `OrderChangesSnapshot` and updates
+      with close code `1012`, whose reason string begins `feed resync —
+      resubscribe for fresh snapshot` and carries a runtime-appended suffix
+      (` (reset)` or ` (gap)`) — key recovery on the close **code** `1012` and
+      treat the reason as advisory. Recovery for both is the same: reconnect and
+      resubscribe; the subscribe path returns a fresh consistent
+      `OrderChangesSnapshot` and updates
       from the disconnection window are not replayed (the snapshot reflects the
       resulting order state; per-fill attribution lives in the executions data).
       See the API overview for the shared connection-lifecycle contract.
