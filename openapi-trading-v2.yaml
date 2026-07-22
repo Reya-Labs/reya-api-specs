@@ -286,11 +286,17 @@ paths:
       description: |
         Returns an L2 order book snapshot with aggregated price levels for the specified market.
         Supports both spot and perp markets.
+
+        By default the full book is returned. Pass the optional `limit` query parameter to cap the
+        response to the top-N aggregated price levels per side — the `limit` best (highest) bids and
+        the `limit` best (lowest) asks. Omitting `limit` preserves the full-book response (the
+        existing contract is unchanged).
       operationId: getMarketDepth
       tags:
         - Market Data
       parameters:
         - $ref: '#/components/parameters/SymbolParam'
+        - $ref: '#/components/parameters/DepthLimitParam'
       responses:
         '200':
           description: Depth snapshot
@@ -852,6 +858,20 @@ components:
           - ORDER_MATCH
           - LIQUIDATION
         example: LIQUIDATION
+
+    DepthLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: >-
+        Optional cap on the number of aggregated price levels returned per side.
+        When set to N (an integer >= 1), the response contains only the top N
+        levels on each side — the N best (highest) bids and the N best (lowest)
+        asks. Omit to receive the full order book (the default).
+      schema:
+        type: integer
+        minimum: 1
+        example: 10
 
     ResolutionParam:
       name: resolution

@@ -2,7 +2,17 @@ asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
   version: 3.0.18
-  description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
+  description: |
+    Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
+
+    ## Connection lifecycle, backpressure & recovery
+
+    Channels fall into two delivery classes with different backpressure behaviour:
+
+    - **Stateful channels** — market depth (`/v2/market/{symbol}/depth`) and wallet order changes (`/v2/wallet/{address}/orderChanges`) — deliver an ordered stream anchored to an initial snapshot. The server enforces per-connection backpressure: a consumer that falls too far behind is disconnected with WebSocket close code `1013` and reason `slow consumer — resubscribe for fresh snapshot`. Separately, after an internal feed resynchronization (for example a matching-engine restart), affected subscribers are closed with close code `1012` and reason `feed resync — resubscribe for fresh snapshot (reset)`.
+    - **Conflating channels** — asset oracle prices (`/v2/assetOraclePrices`) — coalesce under backpressure per symbol/asset: intermediate ticks may be dropped, but the latest value per symbol is always eventually delivered.
+
+    Recovery is identical for both `1013` and `1012`: reconnect and resubscribe. The normal subscribe path replies with a fresh, consistent snapshot that reflects the resulting state. Events that occurred during the disconnection window are **not** replayed — clients must not expect gap-fill of individual updates; per-fill attribution lives in the execution channels (`.../perpExecutions`, `.../spotExecutions`) and the corresponding REST endpoints.
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -107,7 +117,20 @@ channels:
 
   marketDepth:
     address: /v2/market/{symbol}/depth
-    description: Real-time L2 order book depth snapshots for a specific market
+    description: |
+      Real-time L2 order book depth snapshots for a specific market.
+
+      This is a stateful channel: subscribing delivers a full snapshot and every
+      subsequent `channel_data` frame carries the current aggregated book. The
+      server enforces per-connection backpressure — a consumer that falls behind
+      is disconnected with close code `1013` (reason `slow consumer — resubscribe
+      for fresh snapshot`). After an internal feed resynchronization (e.g. a
+      matching-engine restart) subscribers are closed with close code `1012`
+      (reason `feed resync — resubscribe for fresh snapshot (reset)`). Recovery
+      for both is the same: reconnect and resubscribe; the subscribe path returns
+      a fresh consistent snapshot and updates from the disconnection window are
+      not replayed. See the API overview for the shared connection-lifecycle
+      contract.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
@@ -150,6 +173,22 @@ channels:
       `channel_data` frame and carries order rows whose `sequenceNumber` is
       greater than `snapshotSequenceNumber`. The cursor lets clients splice the
       live feed against the `/wallet/{address}/orderHistory` REST endpoint.
+
+      Each `orderChangeUpdate` frame batches losslessly: the `channel_data` `data`
+      array may carry multiple order events in a single frame — every event is
+      delivered (none are conflated or dropped) and clients must process the array
+      in order.
+
+      This is a stateful channel and enforces per-connection backpressure. A
+      consumer that falls behind is disconnected with close code `1013` (reason
+      `slow consumer — resubscribe for fresh snapshot`); after an internal feed
+      resynchronization (e.g. a matching-engine restart) subscribers are closed
+      with close code `1012` (reason `feed resync — resubscribe for fresh snapshot
+      (reset)`). Recovery for both is the same: reconnect and resubscribe; the
+      subscribe path returns a fresh consistent `OrderChangesSnapshot` and updates
+      from the disconnection window are not replayed (the snapshot reflects the
+      resulting order state; per-fill attribution lives in the executions data).
+      See the API overview for the shared connection-lifecycle contract.
     parameters:
       address:
         description: Ethereum wallet address
@@ -217,7 +256,15 @@ channels:
 
   assetOraclePrices:
     address: /v2/assetOraclePrices
-    description: Asset Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
+    description: |
+      Asset Stork oracle price updates. This replacement feed deliberately omits
+      AMM-era `poolPrice`.
+
+      This is a conflating channel: under backpressure the server coalesces
+      updates per asset — intermediate ticks may be dropped — but the latest
+      price per asset is always eventually delivered, so consumers converge to
+      current values. See the API overview for the shared connection-lifecycle
+      contract.
     messages:
       assetOraclePricesUpdate:
         $ref: '#/components/messages/AssetOraclePricesUpdate'
