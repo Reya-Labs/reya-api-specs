@@ -865,11 +865,12 @@ components:
       required: false
       description: >-
         Optional cap on the number of aggregated price levels returned per side.
-        When set to N (an integer >= 1), the response contains only the top N
-        levels on each side — the N best (highest) bids and the N best (lowest)
-        asks. Omit to receive the full order book (the default). Values below 1
-        are ignored — the server safely degrades to returning the full book, the
-        same as omitting the parameter.
+        The parameter must be an integer >= 1 (as declared by `minimum`); when
+        set to N, the response contains only the top N levels on each side — the
+        N best (highest) bids and the N best (lowest) asks. Omit to receive the
+        full order book (the default). Out-of-contract values (anything below 1)
+        are not rejected — the server safely degrades to returning the full book,
+        the same as omitting the parameter.
       schema:
         type: integer
         minimum: 1
