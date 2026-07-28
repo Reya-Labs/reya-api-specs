@@ -2419,7 +2419,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine. Always required, and always the explicit signed value: it is carried through to on-chain settlement as signed and is never inferred from `expiresAfter`. An order whose signed deadline is missing is rejected outright rather than settled against a substituted one.",
           "example": 1676923200
         },
         "expiresAfter": {
@@ -2622,7 +2622,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Distinct from `expiresAfter` (order lifetime).",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Distinct from `expiresAfter` (order lifetime). Always required, and always the explicit signed value: it is carried through to on-chain settlement as signed and is never inferred from `expiresAfter`.",
           "example": 1676923200
         }
       },
