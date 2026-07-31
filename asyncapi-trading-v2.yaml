@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.0.20
+  version: 3.0.21
   description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
   contact:
     name: Reya Network
@@ -25,6 +25,10 @@ servers:
     host: ws.reya.xyz
     protocol: wss
     description: Production WebSocket server
+  devnet:
+    host: websocket-devnet.reya-cronos.network
+    protocol: wss
+    description: Devnet WebSocket server for Perp OB integration
   staging:
     host: websocket-staging.reya.xyz
     protocol: wss
@@ -215,6 +219,17 @@ channels:
       accountBalanceUpdate:
         $ref: '#/components/messages/AccountBalanceUpdate'
 
+  walletAccounts:
+    address: /v2/wallet/{address}/accounts
+    description: Real-time account creation and account-binding updates for a wallet
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      accountUpdate:
+        $ref: '#/components/messages/AccountUpdate'
+
   assetOraclePrices:
     address: /v2/assetOraclePrices
     description: Asset Stork oracle price updates. This replacement feed deliberately omits AMM-era `poolPrice`.
@@ -401,6 +416,14 @@ operations:
       - $ref: '#/channels/walletAccountBalances/messages/accountBalanceUpdate'
     summary: Receive account balance updates for wallet
 
+  receiveWalletAccounts:
+    action: receive
+    channel:
+      $ref: '#/channels/walletAccounts'
+    messages:
+      - $ref: '#/channels/walletAccounts/messages/accountUpdate'
+    summary: Receive account creation and account-binding updates for wallet
+
   receiveAssetOraclePrices:
     action: receive
     channel:
@@ -523,6 +546,13 @@ components:
       summary: Real-time account balance update for wallet
       payload:
         $ref: '#/components/schemas/AccountBalanceUpdatePayload'
+
+    AccountUpdate:
+      name: accountUpdate
+      title: Account Update
+      summary: Real-time account creation or account-binding update for wallet
+      payload:
+        $ref: '#/components/schemas/AccountUpdatePayload'
 
     AssetOraclePricesUpdate:
       name: assetOraclePricesUpdate
@@ -721,6 +751,11 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
       description: Channel pattern for wallet account balances
+
+    WalletAccountsChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accounts$'
+      description: Channel pattern for wallet account creation and binding updates
 
     BaseUpdateEnvelope:
       type: object
@@ -968,6 +1003,51 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/AccountBalance'
 
+    AccountUpdateData:
+      type: object
+      title: AccountUpdateData
+      additionalProperties: false
+      required:
+        - accountId
+        - owner
+        - mainAccountId
+        - spotAccountId
+        - isMainPerpAccount
+        - isSpotAccount
+      properties:
+        accountId:
+          type: string
+          pattern: '^\\d+$'
+          description: Decimal-string account identifier whose creation or binding changed.
+          example: '7'
+        owner:
+          $ref: './trading-schemas.json#/definitions/Address'
+        mainAccountId:
+          type:
+            - string
+            - 'null'
+          pattern: '^\\d+$'
+          description: Decimal-string main perp account identifier for the owner, or null when none is bound.
+          example: '7'
+        spotAccountId:
+          type:
+            - string
+            - 'null'
+          pattern: '^\\d+$'
+          description: Decimal-string spot account identifier for the owner, or null when none is bound.
+          example: null
+        isMainPerpAccount:
+          type: boolean
+          description: Whether accountId is currently the owner's main perp account.
+          example: true
+        isSpotAccount:
+          type: boolean
+          description: Whether accountId is currently the owner's spot account.
+          example: false
+        removed:
+          type: boolean
+          description: Present and true only on the previous owner's channel during a defensive ownership rebind notification.
+
     AssetOraclePricesUpdateBody:
       type: object
       title: AssetOraclePricesUpdateBody
@@ -1067,6 +1147,31 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/AccountBalanceUpdateBody'
+
+    AccountUpdatePayload:
+      type: object
+      title: AccountUpdatePayload
+      additionalProperties: false
+      required:
+        - type
+        - timestamp
+        - channel
+        - data
+      properties:
+        type:
+          $ref: '#/components/schemas/ChannelDataMessageType'
+        timestamp:
+          type: number
+          description: Update timestamp (milliseconds)
+          example: 1747927089946
+        channel:
+          $ref: '#/components/schemas/WalletAccountsChannelPattern'
+        data:
+          type: array
+          title: AccountUpdateList
+          description: The account whose creation or owner binding changed.
+          items:
+            $ref: '#/components/schemas/AccountUpdateData'
 
     AssetOraclePricesUpdatePayload:
       title: AssetOraclePricesUpdatePayload

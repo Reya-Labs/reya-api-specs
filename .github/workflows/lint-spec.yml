@@ -19,6 +19,8 @@ on:
       - 'asyncapi-trading-v2.yaml'
       - 'asyncapi-exec-v2.yaml'
       - 'trading-schemas.json'
+      - 'scripts/verify-perpob-contracts.mjs'
+      - '.github/workflows/lint-spec.yml'
   workflow_dispatch:
 
 permissions:
@@ -59,5 +61,14 @@ jobs:
       - name: Validate trading AsyncAPI spec
         run: npx --yes @asyncapi/cli@1.7.0 validate asyncapi-trading-v2.yaml
 
+      - name: Bundle trading AsyncAPI spec
+        run: npx --yes @asyncapi/cli@1.7.0 bundle asyncapi-trading-v2.yaml -o /tmp/asyncapi-trading-v2-bundled.yaml
+
       - name: Validate order-entry AsyncAPI spec
         run: npx --yes @asyncapi/cli@1.7.0 validate asyncapi-exec-v2.yaml
+
+      - name: Bundle order-entry AsyncAPI spec
+        run: npx --yes @asyncapi/cli@1.7.0 bundle asyncapi-exec-v2.yaml -o /tmp/asyncapi-exec-v2-bundled.yaml
+
+      - name: Assert Perp OB integration contracts
+        run: node scripts/verify-perpob-contracts.mjs
