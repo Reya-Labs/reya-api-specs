@@ -2957,7 +2957,7 @@
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Snapshot generation timestamp (milliseconds)",
+          "description": "Matching-engine-clock timestamp (milliseconds) of the last applied depth change for this market. For a market unchanged since this API instance bootstrapped, it is the matching-engine timestamp of the depth stream tip at bootstrap. Always producer-clocked: identical across API instances and comparable across markets. Not a feed-liveness signal - a stale value means a quiet market, not a stalled feed.",
           "example": 1747927809946
         }
       },
