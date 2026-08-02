@@ -2315,6 +2315,11 @@
           "description": "Number of items returned",
           "example": 50
         },
+        "nextCursor": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "description": "Exclusive decimal event-sequence cursor for the next page. Present only when sequence mode has more rows."
+        },
         "endTime": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Timestamp of the last result in response order, in milliseconds. Descending endpoints return newest-first, so this is the oldest returned timestamp and can be used as the next page's endTime boundary.",
