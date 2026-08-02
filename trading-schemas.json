@@ -160,7 +160,7 @@
       "title": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
-      "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
+      "description": "Depth message type. SNAPSHOT = the complete aggregated book delivered on subscribe. UPDATE = a diff carrying only the price levels that changed since the previous frame (one UPDATE may include multiple levels across both bids and asks); each level's qty is the absolute new total at that price and qty 0 removes the level. Apply UPDATE frames in order to the SNAPSHOT to maintain the book."
     },
     "RequestError": {
       "title": "RequestError",
@@ -2957,7 +2957,7 @@
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Snapshot generation timestamp (milliseconds)",
+          "description": "Matching-engine-clock timestamp (milliseconds) of the last applied depth change for this market. For a market unchanged since this API instance bootstrapped, it is the matching-engine timestamp of the depth stream tip at bootstrap. Always producer-clocked: identical across API instances and comparable across markets. Not a feed-liveness signal - a stale value means a quiet market, not a stalled feed.",
           "example": 1747927809946
         }
       },
