@@ -8,6 +8,7 @@ This repository contains the API specifications for Reya Network's trading endpo
 - **`asyncapi-trading-v2.yaml`** - AsyncAPI specification for Reya DEX trading v2 WebSocket streams
 - **`trading-schemas.json`** - JSON schemas used both openapi and asyncapi specifications
 - **`docs/eip712.md`** - EIP-712 signing reference (domain, typehashes, market-id encoding) for order-entry payloads
+- **`docs/order-outcome-unknown-venue-benchmark.md`** - Peer-venue benchmark and client guidance for ambiguous order-placement outcomes
 
 ## Usage
 
