@@ -33,6 +33,14 @@ const asyncExecSpecOperation = yamlBlock(openApi, '  /asyncapi-exec-spec.yaml:')
 assert.ok(asyncExecSpecOperation.includes('operationId: getAsyncExecApiSpec'));
 assert.ok(asyncExecSpecOperation.includes('application/yaml:'));
 
+const executionTypeParam = yamlBlock(openApi, '    ExecutionTypeParam:');
+assert.ok(
+  executionTypeParam.includes(
+    "$ref: './trading-schemas.json#/definitions/ExecutionType'",
+  ),
+  'ExecutionTypeParam must reference the canonical ExecutionType payload enum',
+);
+
 for (const expected of [
   'host: websocket-devnet.reya-cronos.network',
   'address: /v2/wallet/{address}/accounts',
