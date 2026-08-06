@@ -34,11 +34,14 @@ assert.ok(asyncExecSpecOperation.includes('operationId: getAsyncExecApiSpec'));
 assert.ok(asyncExecSpecOperation.includes('application/yaml:'));
 
 const executionTypeParam = yamlBlock(openApi, '    ExecutionTypeParam:');
-assert.ok(
-  executionTypeParam.includes(
-    "$ref: './trading-schemas.json#/definitions/ExecutionType'",
-  ),
-  'ExecutionTypeParam must reference the canonical ExecutionType payload enum',
+const executionTypeParamValues = Array.from(
+  executionTypeParam.matchAll(/^\s+- ([A-Z_]+)$/gm),
+  (match) => match[1],
+);
+assert.deepEqual(
+  executionTypeParamValues,
+  tradingSchemas.definitions.ExecutionType.enum,
+  'ExecutionTypeParam must stay value-complete with the ExecutionType payload enum',
 );
 
 for (const expected of [

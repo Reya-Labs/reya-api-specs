@@ -873,8 +873,13 @@ components:
       required: false
       description: Filter perp executions by their exact response type. Omit to return executions of all types.
       schema:
-        $ref: './trading-schemas.json#/definitions/ExecutionType'
-      example: LIQUIDATION
+        type: string
+        enum:
+          - ORDER_MATCH
+          - LIQUIDATION
+          - ADL
+          - MARKET_CLOSE
+        example: LIQUIDATION
 
     DepthLimitParam:
       name: limit
