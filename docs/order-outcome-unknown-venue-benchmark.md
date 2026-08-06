@@ -46,7 +46,9 @@ For Reya clients, `ORDER_OUTCOME_UNKNOWN_ERROR` should mean:
 For create order, `clientOrderId` is the intended caller correlation tag, not
 yet a durable terminal lookup key or lifetime idempotency key. Clients should
 assign a non-zero value and keep it unique for their full reconciliation window.
-Modify and cancel use `clientOrderId` only as an existing-order selector, while
+Modify cannot assign a new `clientOrderId`: it is the lookup key when `orderId`
+is absent, and otherwise restates the existing order's immutable client ID in
+the signed full-order context. Cancel may use it as an existing-order selector;
 cancel-all and cancel-all-after do not carry it. Every operation therefore needs
 an attempt-specific reconciliation key containing the recovered signer/account,
 operation, signed-request hash, nonce, and applicable market scope; create can
