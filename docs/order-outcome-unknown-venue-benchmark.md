@@ -9,10 +9,9 @@ Hyperliquid, Lighter, and Extended
 Keep the proposed `ORDER_OUTCOME_UNKNOWN_ERROR` code from PRO-643, but revise
 its payload, recovery state machine, and lookup support before implementation:
 
-- echo `accountId` plus each operation's submitted selectors (`orderId` or
-  `clientOrderId`, mass-cancel `symbol`, cancel-all-after `timeoutMs`) in
-  addition to `nonce`, or explicitly require the client to retain and join the
-  original request;
+- require the client to retain and join the complete signed request. Treat
+  echoed fields as supplemental unless the error includes recovered signer,
+  market, `accountId`, `nonce`, and each operation's submitted selectors;
 - treat an identical same-nonce resend as a bounded probe, not an idempotent
   result replay or proof of durable execution; and
 - add a retained terminal-order lookup keyed by an attempt-unique pre-send
@@ -32,9 +31,10 @@ For Reya clients, `ORDER_OUTCOME_UNKNOWN_ERROR` should mean:
 - the error remains joined to the original signed request or echoes enough
   operation context to identify the intended state transition;
 - while that request is still valid, clients may resend the identical bytes
-  with the same nonce. Only a response with an explicit nonce-stage guarantee
-  can resolve the probe; generic API/ME errors and another transport ambiguity
-  do not resolve the original outcome;
+  with the same nonce only under a published nonce-floor continuity guarantee
+  covering any matching-engine recovery implicated by the error. Only a response
+  with an explicit nonce-stage guarantee can resolve the probe; generic API/ME
+  errors and another transport ambiguity do not resolve the original outcome;
 - `INVALID_NONCE_ERROR` means only that the matching engine's observed nonce
   floor is already at or above the submitted nonce. Attribute that floor to the
   original attempt only when the nonce was known fresh before send and traffic
@@ -62,8 +62,8 @@ the venue documents propagation and finality guarantees.
 | --- | --- | --- | --- | --- |
 | Binance | `-1007 TIMEOUT`: “Send status unknown; execution status unknown.” HTTP `5XX` responses can also have an unknown execution state. | The timeout format documents only `code` and `msg`; it does not echo the submitted `newClientOrderId`, signing `timestamp`, or an order ID. | Retain `symbol + newClientOrderId`; consume the User Data Stream, then query order status with `origClientOrderId`. This is the only explicit unknown-outcome recipe in the set. | No. `newClientOrderId` is unique only among open orders and may be reused after fill, so repeating placement can create a second order. |
 | Kraken | No placement-specific unknown-outcome code. `EService:Unavailable`, `EService:Busy`, `EGeneral:Internal error`, and non-JSON gateway errors are temporary/degraded-service signals without placement-finality semantics. | REST `AddOrder` success returns a venue `txid`; the reviewed error contract does not echo `nonce`, `cl_ord_id`, a request ID, or a server timestamp. | Persist a unique `cl_ord_id`; reconcile both open and closed orders using its filters before considering another placement. This is an inference from the available lookup surfaces, not Kraken's generic retry advice. | No. Nonces must increase, and `cl_ord_id` uniqueness is guaranteed only across open orders. A completed first order can therefore escape duplicate protection. |
-| Hyperliquid | No documented outcome-unknown code. Semantic placement failures are per-order string errors in an otherwise successful exchange response. | A successful or rejected item can carry order status/error information; no dedicated ambiguous error with echoed request identifiers is documented. | Assign a 128-bit `cloid`; query `orderStatus` by that ID and consume `orderUpdates`. `unknownOid` has no documented propagation/finality window, so it is not by itself conclusive. | No. Transaction nonces are anti-replay while retained and must not be reused; API-wallet nonce state can be pruned after deregistration/expiry. Same-`cloid` replay is not documented as idempotent. |
-| Lighter | Two-stage acceptance is explicit: `code=200` does not guarantee execution because the sequencer may still reject. Generic `29501 process timeout` and `29500 internal server error` have no documented enqueue/finality semantics. | A successful `sendTx` returns `tx_hash`; orders and streams expose `client_order_index`, venue order index, nonce, and status. The generic errors do not document these as echoed fields. | Assign a globally unique `client_order_index`; monitor WebSocket order updates and query `/accountOrders` by that index. If a `tx_hash` was received, query `/tx` for its status. `/accountOrders` retains only the last 10,000 active and last 1,000 inactive orders from 24 hours; negative lookups have no documented finality. | No. `21728 client order index already exists` detects some duplicates, but the docs do not promise replay returns the original result; `21104 invalid nonce` rejects nonce reuse. |
+| Hyperliquid | No documented outcome-unknown code. Semantic placement failures are per-order string errors in an otherwise successful exchange response. | A successful or rejected item can carry order status/error information; no dedicated ambiguous error with echoed request identifiers is documented. | Assign a 128-bit `cloid`; query `orderStatus` by that ID and consume `orderUpdates`. `unknownOid` has no documented propagation/finality window, so it is not by itself conclusive. | No. Transaction nonces are anti-replay while retained and must not be reused; API-wallet nonce state can be pruned after deregistration, expiry, or loss of funds on the registering account. Same-`cloid` replay is not documented as idempotent. |
+| Lighter | Two-stage acceptance is explicit: `code=200` does not guarantee execution because the sequencer may still reject. Generic `29501 process timeout` and `29500 internal server error` have no documented enqueue/finality semantics. | A successful `sendTx` returns `tx_hash`; orders and streams expose `client_order_index`, venue order index, nonce, and status. The generic errors do not document these as echoed fields. | Assign a globally unique `client_order_index`; monitor WebSocket order updates and query `/accountOrders` by that index. If a `tx_hash` was received, query `/tx` for its status. `/accountOrders` supports the last 10,000 active orders without a time limit, or the last 1,000 inactive orders from 24 hours; negative lookups have no documented finality. | No. `21728 client order index already exists` detects some duplicates, but the docs do not promise replay returns the original result; `21104 invalid nonce` rejects nonce reuse. |
 | Extended | No dedicated outcome-unknown code. REST placement is asynchronous: an accepted request can later be rejected or cancelled by the matching engine. Generic `500 InternalServerError` / `1006 UnhandledError` do not define placement finality. | Placement success returns Extended's order ID and the caller's `externalId`; the generic errors do not document either ID or the request nonce as echoed. | Persist the caller-assigned order `id`, returned as `externalId`; consume account WebSocket updates and query `/api/v1/user/orders/external/{externalId}` for current status and `statusReason`. | No. `1134 DuplicateOrder` is documented, but repeating the create request is not promised to return the original result or be a safe status probe. |
 
 ## Venue evidence
@@ -111,8 +111,9 @@ outcome-unknown state. A caller can assign `cloid`, query status by it, and
 receive it on `orderUpdates`. A status miss returns `unknownOid`; the docs do not
 give that negative result a conclusive propagation or retention window.
 Transaction nonces are anti-replay while their state is retained and must not be
-reused. The docs warn that deregistered/expired API-wallet nonce state may be
-pruned, after which previously signed actions can become replayable.
+reused. The docs warn that API-wallet nonce state may be pruned after wallet
+deregistration/expiry or when the registering account no longer has funds,
+after which previously signed actions can become replayable.
 
 Sources: [exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint),
 [error responses](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/error-responses),
@@ -127,9 +128,9 @@ caller-generated `client_order_index` can be used to query orders, while a
 returned `tx_hash` can be used for transaction-status lookup. It documents
 duplicate client-index, invalid-nonce, process-timeout, internal-server, and
 transaction-not-found errors, but does not turn any replay or negative lookup
-into a conclusive unknown-outcome protocol. `/accountOrders` is explicitly
-bounded to the last 10,000 active orders and the last 1,000 inactive orders from
-the preceding 24 hours.
+into a conclusive unknown-outcome protocol. `/accountOrders` supports the last
+10,000 active orders without a time limit, or the last 1,000 inactive orders
+from the preceding 24 hours.
 
 Sources: [trading semantics](https://apidocs.lighter.xyz/docs/trading),
 [getting started](https://apidocs.lighter.xyz/docs/get-started),
@@ -167,25 +168,31 @@ not triggered. When PRO-643 is implemented:
 
 1. Preserve the distinct `ORDER_OUTCOME_UNKNOWN_ERROR` code. It gives Reya
    clients a branchable contract that four of the five peers leave implicit.
-2. Echo `nonce`, `accountId`, and the operation's submitted selectors:
-   `clientOrderId`/`orderId`, mass-cancel `symbol`, or cancel-all-after
-   `timeoutMs`. Keep echoing the WebSocket envelope `id`. If the wire payload is
-   intentionally smaller, require callers to retain the complete signed request
-   and say that the error is not self-contained.
+2. Require callers to retain the complete signed request and keep echoing the
+   WebSocket envelope `id`. `nonce`, `accountId`, and submitted selectors are
+   useful supplemental fields, but are not a self-contained tuple: order/client
+   IDs are market-scoped and nonces are signer-scoped. A standalone error must
+   also echo the recovered signer and relevant market scope (`symbol` or
+   `marketId`, including an optional mass-cancel symbol), plus
+   cancel-all-after `timeoutMs` where applicable.
 3. State explicitly that matching-engine execution may have succeeded.
 4. Permit an identical same-nonce resend only as a bounded probe while the
-   signed request remains valid. Only a response whose contract proves how this
-   attempt interacted with the matching-engine nonce gate resolves the original
-   ambiguity. Current generic deadline, permission, risk, and business errors
-   carry no such stage guarantee.
+   signed request remains valid and the server guarantees nonce-floor continuity
+   across any relevant matching-engine recovery. Only a response whose contract
+   proves how this attempt interacted with the matching-engine nonce gate
+   resolves the original ambiguity. Current generic deadline, permission, risk,
+   and business errors carry no such stage guarantee.
 5. If the identical resend is again outcome-unknown or fails before the nonce
    gate, keep the operation unresolved. Clients may back off and retry the same
    signed bytes while valid, but must not advance the nonce; expiry without an
    authoritative result requires reconciliation/escalation, not replacement.
-6. Define `INVALID_NONCE_ERROR` narrowly: the matching engine's observed floor
-   is already at or above the submitted nonce. Attribute that to the original
-   only when the nonce was known fresh before send and all signer traffic was
-   exclusively serialized. Do not describe it as proof of on-disk durability.
+6. For a known-valid, non-zero same-nonce probe, define
+   `INVALID_NONCE_ERROR` narrowly: the matching engine's observed floor is
+   already at or above the submitted nonce. Attribute that to the original only
+   when the nonce was known fresh before send and all signer traffic was
+   exclusively serialized. Map the matching engine's `MISSING_NONCE` to an input
+   validation code instead of collapsing it into the same wire error. Do not
+   describe invalid nonce as proof of on-disk durability.
 7. After an unresolved probe, reconcile the operation's state before sending a
    fresh nonce. For create, open orders and current execution rows are supporting
    evidence only: execution rows cannot be queried by `clientOrderId`, and an
@@ -238,6 +245,8 @@ durability unless the matching engine exposes a genuine durable receipt.
 Sources: [current API nonce ownership and prechecks](https://github.com/Reya-Labs/reya-off-chain-monorepo/blob/2af1a2d2eced41a6c4379c9051542d9d3cb26295/packages/common-backend/src/trade-handlers/validate-permissions.ts#L15-L24),
 [current PRO-608 retry text](https://github.com/Reya-Labs/reya-off-chain-monorepo/blob/fc4d462c38b3aa407d437db49047173260a054bb/packages/common-backend/src/tcp/README.md#L45-L90),
 [current wire mapping](https://github.com/Reya-Labs/reya-off-chain-monorepo/blob/fc4d462c38b3aa407d437db49047173260a054bb/packages/common-backend/src/trade-handlers/map-me-transport-error.ts#L27-L42),
-[matching-engine nonce and append order](https://github.com/Reya-Labs/reya-chain/blob/694f5670e7dc6316fa6be52adf5926a22cefe2f8/crates/matching-engine/src/threads/reactor/reactor.rs#L1710-L1832),
+[current ME nonce-code mapping](https://github.com/Reya-Labs/reya-off-chain-monorepo/blob/fc4d462c38b3aa407d437db49047173260a054bb/packages/common-backend/src/trade-handlers/me-error.ts#L1-L18),
+[matching-engine nonce, append, and response order](https://github.com/Reya-Labs/reya-chain/blob/694f5670e7dc6316fa6be52adf5926a22cefe2f8/crates/matching-engine/src/threads/reactor/reactor.rs#L1700-L1901),
 [WAL page-cache flush versus `fdatasync`](https://github.com/Reya-Labs/reya-chain/blob/694f5670e7dc6316fa6be52adf5926a22cefe2f8/crates/matching-engine/src/base/persistence/wal.rs#L126-L162),
+[periodic WAL sync loop](https://github.com/Reya-Labs/reya-chain/blob/694f5670e7dc6316fa6be52adf5926a22cefe2f8/crates/matching-engine/src/threads/disk_writer/disk_writer.rs#L270-L326),
 [frame flush implementation](https://github.com/Reya-Labs/reya-chain/blob/694f5670e7dc6316fa6be52adf5926a22cefe2f8/crates/matching-engine/src/base/persistence/framing.rs#L65-L83).
