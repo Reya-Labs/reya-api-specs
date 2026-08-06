@@ -43,13 +43,16 @@ For Reya clients, `ORDER_OUTCOME_UNKNOWN_ERROR` should mean:
   Never submit a replacement with a fresh nonce while the outcome remains
   unresolved.
 
-`clientOrderId` is the intended caller correlation tag, not yet a durable
-terminal lookup key or lifetime idempotency key. A retained lookup must define
-its namespace, propagation/finality point, retention window, and reuse rules;
-the safest attempt key is a composite such as signer/account +
-`clientOrderId` + nonce (or a request hash). Until then, clients should assign a
-non-zero `clientOrderId`, keep it unique for their full reconciliation window,
-and persist the complete signed request.
+For create order, `clientOrderId` is the intended caller correlation tag, not
+yet a durable terminal lookup key or lifetime idempotency key. Clients should
+assign a non-zero value and keep it unique for their full reconciliation window.
+Modify and cancel use `clientOrderId` only as an existing-order selector, while
+cancel-all and cancel-all-after do not carry it. Every operation therefore needs
+an attempt-specific reconciliation key containing the recovered signer/account,
+operation, signed-request hash, nonce, and applicable market scope; create can
+also include `clientOrderId`. A retained lookup must define that key's namespace,
+propagation/finality point, retention window, and reuse rules. Until then,
+clients should persist the complete signed request.
 
 ## Comparison
 
@@ -182,10 +185,14 @@ not triggered. When PRO-643 is implemented:
    proves how this attempt interacted with the matching-engine nonce gate
    resolves the original ambiguity. Current generic deadline, permission, risk,
    and business errors carry no such stage guarantee.
-5. If the identical resend is again outcome-unknown or fails before the nonce
-   gate, keep the operation unresolved. Clients may back off and retry the same
-   signed bytes while valid, but must not advance the nonce; expiry without an
-   authoritative result requires reconciliation/escalation, not replacement.
+5. Default to one probe attempt: one identical same-nonce resend. If a future
+   contract publishes a larger finite probe budget, additional retries must be
+   limited to explicitly classified transient transport or availability failures
+   known to occur before the nonce gate. Do not retry deadline, permission, risk,
+   business, or other deterministic errors. Outcome-unknown, an error without an
+   authoritative nonce-stage guarantee, exhaustion of the probe budget, or
+   expiry keeps the operation unresolved and requires reconciliation/escalation;
+   clients must not advance the nonce.
 6. For a known-valid, non-zero same-nonce probe, define
    `INVALID_NONCE_ERROR` narrowly: the matching engine's observed floor is
    already at or above the submitted nonce. Attribute that to the original only
@@ -197,9 +204,13 @@ not triggered. When PRO-643 is implemented:
    fresh nonce. For create, open orders and current execution rows are supporting
    evidence only: execution rows cannot be queried by `clientOrderId`, and an
    absent open order is not authoritative for an immediately terminal order.
-8. Add a retained terminal-order lookup under an attempt-unique namespace, such
-   as signer/account + `clientOrderId` + nonce (or request hash), with explicit
-   propagation/finality, retention, duplicate, and reuse rules.
+8. Add a retained terminal create-result lookup under an attempt-unique
+   namespace, such as signer/account + `clientOrderId` + nonce (or request hash),
+   with explicit propagation/finality, retention, duplicate, and reuse rules.
+   It must return every field needed to reconstruct the create response,
+   including the IOC fill range, or be paired with a retained fill lookup under
+   the same attempt key. Define equivalent operation-specific keys and terminal
+   results for modify, cancel, cancel-all, and cancel-all-after.
 
 ### Remaining create-order lookup gap
 
@@ -215,12 +226,14 @@ terminal create outcome recoverable from `clientOrderId`:
 - `orderHistory` is bounded, may exclude high-throughput accounts, and is
   explicitly not intended for market-maker reconciliation.
 
-PRO-643 should therefore add or depend on a retained terminal-order status
+PRO-643 should therefore add or depend on a retained terminal create-result
 lookup under an attempt-unique key with documented propagation/finality and
-retention. Until then, `INVALID_NONCE_ERROR` plus an absent open order can still
-leave an immediately filled/cancelled create ambiguous. This gap is specific to
-Reya's current surfaces; the peer comparison shows why negative-lookup finality
-must be specified rather than inferred.
+retention. It must return the IOC fill range and every other response-only field
+needed to reconstruct the create result, or be paired with a retained fill
+lookup under the same key. Until then, `INVALID_NONCE_ERROR` plus an absent open
+order can still leave an immediately filled/cancelled create ambiguous. This gap
+is specific to Reya's current surfaces; the peer comparison shows why
+negative-lookup finality must be specified rather than inferred.
 
 Sources: [current order-history scope](https://github.com/Reya-Labs/reya-api-specs/blob/02e1987d091c5be87431aa2a999db4f75517db00/openapi-trading-v2.yaml#L495-L526),
 [current order and execution schemas](https://github.com/Reya-Labs/reya-api-specs/blob/02e1987d091c5be87431aa2a999db4f75517db00/trading-schemas.json#L357-L417),
