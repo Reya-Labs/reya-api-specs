@@ -183,10 +183,12 @@ not triggered. When PRO-643 is implemented:
 3. State explicitly that matching-engine execution may have succeeded.
 4. Permit an identical same-nonce resend only as a bounded probe while the
    signed request remains valid and the server guarantees nonce-floor continuity
-   across any relevant matching-engine recovery. Only a response whose contract
-   proves how this attempt interacted with the matching-engine nonce gate
-   resolves the original ambiguity. Current generic deadline, permission, risk,
-   and business errors carry no such stage guarantee.
+   across any relevant matching-engine recovery. A response with an explicit
+   nonce-stage contract can establish probe attribution and retry eligibility,
+   but it does not identify the terminal operation result or recover response-only
+   fields. Resolve the original operation outcome only through a complete result
+   receipt or an authoritative operation lookup. Current generic deadline,
+   permission, risk, and business errors carry no nonce-stage guarantee.
 5. Default to one probe attempt: one identical same-nonce resend. If a future
    contract publishes a larger finite probe budget, additional retries must be
    limited to explicitly classified transient transport or availability failures
@@ -211,8 +213,15 @@ not triggered. When PRO-643 is implemented:
    with explicit propagation/finality, retention, duplicate, and reuse rules.
    It must return every field needed to reconstruct the create response,
    including the IOC fill range, or be paired with a retained fill lookup under
-   the same attempt key. Define equivalent operation-specific keys and terminal
-   results for modify, cancel, cancel-all, and cancel-all-after.
+   the same attempt key. Define complete response fields and state transitions
+   for every other operation-specific lookup: modify needs the complete
+   modification result (including immediate-fill and cancellation fields), and
+   cancel needs its order identity and terminal status. Cancel-all must recover
+   `cancelledCount` and provide authoritative reconciliation of the affected
+   order transitions. Cancel-all-after must recover `accountId`, `timeoutMs`, and
+   optional `triggerAt`, distinguish command application (arm, refresh, or
+   disarm) from the later timer firing, expose authoritative timer state, and
+   reconcile the affected order transitions if the timer fires.
 
 ### Remaining create-order lookup gap
 
