@@ -43,6 +43,23 @@ assert.deepEqual(
   tradingSchemas.definitions.ExecutionType.enum,
   'ExecutionTypeParam must stay value-complete with the ExecutionType payload enum',
 );
+const executionTypeParamRef =
+  "$ref: '#/components/parameters/ExecutionTypeParam'";
+const executionTypeFilterOperations = [
+  '  /market/{symbol}/perpExecutions:',
+  '  /wallet/{address}/perpExecutions:',
+];
+for (const operationHeading of executionTypeFilterOperations) {
+  assert.ok(
+    yamlBlock(openApi, operationHeading).includes(executionTypeParamRef),
+    `${operationHeading.trim()} must expose ExecutionTypeParam`,
+  );
+}
+assert.equal(
+  openApi.split(executionTypeParamRef).length - 1,
+  executionTypeFilterOperations.length,
+  'ExecutionTypeParam must be used by exactly the market and wallet perp execution operations',
+);
 
 for (const expected of [
   'host: websocket-devnet.reya-cronos.network',
