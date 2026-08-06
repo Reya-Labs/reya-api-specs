@@ -183,11 +183,24 @@ not triggered. When PRO-643 is implemented:
 3. State explicitly that matching-engine execution may have succeeded.
 4. Permit an identical same-nonce resend only as a bounded probe while the
    signed request remains valid and the server guarantees nonce-floor continuity
-   across any relevant matching-engine recovery. A response with an explicit
-   nonce-stage contract can establish probe attribution and retry eligibility,
-   but it does not identify the terminal operation result or recover response-only
-   fields. Resolve the original operation outcome only through a complete result
-   receipt or an authoritative operation lookup. Current generic deadline,
+   across any relevant matching-engine recovery. Define any nonce-stage evidence
+   as a versioned, machine-readable receipt bound to the recovered signer/account,
+   submitted nonce, and signed-request hash/attempt key, with an explicit evidence
+   source (`API` or `MATCHING_ENGINE`). At minimum, define these stages and
+   actions:
+   - `NOT_REACHED`: this probe stopped before the matching-engine nonce gate. A
+     same-bytes retry is allowed only for a classified transient failure while
+     the finite probe budget remains; otherwise reconcile/escalate;
+   - `FLOOR_AT_OR_ABOVE`: the matching engine observed its nonce floor at or
+     above the submitted nonce. Stop probing and reconcile, subject to the
+     attribution constraints in item 6;
+   - `ACCEPTED`: the matching engine attests that this probe accepted/advanced
+     the nonce. Stop probing and reconcile the terminal operation result; and
+   - `UNKNOWN`: no nonce-stage assertion is available. Reconcile/escalate.
+   Only matching-engine evidence may assert `FLOOR_AT_OR_ABOVE` or `ACCEPTED`.
+   None of these stages identifies the terminal operation result or recovers
+   response-only fields; resolve that outcome only through a complete result
+   receipt or authoritative operation lookup. Current generic deadline,
    permission, risk, and business errors carry no nonce-stage guarantee.
 5. Default to one probe attempt: one identical same-nonce resend. If a future
    contract publishes a larger finite probe budget, additional retries must be
@@ -219,9 +232,11 @@ not triggered. When PRO-643 is implemented:
    cancel needs its order identity and terminal status. Cancel-all must recover
    `cancelledCount` and provide authoritative reconciliation of the affected
    order transitions. Cancel-all-after must recover `accountId`, `timeoutMs`, and
-   optional `triggerAt`, distinguish command application (arm, refresh, or
-   disarm) from the later timer firing, expose authoritative timer state, and
-   reconcile the affected order transitions if the timer fires.
+   optional advisory `triggerAt`, distinguish command application (arm, refresh,
+   or disarm) from the later timer firing, and expose authoritative timer state
+   to determine whether firing occurred. The firing scope is the account's open
+   orders at that time excluding protective `STOP_LOSS` and `TAKE_PROFIT` orders;
+   reconcile only the resulting affected-order transitions.
 
 ### Remaining create-order lookup gap
 
