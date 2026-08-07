@@ -44,7 +44,7 @@ assert.deepEqual(
   'ExecutionTypeParam must stay value-complete with the ExecutionType payload enum',
 );
 const executionTypeParamRefLine =
-  /^(\s*)(?:-\s+)?\$ref:\s*(['"])#\/components\/parameters\/ExecutionTypeParam\2(?:\s+#.*)?\s*$/gm;
+  /^([ ]*)-[ ]+\$ref:[ ]*(['"])#\/components\/parameters\/ExecutionTypeParam\2(?:[ ]+#.*)?[ ]*$/gm;
 const countActiveExecutionTypeParamRefs = (source, expectedIndent) =>
   Array.from(
     source.matchAll(executionTypeParamRefLine),
