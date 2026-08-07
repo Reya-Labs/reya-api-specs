@@ -44,9 +44,14 @@ assert.deepEqual(
   'ExecutionTypeParam must stay value-complete with the ExecutionType payload enum',
 );
 const executionTypeParamRefLine =
-  /^\s*(?:-\s+)?\$ref:\s+'#\/components\/parameters\/ExecutionTypeParam'\s*$/gm;
-const countActiveExecutionTypeParamRefs = (source) =>
-  source.match(executionTypeParamRefLine)?.length ?? 0;
+  /^(\s*)(?:-\s+)?\$ref:\s*(['"])#\/components\/parameters\/ExecutionTypeParam\2(?:\s+#.*)?\s*$/gm;
+const countActiveExecutionTypeParamRefs = (source, expectedIndent) =>
+  Array.from(
+    source.matchAll(executionTypeParamRefLine),
+    (match) => match[1].length,
+  ).filter(
+    (indent) => expectedIndent === undefined || indent === expectedIndent,
+  ).length;
 const executionTypeFilterOperations = [
   '  /market/{symbol}/perpExecutions:',
   '  /wallet/{address}/perpExecutions:',
@@ -56,7 +61,7 @@ for (const operationHeading of executionTypeFilterOperations) {
   const getOperation = yamlBlock(pathItem, '    get:');
   const parameters = yamlBlock(getOperation, '      parameters:');
   assert.equal(
-    countActiveExecutionTypeParamRefs(parameters),
+    countActiveExecutionTypeParamRefs(parameters, 8),
     1,
     `${operationHeading.trim()} GET parameters must expose ExecutionTypeParam exactly once`,
   );
