@@ -33,6 +33,45 @@ const asyncExecSpecOperation = yamlBlock(openApi, '  /asyncapi-exec-spec.yaml:')
 assert.ok(asyncExecSpecOperation.includes('operationId: getAsyncExecApiSpec'));
 assert.ok(asyncExecSpecOperation.includes('application/yaml:'));
 
+const executionTypeParam = yamlBlock(openApi, '    ExecutionTypeParam:');
+const executionTypeParamValues = Array.from(
+  executionTypeParam.matchAll(/^\s+- ([A-Z_]+)$/gm),
+  (match) => match[1],
+);
+assert.deepEqual(
+  executionTypeParamValues,
+  tradingSchemas.definitions.ExecutionType.enum,
+  'ExecutionTypeParam must stay value-complete with the ExecutionType payload enum',
+);
+const executionTypeParamRefLine =
+  /^([ ]*)-[ ]+\$ref:[ ]*(['"])#\/components\/parameters\/ExecutionTypeParam\2(?:[ ]+#.*)?[ ]*$/gm;
+const countActiveExecutionTypeParamRefs = (source, expectedIndent) =>
+  Array.from(
+    source.matchAll(executionTypeParamRefLine),
+    (match) => match[1].length,
+  ).filter(
+    (indent) => expectedIndent === undefined || indent === expectedIndent,
+  ).length;
+const executionTypeFilterOperations = [
+  '  /market/{symbol}/perpExecutions:',
+  '  /wallet/{address}/perpExecutions:',
+];
+for (const operationHeading of executionTypeFilterOperations) {
+  const pathItem = yamlBlock(openApi, operationHeading);
+  const getOperation = yamlBlock(pathItem, '    get:');
+  const parameters = yamlBlock(getOperation, '      parameters:');
+  assert.equal(
+    countActiveExecutionTypeParamRefs(parameters, 8),
+    1,
+    `${operationHeading.trim()} GET parameters must expose ExecutionTypeParam exactly once`,
+  );
+}
+assert.equal(
+  countActiveExecutionTypeParamRefs(openApi),
+  executionTypeFilterOperations.length,
+  'ExecutionTypeParam must not be used outside the market and wallet perp execution GET operations',
+);
+
 for (const expected of [
   'host: websocket-devnet.reya-cronos.network',
   'address: /v2/wallet/{address}/accounts',
