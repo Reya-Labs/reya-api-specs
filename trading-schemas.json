@@ -2318,12 +2318,12 @@
         "endTime": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Timestamp of the last result in response order, in milliseconds. Descending endpoints return newest-first, so this is the oldest returned timestamp and can be used as the next page's endTime boundary.",
-          "example": 1756733679000
+          "example": 1756733579000
         },
         "startTime": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Timestamp of the first result in response order, in milliseconds. Descending endpoints return newest-first, so this is the newest returned timestamp.",
-          "example": 1756733579000
+          "example": 1756733679000
         }
       },
       "additionalProperties": true
