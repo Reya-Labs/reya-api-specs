@@ -50,15 +50,18 @@ const executionTypeFilterOperations = [
   '  /wallet/{address}/perpExecutions:',
 ];
 for (const operationHeading of executionTypeFilterOperations) {
-  assert.ok(
-    yamlBlock(openApi, operationHeading).includes(executionTypeParamRef),
-    `${operationHeading.trim()} must expose ExecutionTypeParam`,
+  const pathItem = yamlBlock(openApi, operationHeading);
+  const getOperation = yamlBlock(pathItem, '    get:');
+  assert.equal(
+    getOperation.split(executionTypeParamRef).length - 1,
+    1,
+    `${operationHeading.trim()} GET must expose ExecutionTypeParam exactly once`,
   );
 }
 assert.equal(
   openApi.split(executionTypeParamRef).length - 1,
   executionTypeFilterOperations.length,
-  'ExecutionTypeParam must be used by exactly the market and wallet perp execution operations',
+  'ExecutionTypeParam must not be used outside the market and wallet perp execution GET operations',
 );
 
 for (const expected of [
