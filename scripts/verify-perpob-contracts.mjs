@@ -43,8 +43,10 @@ assert.deepEqual(
   tradingSchemas.definitions.ExecutionType.enum,
   'ExecutionTypeParam must stay value-complete with the ExecutionType payload enum',
 );
-const executionTypeParamRef =
-  "$ref: '#/components/parameters/ExecutionTypeParam'";
+const executionTypeParamRefLine =
+  /^\s*(?:-\s+)?\$ref:\s+'#\/components\/parameters\/ExecutionTypeParam'\s*$/gm;
+const countActiveExecutionTypeParamRefs = (source) =>
+  source.match(executionTypeParamRefLine)?.length ?? 0;
 const executionTypeFilterOperations = [
   '  /market/{symbol}/perpExecutions:',
   '  /wallet/{address}/perpExecutions:',
@@ -52,14 +54,15 @@ const executionTypeFilterOperations = [
 for (const operationHeading of executionTypeFilterOperations) {
   const pathItem = yamlBlock(openApi, operationHeading);
   const getOperation = yamlBlock(pathItem, '    get:');
+  const parameters = yamlBlock(getOperation, '      parameters:');
   assert.equal(
-    getOperation.split(executionTypeParamRef).length - 1,
+    countActiveExecutionTypeParamRefs(parameters),
     1,
-    `${operationHeading.trim()} GET must expose ExecutionTypeParam exactly once`,
+    `${operationHeading.trim()} GET parameters must expose ExecutionTypeParam exactly once`,
   );
 }
 assert.equal(
-  openApi.split(executionTypeParamRef).length - 1,
+  countActiveExecutionTypeParamRefs(openApi),
   executionTypeFilterOperations.length,
   'ExecutionTypeParam must not be used outside the market and wallet perp execution GET operations',
 );
