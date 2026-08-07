@@ -25,6 +25,12 @@ assert.equal(
   'Reduce-only intent. Required only for perp IOC orders. Omit this field for every other order class: perp GTC/GTT, STOP_LOSS/TAKE_PROFIT, and all spot orders. Sending the field, including `false`, for those order classes is rejected with `INPUT_VALIDATION_ERROR`. Omitted values map to `false` in the signed on-chain `OrderDetails.reduceOnly` field.',
 );
 
+const paginationMeta = tradingSchemas.definitions.PaginationMeta.properties;
+assert.ok(
+  paginationMeta.startTime.example > paginationMeta.endTime.example,
+  'PaginationMeta examples must show newest-first ordering',
+);
+
 assert.ok(
   openApi.includes('url: https://api-devnet.reya-cronos.network/v2'),
   'OpenAPI must include the current devnet server',
