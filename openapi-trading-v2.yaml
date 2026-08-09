@@ -1158,9 +1158,13 @@ tags:
       wallet's resting orders live — offboarding is graceful, and an accidental
       removal can never flatten a book. **Ejection** is a separate, explicit
       decision under which the exchange cancels the account's resting orders
-      itself; while it is in force the matching engine refuses new placements
-      with `ACCOUNT_SUSPENDED_ERROR`, and the client's own cancels continue to
-      be accepted throughout. Neither state is retryable from the client side.
+      itself — except armed protective stops (`STOP_LOSS` / `TAKE_PROFIT`),
+      which ejection deliberately leaves armed, because ejecting an account
+      does not close its positions and it must not be left holding exposure it
+      can no longer re-protect. While ejection is in force the matching engine
+      refuses new placements with `ACCOUNT_SUSPENDED_ERROR`, and the client's
+      own cancels continue to be accepted throughout. Neither state is
+      retryable from the client side.
 
       Order entry is also rate limited and load shed; see `RATE_LIMITED_ERROR`,
       `OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`
