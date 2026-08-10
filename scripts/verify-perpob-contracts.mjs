@@ -123,4 +123,108 @@ assert.ok(
   'Execution AsyncAPI must include the current devnet server',
 );
 
+// --- Rate limit v1 wire contract -------------------------------------------
+
+for (const code of [
+  'RATE_LIMITED_ERROR',
+  'OPEN_ORDER_COUNT_EXCEEDED_ERROR',
+  'OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR',
+  'CAPACITY_LIMITED_ERROR',
+  'NOT_WHITELISTED_ERROR',
+  'ACCOUNT_SUSPENDED_ERROR',
+]) {
+  assert.ok(
+    tradingSchemas.definitions.RequestErrorCode.enum.includes(code),
+    `RequestErrorCode must keep the rate-limit v1 member: ${code}`,
+  );
+}
+
+const responseStatuses = (operationId) => {
+  const pathItem = yamlBlock(openApi, `  /${operationId}:`);
+  const responses = yamlBlock(yamlBlock(pathItem, '    post:'), '      responses:');
+  return Array.from(responses.matchAll(/^        '(\d{3})':$/gm), (match) => match[1]);
+};
+// Exact sets: absence is the load-bearing half. A cancel that starts declaring
+// 503, or a cancelAllAfter that does, would mean risk-off traffic can be shed.
+const ACCESS_AND_LIMIT_STATUSES = ['403', '429', '503'];
+for (const [operationId, expectedStatuses] of [
+  ['createOrder', ['403', '429', '503']],
+  ['modifyOrder', ['403', '429', '503']],
+  ['cancelOrder', ['429']],
+  ['cancelAll', ['429']],
+  // Arming or refreshing a countdown from a suspended account is refused 403;
+  // disarming is not gated, and no direction is ever capacity-shed.
+  ['cancelAllAfter', ['403', '429']],
+]) {
+  const declared = responseStatuses(operationId).filter((status) =>
+    ACCESS_AND_LIMIT_STATUSES.includes(status),
+  );
+  assert.deepEqual(
+    declared.sort(),
+    [...expectedStatuses].sort(),
+    `POST /v2/${operationId} must declare exactly these access/limit responses: ${expectedStatuses.join(', ')} (declares: ${declared.join(', ') || 'none'})`,
+  );
+}
+
+const tooManyRequests = yamlBlock(openApi, '    TooManyRequests:');
+const tooManyRequestsHeader = yamlBlock(tooManyRequests, '        Retry-After:');
+assert.ok(
+  tooManyRequestsHeader.includes('required: true'),
+  'TooManyRequests must declare Retry-After as required',
+);
+assert.ok(
+  tooManyRequestsHeader.includes('minimum: 1'),
+  'TooManyRequests Retry-After must declare minimum: 1 (the edge never sends 0)',
+);
+const serviceUnavailableHeader = yamlBlock(
+  yamlBlock(openApi, '    ServiceUnavailable:'),
+  '        Retry-After:',
+);
+assert.ok(
+  serviceUnavailableHeader.includes('required: false'),
+  'ServiceUnavailable must declare Retry-After as optional',
+);
+
+const retryAfterMs = tradingSchemas.definitions.RequestError.properties.retryAfterMs;
+assert.ok(retryAfterMs, 'RequestError must carry retryAfterMs');
+assert.equal(retryAfterMs.type, 'integer', 'RequestError.retryAfterMs must be an integer');
+assert.equal(
+  retryAfterMs.minimum,
+  1,
+  'RequestError.retryAfterMs must declare minimum: 1 — a zero hint is collapsed to omission',
+);
+
+for (const [name, source] of [
+  ['Execution AsyncAPI', execAsyncApi],
+  ['Info AsyncAPI', infoAsyncApi],
+]) {
+  const info = yamlBlock(source, 'info:');
+  assert.ok(info.includes('4029'), `${name} info description must document close code 4029`);
+  assert.ok(
+    info.includes('MSG_RATE_EXCEEDED retry_after_ms='),
+    `${name} info description must document the 4029 close reason grammar verbatim`,
+  );
+}
+// Proximity rather than two independent substring hits, so a code cannot stay
+// "documented" while its reason drifts to a different close code.
+const infoAsyncApiInfo = yamlBlock(infoAsyncApi, 'info:');
+const BINDING_WINDOW = 200;
+for (const [closeCode, boundTo] of [
+  ['1013', 'slow consumer'],
+  ['1012', 'feed resync'],
+]) {
+  const token = `\`${closeCode}\``;
+  let bound = false;
+  for (let at = infoAsyncApiInfo.indexOf(token); at !== -1; at = infoAsyncApiInfo.indexOf(token, at + 1)) {
+    if (infoAsyncApiInfo.slice(at, at + BINDING_WINDOW).includes(boundTo)) {
+      bound = true;
+      break;
+    }
+  }
+  assert.ok(
+    bound,
+    `Info AsyncAPI must keep close code ${closeCode} bound to "${boundTo}" (within ${BINDING_WINDOW} characters of a \`${closeCode}\` mention)`,
+  );
+}
+
 console.log('Perp OB REST and AsyncAPI contract assertions passed.');
