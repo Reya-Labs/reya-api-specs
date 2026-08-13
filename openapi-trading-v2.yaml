@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.26
+  version: 3.0.27
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -662,8 +662,14 @@ paths:
                 $ref: '#/components/schemas/CreateOrderResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /modifyOrder:
     post:
@@ -722,8 +728,14 @@ paths:
                 $ref: '#/components/schemas/ModifyOrderResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /cancelOrder:
     post:
@@ -751,6 +763,8 @@ paths:
                 $ref: '#/components/schemas/CancelOrderResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -776,6 +790,8 @@ paths:
                 $ref: '#/components/schemas/MassCancelResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -793,8 +809,10 @@ paths:
         trigger the countdown. `accountId`, `timeoutMs`, `nonce`, and `deadline` are bound into the
         EIP-712 `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds),
         not the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
-        milliseconds; omitted when disarming). Also available on the order-entry WebSocket
-        (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
+        milliseconds; omitted when disarming). Arming or refreshing (non-zero `timeoutMs`) from a
+        suspended account is refused with HTTP 403 and `ACCOUNT_SUSPENDED_ERROR`; disarming
+        (`timeoutMs: 0`) is never refused for access control. Also available on the order-entry
+        WebSocket (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
       operationId: cancelAllAfter
       tags:
         - Order Entry
@@ -813,6 +831,10 @@ paths:
                 $ref: '#/components/schemas/CancelAllAfterResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -1016,6 +1038,119 @@ components:
             error: INPUT_VALIDATION_ERROR
             message: Invalid request parameters
 
+    Forbidden:
+      description: |
+        Order insertion is not permitted for this wallet or account. Returned
+        with `NOT_WHITELISTED_ERROR` when the wallet is not on the order-entry
+        allowlist, and with `ACCOUNT_SUSPENDED_ERROR` when the account has been
+        suspended by the exchange. Neither is retryable: both are access
+        decisions, not transient conditions.
+
+        `NOT_WHITELISTED_ERROR` also covers a wallet that *is* on the allowlist
+        but whose `accountId` resolves to no owner. The gate is owner-keyed and
+        fails closed, so an unresolvable owner is refused exactly as an
+        unlisted wallet is; the message distinguishes it (`Account owner could
+        not be resolved; this account is not whitelisted for order entry` vs
+        `Wallet is not whitelisted for order entry`). An owner lookup that
+        *errors* rather than resolving to nothing is a transient server-side
+        failure and comes back as 503, not 403 — see `ServiceUnavailable`.
+
+        This status is returned by `POST /v2/createOrder`,
+        `POST /v2/modifyOrder` and, in one narrow case,
+        `POST /v2/cancelAllAfter`. `POST /v2/cancelOrder` and
+        `POST /v2/cancelAll` are never gated by access control: they keep
+        working for a wallet that has been removed from the allowlist or whose
+        account has been suspended, so a client can always flatten its resting
+        orders.
+
+        On `POST /v2/cancelAllAfter` the gate splits by intent. Arming or
+        refreshing a countdown (non-zero `timeoutMs`) from a **suspended**
+        account is refused with `ACCOUNT_SUSPENDED_ERROR` — the exchange is
+        already cancelling that account's resting orders, so a fresh deadline
+        has nothing left to protect. Disarming (`timeoutMs: 0`) is never
+        refused for access control, in any state: a dead-man's switch can
+        always be turned off. Removal from the allowlist on its own does not
+        gate the countdown — a wallet that has been removed but whose account
+        is not suspended may still arm, refresh and disarm.
+
+        Market data, positions, balances and order state remain readable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RequestError'
+          example:
+            error: NOT_WHITELISTED_ERROR
+            message: Wallet is not whitelisted for order entry
+
+    TooManyRequests:
+      description: |
+        The account's own limits refused the request. `RATE_LIMITED_ERROR` means
+        the request budget for that class of operation (placement, single
+        cancel, bulk cancel, cancel-all-after control) is momentarily exhausted
+        — the classes are budgeted separately, so being throttled on one does
+        not throttle the others. On `createOrder` / `modifyOrder` this status is
+        also returned for the account's resting-order caps,
+        `OPEN_ORDER_COUNT_EXCEEDED_ERROR` and
+        `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`.
+
+        `Retry-After` is always present on this status and is never `0`. For
+        `RATE_LIMITED_ERROR` it is the exchange's own retry instant, rounded up
+        to whole seconds — wait at least that long, since an earlier retry only
+        consumes more budget. For the two open-order caps it is a backoff floor
+        rather than a promise: waiting does not by itself clear the condition,
+        which lifts only when resting orders are cancelled or filled.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying, rounded up. Never `0`.
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          example: 2
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RequestError'
+          example:
+            error: RATE_LIMITED_ERROR
+            message: Rate limit exceeded, retry after the indicated delay
+
+    ServiceUnavailable:
+      description: |
+        The exchange is shedding load (`CAPACITY_LIMITED_ERROR`): it is at its
+        ingest ceiling and is refusing new orders to protect the ones already in
+        the book. This is about the venue, not the account. Cancels are never
+        shed — `POST /v2/cancelOrder`, `POST /v2/cancelAll` and
+        `POST /v2/cancelAllAfter` keep working throughout, so flattening risk
+        stays available. Retry the create after a short delay, and do not stop
+        cancelling.
+
+        `CAPACITY_LIMITED_ERROR` has a second provenance on `createOrder` and
+        `modifyOrder`, and this version of the API does not give it a code of
+        its own: the API edge also returns it when the `accountId` → owner
+        lookup the allowlist gate depends on *fails* — a database dependency
+        failure, not venue overload. The `message` is what tells them apart
+        (`Account owner could not be resolved right now; this is a transient
+        server-side failure, retry shortly` for the edge-originated one). The
+        correct client behaviour is the same either way — short backoff, retry,
+        and keep cancelling — so a client need not branch on it; server-side
+        logs and metrics carry distinct reason labels for operators.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying, rounded up. Present only when the exchange supplies a hint.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          example: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RequestError'
+          example:
+            error: CAPACITY_LIMITED_ERROR
+            message: Venue capacity is temporarily limited, retry shortly
+
     InternalServerError:
       description: Internal server error
       content:
@@ -1036,4 +1171,48 @@ tags:
   - name: Wallet Data
     description: Accounts, positions, trades, etc.
   - name: Order Entry
-    description: Order entry operations
+    description: |
+      Order entry operations.
+
+      **Gated launch.** Order *insertion* on this deployment is gated: only
+      wallets on the exchange's order-entry allowlist may place or modify
+      orders. A wallet that is not on the list is refused with HTTP 403 and
+      `NOT_WHITELISTED_ERROR` at the API edge, before the request reaches the
+      matching engine. Market data, positions, balances and order state are
+      public and are never gated.
+
+      **Cancelling is never gated.** `cancelOrder` and `cancelAll` are outside
+      the allowlist check entirely: a wallet that has been removed from the
+      allowlist, or whose account has been suspended, can still cancel its
+      resting orders individually or en masse. Access control never traps a
+      position.
+
+      **The cancel-all-after countdown is gated in one direction only.**
+      Disarming (`timeoutMs: 0`) is never refused for access control — a
+      dead-man's switch can always be turned off. Arming or refreshing
+      (non-zero `timeoutMs`) is refused with HTTP 403 and
+      `ACCOUNT_SUSPENDED_ERROR` once the account is suspended, because the
+      exchange is already cancelling that account's resting orders and a fresh
+      deadline has nothing left to protect. Mere removal from the allowlist
+      does not gate it: a removed wallet whose account is not suspended may
+      still arm, refresh and disarm.
+
+      Losing access has two distinct forms, and they are not the same thing.
+      **Removal** from the allowlist stops new placements shortly after it is
+      made (the allowlist is polled, not pushed) and deliberately leaves the
+      wallet's resting orders live — offboarding is graceful, and an accidental
+      removal can never flatten a book. **Ejection** is a separate, explicit
+      decision under which the exchange cancels the account's resting orders
+      itself — except armed protective stops (`STOP_LOSS` / `TAKE_PROFIT`),
+      which ejection deliberately leaves armed, because ejecting an account
+      does not close its positions and it must not be left holding exposure it
+      can no longer re-protect. While ejection is in force the matching engine
+      refuses new placements — and countdown arms and refreshes — with
+      `ACCOUNT_SUSPENDED_ERROR`, while the client's own cancels and countdown
+      disarms continue to be accepted throughout. Neither state is retryable
+      from the client side.
+
+      Order entry is also rate limited and load shed; see `RATE_LIMITED_ERROR`,
+      `OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`
+      and `CAPACITY_LIMITED_ERROR` on `RequestErrorCode`, and the 429 / 503
+      responses below.
