@@ -39,6 +39,13 @@ assert.deepEqual(
 );
 const depthSnapshot = tradingSchemas.definitions.DepthSnapshot.allOf[1];
 const depthUpdate = tradingSchemas.definitions.DepthUpdate.allOf[1];
+assert.deepEqual(
+  tradingSchemas.definitions.DepthBase.required,
+  ['symbol', 'updatedAt'],
+  'DepthBase must not widen variant discriminators or side constraints during code generation',
+);
+assert.deepEqual(depthSnapshot.required, ['type', 'bids', 'asks']);
+assert.deepEqual(depthUpdate.required, ['type', 'bids', 'asks']);
 assert.deepEqual(depthSnapshot.properties.type.enum, ['SNAPSHOT']);
 assert.deepEqual(depthUpdate.properties.type.enum, ['UPDATE']);
 for (const side of ['bids', 'asks']) {

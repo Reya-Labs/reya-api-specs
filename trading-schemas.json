@@ -2929,31 +2929,11 @@
       "type": "object",
       "required": [
         "symbol",
-        "type",
-        "bids",
-        "asks",
         "updatedAt"
       ],
       "properties": {
         "symbol": {
           "$ref": "#/definitions/Symbol"
-        },
-        "type": {
-          "$ref": "#/definitions/DepthType"
-        },
-        "bids": {
-          "type": "array",
-          "description": "Bid side levels aggregated by price, sorted descending by price",
-          "items": {
-            "$ref": "#/definitions/Level"
-          }
-        },
-        "asks": {
-          "type": "array",
-          "description": "Ask side levels aggregated by price, sorted ascending by price",
-          "items": {
-            "$ref": "#/definitions/Level"
-          }
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -2984,6 +2964,7 @@
         },
         {
           "type": "object",
+          "required": ["type", "bids", "asks"],
           "properties": {
             "type": {
               "type": "string",
@@ -3018,6 +2999,7 @@
         },
         {
           "type": "object",
+          "required": ["type", "bids", "asks"],
           "properties": {
             "type": {
               "type": "string",
