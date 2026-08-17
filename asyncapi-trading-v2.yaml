@@ -12,7 +12,7 @@ info:
     - **Stateful channels** — market depth (`/v2/market/{symbol}/depth`) and wallet order changes (`/v2/wallet/{address}/orderChanges`) — deliver an ordered stream anchored to an initial snapshot. The server enforces per-connection backpressure: a consumer that falls too far behind is disconnected with WebSocket close code `1013` and reason `slow consumer — resubscribe for fresh snapshot`. Separately, after an internal feed resynchronization (for example a matching-engine restart), affected subscribers are closed with close code `1012`; the reason string begins `feed resync — resubscribe for fresh snapshot` and carries a runtime-appended suffix — ` (reset)` or ` (gap)` — identifying the internal cause. The same close code `1012` is also used when the server retires a connection for operational reasons — such as a graceful shutdown/deploy drain (reason prefix `server draining …`) or load management — where the reason string begins with an operationally-descriptive prefix rather than `feed resync …`. Clients must key recovery on the close **code** `1012` and treat the reason string as advisory only (do not parse the prefix or suffix).
     - **Conflating channels** — asset oracle prices (`/v2/assetOraclePrices`) — coalesce under backpressure per symbol/asset: intermediate ticks may be dropped, but the latest value per symbol is always eventually delivered.
 
-    Recovery is identical for both `1013` and `1012`: reconnect and resubscribe. The normal subscribe path replies with a fresh, consistent snapshot that reflects the resulting state. Events that occurred during the disconnection window are **not** replayed — clients must not expect gap-fill of individual updates; per-fill attribution lives in the execution channels (`.../perpExecutions`, `.../spotExecutions`) and the corresponding REST endpoints.
+    Recovery is identical for both `1013` and `1012`: reconnect and resubscribe. The normal subscribe path replies with a fresh, consistent snapshot of the channel's documented view. Events that occurred during the disconnection window are **not** replayed — clients must not expect gap-fill of individual updates; per-fill attribution lives in the execution channels (`.../perpExecutions`, `.../spotExecutions`) and the corresponding REST endpoints.
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -127,22 +127,32 @@ channels:
       This is a stateful channel with snapshot + diff semantics. The `type` field
       on every frame (`SNAPSHOT` or `UPDATE`) tells the client how to apply it:
 
-      - Subscribing delivers a single full `SNAPSHOT` frame carrying the complete
-        aggregated book (`bids` sorted descending by `px`, `asks` ascending).
+      - Subscribing delivers one bounded `SNAPSHOT`: at most the 1,000 highest
+        bid levels and at most the 1,000 lowest ask levels. Bids are sorted
+        descending by `px`; asks are sorted ascending. WebSocket subscriptions
+        have no client-selected depth limit. If a side contains more than 1,000
+        levels, deeper levels are omitted from the published view.
       - Every subsequent `channel_data` frame is an `UPDATE` **diff** that carries
-        **only the price levels that changed** since the previous frame — not the
-        whole book.
+        **only the price levels whose state changed in that bounded view** since
+        the previous frame — not another snapshot. When the 1,000-level boundary
+        moves, this includes a newly visible level even if its underlying quantity
+        did not change, and a zero-quantity removal for a displaced level even if
+        that level still exists deeper in the full exchange book. An underlying
+        change wholly outside the published view may produce an empty `UPDATE`.
       - Each level's `qty` is ABSOLUTE: it is the level's new aggregated total at
         that `px`, not a signed delta. Overwrite the level at that `px` with the
         received `qty`.
-      - A `qty` of `0` means the level was fully consumed — delete that `px` from
-        the book.
+      - A `qty` of `0` means delete that `px` from the published view. The level
+        may have been fully consumed or may merely have moved outside the
+        1,000-level boundary.
       - A single `UPDATE` frame may carry multiple changed levels, and levels for
         both `bids` and `asks` may appear together in the same frame.
 
-      To maintain a correct local book: seed it from the `SNAPSHOT`, then apply
-      each `UPDATE` frame in the order received — for every level, replace the
-      total at its `px` (or delete the `px` when `qty` is `0`).
+      To maintain the exact published top-1,000 view: seed it from the `SNAPSHOT`,
+      then apply each `UPDATE` frame in the order received — for every level,
+      replace the total at its `px` (or delete the `px` when `qty` is `0`). This
+      channel does not provide a complete book when either side exceeds 1,000
+      levels; use a new subscription to recover a fresh bounded view.
 
       The server enforces per-connection backpressure — a consumer that falls
       behind is disconnected with close code `1013` (reason `slow consumer —
@@ -156,8 +166,9 @@ channels:
       shutdown/deploy drain or load management), with a different reason prefix;
       recovery is unchanged. Recovery for both `1013` and `1012` is the
       same: reconnect and resubscribe; the subscribe path returns a fresh
-      consistent `SNAPSHOT` and updates from the disconnection window are not
-      replayed. See the API overview for the shared connection-lifecycle contract.
+      consistent bounded `SNAPSHOT` and updates from the disconnection window
+      are not replayed. See the API overview for the shared
+      connection-lifecycle contract.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
