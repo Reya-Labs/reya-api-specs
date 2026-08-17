@@ -31,6 +31,34 @@ assert.ok(
   'PaginationMeta examples must show newest-first ordering',
 );
 
+const depth = tradingSchemas.definitions.Depth;
+assert.deepEqual(
+  depth.oneOf.map((variant) => variant.$ref),
+  ['#/definitions/DepthSnapshot', '#/definitions/DepthUpdate'],
+  'Depth must remain a closed snapshot/update union',
+);
+const depthSnapshot = tradingSchemas.definitions.DepthSnapshot.allOf[1];
+const depthUpdate = tradingSchemas.definitions.DepthUpdate.allOf[1];
+assert.deepEqual(depthSnapshot.properties.type.enum, ['SNAPSHOT']);
+assert.deepEqual(depthUpdate.properties.type.enum, ['UPDATE']);
+for (const side of ['bids', 'asks']) {
+  assert.equal(
+    depthSnapshot.properties[side].maxItems,
+    1000,
+    `DepthSnapshot.${side} must be capped at 1,000 levels`,
+  );
+  assert.equal(
+    depthUpdate.properties[side].maxItems,
+    undefined,
+    `DepthUpdate.${side} must allow a boundary transition larger than 1,000`,
+  );
+  assert.equal(
+    depthUpdate.properties[side].minItems,
+    undefined,
+    `DepthUpdate.${side} must allow an empty unchanged-side diff`,
+  );
+}
+
 assert.ok(
   openApi.includes('url: https://api-devnet.reya-cronos.network/v2'),
   'OpenAPI must include the current devnet server',
@@ -38,6 +66,11 @@ assert.ok(
 const asyncExecSpecOperation = yamlBlock(openApi, '  /asyncapi-exec-spec.yaml:');
 assert.ok(asyncExecSpecOperation.includes('operationId: getAsyncExecApiSpec'));
 assert.ok(asyncExecSpecOperation.includes('application/yaml:'));
+const marketDepthOperation = yamlBlock(openApi, '  /market/{symbol}/depth:');
+assert.ok(
+  marketDepthOperation.includes("$ref: '#/components/schemas/DepthSnapshot'"),
+  'REST market depth must return the bounded snapshot variant',
+);
 
 const executionTypeParam = yamlBlock(openApi, '    ExecutionTypeParam:');
 const executionTypeParamValues = Array.from(
@@ -87,6 +120,44 @@ for (const expected of [
 ]) {
   assert.ok(infoAsyncApi.includes(expected), `Info AsyncAPI must include: ${expected}`);
 }
+
+const marketDepthChannel = yamlBlock(infoAsyncApi, '  marketDepth:');
+for (const message of ['marketDepthSubscribed:', 'marketDepthUpdate:']) {
+  assert.ok(
+    marketDepthChannel.includes(message),
+    `Market depth channel must include ${message}`,
+  );
+}
+const receiveMarketDepth = yamlBlock(infoAsyncApi, '  receiveMarketDepth:');
+for (const messageRef of [
+  '#/channels/marketDepth/messages/marketDepthSubscribed',
+  '#/channels/marketDepth/messages/marketDepthUpdate',
+]) {
+  assert.ok(
+    receiveMarketDepth.includes(messageRef),
+    `receiveMarketDepth must include ${messageRef}`,
+  );
+}
+const marketDepthSubscribedPayload = yamlBlock(
+  infoAsyncApi,
+  '    MarketDepthSubscribedPayload:',
+);
+assert.ok(
+  marketDepthSubscribedPayload.includes(
+    "$ref: './trading-schemas.json#/definitions/DepthSnapshot'",
+  ),
+  'Subscribed depth contents must use DepthSnapshot',
+);
+const marketDepthUpdateBody = yamlBlock(
+  infoAsyncApi,
+  '    MarketDepthUpdateBody:',
+);
+assert.ok(
+  marketDepthUpdateBody.includes(
+    "$ref: './trading-schemas.json#/definitions/DepthUpdate'",
+  ),
+  'Depth channel_data must use DepthUpdate',
+);
 
 const accountUpdateData = yamlBlock(infoAsyncApi, '    AccountUpdateData:');
 const accountUpdatePayload = yamlBlock(infoAsyncApi, '    AccountUpdatePayload:');

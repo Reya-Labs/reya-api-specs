@@ -124,8 +124,9 @@ channels:
     description: |
       Real-time L2 order book depth for a specific market.
 
-      This is a stateful channel with snapshot + diff semantics. The `type` field
-      on every frame (`SNAPSHOT` or `UPDATE`) tells the client how to apply it:
+      This is a stateful channel with snapshot + diff semantics. The nested
+      depth payload discriminator (`contents.type` on the `subscribed` frame,
+      `data.type` on `channel_data`) tells the client how to apply it:
 
       - Subscribing delivers one bounded `SNAPSHOT`: at most the 1,000 highest
         bid levels and at most the 1,000 lowest ask levels. Bids are sorted
@@ -174,6 +175,8 @@ channels:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
         location: $message.payload#/symbol
     messages:
+      marketDepthSubscribed:
+        $ref: '#/components/messages/MarketDepthSubscribed'
       marketDepthUpdate:
         $ref: '#/components/messages/MarketDepthUpdate'
 
@@ -435,8 +438,9 @@ operations:
     channel:
       $ref: '#/channels/marketDepth'
     messages:
+      - $ref: '#/channels/marketDepth/messages/marketDepthSubscribed'
       - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
-    summary: Receive L2 depth snapshots for specific market
+    summary: Receive a bounded L2 depth snapshot and subsequent view updates for a specific market
 
   receiveMarketSpotExecutions:
     action: receive
@@ -588,9 +592,19 @@ components:
     MarketDepthUpdate:
       name: marketDepthUpdate
       title: Market Depth Update
-      summary: Real-time L2 order book snapshot for a specific market
+      summary: Real-time bounded L2 order book view update for a specific market
       payload:
         $ref: '#/components/schemas/MarketDepthUpdatePayload'
+
+    MarketDepthSubscribed:
+      name: subscribed
+      title: Market Depth Subscribed
+      summary: |
+        Initial `subscribed` confirmation for the market depth channel. The
+        envelope is the generic subscribe-response shape; `contents` carries a
+        bounded `DepthSnapshot` payload.
+      payload:
+        $ref: '#/components/schemas/MarketDepthSubscribedPayload'
 
     MarketSpotExecutionUpdate:
       name: marketSpotExecutionUpdate
@@ -965,6 +979,22 @@ components:
         contents:
           $ref: './trading-schemas.json#/definitions/OrderChangesSnapshot'
 
+    MarketDepthSubscribedPayload:
+      type: object
+      title: MarketDepthSubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/MarketDepthChannelPattern'
+        contents:
+          $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+
     MarketPerpExecutionUpdateBody:
       type: object
       title: MarketPerpExecutionUpdateBody
@@ -992,7 +1022,7 @@ components:
         channel:
           $ref: '#/components/schemas/MarketDepthChannelPattern'
         data:
-          $ref: './trading-schemas.json#/definitions/Depth'
+          $ref: './trading-schemas.json#/definitions/DepthUpdate'
 
     MarketSpotExecutionUpdateBody:
       type: object
