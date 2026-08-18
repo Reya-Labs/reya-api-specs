@@ -103,7 +103,7 @@ for (const side of ['bids', 'asks']) {
   assert.equal(
     depthUpdate.properties[side].maxItems,
     undefined,
-    `DepthUpdate.${side} must allow a boundary transition larger than 1,000`,
+    `DepthUpdate.${side} must allow a boundary transition larger than the WebSocket view`,
   );
   assert.equal(
     depthUpdate.properties[side].minItems,
@@ -184,6 +184,11 @@ for (const expected of [
 }
 
 const marketDepthChannel = yamlBlock(infoAsyncApi, '  marketDepth:');
+assert.ok(
+  marketDepthChannel.includes('at most the 100 highest') &&
+    marketDepthChannel.includes('exact published top-100 view'),
+  'WebSocket depth must document the fixed 100-level-per-side view',
+);
 for (const message of ['marketDepthSubscribed:', 'marketDepthUpdate:']) {
   assert.ok(
     marketDepthChannel.includes(message),

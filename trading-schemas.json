@@ -160,7 +160,7 @@
       "title": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
-      "description": "Depth message type. On the public WebSocket, SNAPSHOT is the exact bounded view delivered on subscribe: at most the 1,000 highest bids and 1,000 lowest asks (WebSocket has no client-selected limit, and deeper levels are omitted). UPDATE transforms the previous bounded view into the next one. It may include newly visible boundary levels whose underlying quantity did not change and zero-quantity removals for displaced levels that still exist deeper in the exchange book; an underlying change wholly outside the view does not emit an UPDATE. Quantities are absolute, and qty 0 removes that price from the published view. Apply UPDATE frames in order to maintain the exact bounded view; reconnect and resubscribe for a fresh snapshot after interruption. REST depth snapshots use their requested/default limit within the same 1,000-level per-side maximum."
+      "description": "Depth message type. On the public WebSocket, SNAPSHOT is the exact bounded view delivered on subscribe: at most the 100 highest bids and 100 lowest asks (WebSocket has no client-selected limit, and deeper levels are omitted). UPDATE transforms the previous bounded view into the next one. It may include newly visible boundary levels whose underlying quantity did not change and zero-quantity removals for displaced levels that still exist deeper in the exchange book; an underlying change wholly outside the view does not emit an UPDATE. Quantities are absolute, and qty 0 removes that price from the published view. Apply UPDATE frames in order to maintain the exact bounded view; reconnect and resubscribe for a fresh snapshot after interruption. REST depth snapshots use their requested/default limit within the same 1,000-level per-side maximum."
     },
     "DepthSnapshotType": {
       "title": "DepthSnapshotType",
@@ -3033,7 +3033,7 @@
     },
     "DepthUpdate": {
       "title": "DepthUpdate",
-      "description": "An exact diff from the previous bounded depth view to the next. Either side may be empty, but at least one side contains a changed level. Update arrays are not capped at 1,000 because one boundary transition can remove old visible levels and add replacement levels in the same frame.",
+      "description": "An exact diff from the previous bounded depth view to the next. Either side may be empty, but at least one side contains a changed level. Update arrays are not capped at the WebSocket view size of 100 because one boundary transition can remove old visible levels and add replacement levels in the same frame.",
       "additionalProperties": true,
       "allOf": [
         {
