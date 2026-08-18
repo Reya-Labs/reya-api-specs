@@ -139,7 +139,7 @@ channels:
         moves, this includes a newly visible level even if its underlying quantity
         did not change, and a zero-quantity removal for a displaced level even if
         that level still exists deeper in the full exchange book. An underlying
-        change wholly outside the published view may produce an empty `UPDATE`.
+        change wholly outside the published view does not emit an `UPDATE`.
       - Each level's `qty` is ABSOLUTE: it is the level's new aggregated total at
         that `px`, not a signed delta. Overwrite the level at that `px` with the
         received `qty`.
