@@ -231,11 +231,16 @@ assert.ok(
   ),
   'WebSocket depth snapshot must retain the shared snapshot fields',
 );
-assert.equal(
-  (webSocketDepthSnapshot.match(/^\s+maxItems: 100$/gm) ?? []).length,
-  2,
-  'WebSocket depth snapshot must cap both sides at 100 levels',
-);
+for (const side of ['bids', 'asks']) {
+  const sideSchema = yamlBlock(
+    webSocketDepthSnapshot,
+    `            ${side}:`,
+  );
+  assert.ok(
+    sideSchema.includes('maxItems: 100'),
+    `WebSocket depth snapshot ${side} must be capped at 100 levels`,
+  );
+}
 const marketDepthUpdateBody = yamlBlock(
   infoAsyncApi,
   '    MarketDepthUpdateBody:',
