@@ -213,9 +213,28 @@ const marketDepthSubscribedPayload = yamlBlock(
 );
 assert.ok(
   marketDepthSubscribedPayload.includes(
+    "$ref: '#/components/schemas/WebSocketDepthSnapshot'",
+  ),
+  'Subscribed depth contents must use the WebSocket-specific snapshot',
+);
+const webSocketDepthSnapshot = yamlBlock(
+  infoAsyncApi,
+  '    WebSocketDepthSnapshot:',
+);
+assert.ok(
+  webSocketDepthSnapshot.includes('title: DepthSnapshot'),
+  'WebSocket depth snapshot must retain the existing SDK export name',
+);
+assert.ok(
+  webSocketDepthSnapshot.includes(
     "$ref: './trading-schemas.json#/definitions/DepthSnapshot'",
   ),
-  'Subscribed depth contents must use DepthSnapshot',
+  'WebSocket depth snapshot must retain the shared snapshot fields',
+);
+assert.equal(
+  (webSocketDepthSnapshot.match(/^\s+maxItems: 100$/gm) ?? []).length,
+  2,
+  'WebSocket depth snapshot must cap both sides at 100 levels',
 );
 const marketDepthUpdateBody = yamlBlock(
   infoAsyncApi,

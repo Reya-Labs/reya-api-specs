@@ -989,6 +989,28 @@ components:
         contents:
           $ref: './trading-schemas.json#/definitions/OrderChangesSnapshot'
 
+    WebSocketDepthSnapshot:
+      # Preserve the existing generated TypeScript export name for SDK source compatibility.
+      title: DepthSnapshot
+      description: |
+        The fixed public WebSocket depth snapshot. This narrows the shared REST
+        snapshot maximum from 1,000 to the 100 levels per side published by the
+        WebSocket channel.
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+        - type: object
+          properties:
+            bids:
+              type: array
+              maxItems: 100
+              items:
+                $ref: './trading-schemas.json#/definitions/Level'
+            asks:
+              type: array
+              maxItems: 100
+              items:
+                $ref: './trading-schemas.json#/definitions/Level'
+
     MarketDepthSubscribedPayload:
       type: object
       title: MarketDepthSubscribedPayload
@@ -1003,7 +1025,7 @@ components:
         channel:
           $ref: '#/components/schemas/MarketDepthChannelPattern'
         contents:
-          $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+          $ref: '#/components/schemas/WebSocketDepthSnapshot'
 
     MarketPerpExecutionUpdateBody:
       type: object
