@@ -147,7 +147,8 @@ channels:
         may have been fully consumed or may merely have moved outside the
         1,000-level boundary.
       - A single `UPDATE` frame may carry multiple changed levels, and levels for
-        both `bids` and `asks` may appear together in the same frame.
+        both `bids` and `asks` may appear together in the same frame. Either side
+        may be empty, but every emitted `UPDATE` has at least one changed level.
 
       To maintain the exact published top-1,000 view: seed it from the `SNAPSHOT`,
       then apply each `UPDATE` frame in the order received — for every level,

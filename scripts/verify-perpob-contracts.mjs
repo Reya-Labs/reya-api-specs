@@ -56,6 +56,28 @@ assert.equal(
 );
 assert.deepEqual(tradingSchemas.definitions.DepthSnapshotType.enum, ['SNAPSHOT']);
 assert.deepEqual(tradingSchemas.definitions.DepthUpdateType.enum, ['UPDATE']);
+assert.deepEqual(
+  depthUpdate.anyOf,
+  [
+    { properties: { bids: { minItems: 1 } } },
+    { properties: { asks: { minItems: 1 } } },
+  ],
+  'DepthUpdate must require at least one changed side',
+);
+const acceptsDepthUpdateSides = (bids, asks) =>
+  depthUpdate.anyOf.some(({ properties }) =>
+    Object.entries(properties).every(
+      ([side, constraint]) =>
+        ({ bids, asks })[side].length >= constraint.minItems,
+    ),
+  );
+assert.equal(
+  acceptsDepthUpdateSides([], []),
+  false,
+  'DepthUpdate must reject a no-op with both sides empty',
+);
+assert.equal(acceptsDepthUpdateSides([{ px: '1', qty: '1' }], []), true);
+assert.equal(acceptsDepthUpdateSides([], [{ px: '1', qty: '1' }]), true);
 for (const side of ['bids', 'asks']) {
   assert.equal(
     depthSnapshot.properties[side].maxItems,

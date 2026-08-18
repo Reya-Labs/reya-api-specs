@@ -3003,7 +3003,7 @@
     },
     "DepthUpdate": {
       "title": "DepthUpdate",
-      "description": "An exact diff from the previous bounded depth view to the next. Arrays may be empty and are not capped at 1,000 because one boundary transition can remove old visible levels and add replacement levels in the same frame.",
+      "description": "An exact diff from the previous bounded depth view to the next. Either side may be empty, but at least one side contains a changed level. Update arrays are not capped at 1,000 because one boundary transition can remove old visible levels and add replacement levels in the same frame.",
       "allOf": [
         {
           "$ref": "#/definitions/DepthBase"
@@ -3011,6 +3011,22 @@
         {
           "type": "object",
           "required": ["type", "bids", "asks"],
+          "anyOf": [
+            {
+              "properties": {
+                "bids": {
+                  "minItems": 1
+                }
+              }
+            },
+            {
+              "properties": {
+                "asks": {
+                  "minItems": 1
+                }
+              }
+            }
+          ],
           "properties": {
             "type": {
               "$ref": "#/definitions/DepthUpdateType"
