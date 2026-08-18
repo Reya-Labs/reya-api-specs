@@ -813,6 +813,15 @@ components:
       pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
       description: Channel pattern for market depth snapshots
 
+    # Compatibility exports for existing SDK consumers. Wire envelopes below
+    # use the exact snapshot/update variants, while these aliases keep the
+    # previously generated Depth and DepthType imports available.
+    Depth:
+      $ref: './trading-schemas.json#/definitions/Depth'
+
+    DepthType:
+      $ref: './trading-schemas.json#/definitions/DepthType'
+
     MarketSpotExecutionsChannelPattern:
       type: string
       pattern: '^/v2/market/[A-Za-z0-9]+/spotExecutions$'

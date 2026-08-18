@@ -86,6 +86,15 @@ assert.ok(
   marketDepthOperation.includes("$ref: '#/components/schemas/DepthSnapshot'"),
   'REST market depth must return the bounded snapshot variant',
 );
+for (const compatibilitySchema of ['Depth', 'DepthType']) {
+  const schema = yamlBlock(openApi, `    ${compatibilitySchema}:`);
+  assert.ok(
+    schema.includes(
+      `$ref: './trading-schemas.json#/definitions/${compatibilitySchema}'`,
+    ),
+    `OpenAPI must retain the ${compatibilitySchema} SDK compatibility export`,
+  );
+}
 
 const executionTypeParam = yamlBlock(openApi, '    ExecutionTypeParam:');
 const executionTypeParamValues = Array.from(
@@ -173,6 +182,15 @@ assert.ok(
   ),
   'Depth channel_data must use DepthUpdate',
 );
+for (const compatibilitySchema of ['Depth', 'DepthType']) {
+  const schema = yamlBlock(infoAsyncApi, `    ${compatibilitySchema}:`);
+  assert.ok(
+    schema.includes(
+      `$ref: './trading-schemas.json#/definitions/${compatibilitySchema}'`,
+    ),
+    `Info AsyncAPI must retain the ${compatibilitySchema} SDK compatibility export`,
+  );
+}
 
 const accountUpdateData = yamlBlock(infoAsyncApi, '    AccountUpdateData:');
 const accountUpdatePayload = yamlBlock(infoAsyncApi, '    AccountUpdatePayload:');
