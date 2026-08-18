@@ -33,12 +33,18 @@ assert.ok(
 
 const depth = tradingSchemas.definitions.Depth;
 assert.deepEqual(
-  depth.oneOf.map((variant) => variant.$ref),
-  ['#/definitions/DepthSnapshot', '#/definitions/DepthUpdate'],
-  'Depth must remain a closed snapshot/update union',
+  depth.required,
+  ['symbol', 'type', 'bids', 'asks', 'updatedAt'],
+  'Deprecated Depth must preserve its legacy source-compatible shape',
 );
+assert.equal(depth.deprecated, true);
+assert.equal(depth.properties.type.$ref, '#/definitions/DepthType');
+assert.equal(depth.properties.bids.maxItems, undefined);
+assert.equal(depth.properties.asks.maxItems, undefined);
 const depthSnapshot = tradingSchemas.definitions.DepthSnapshot.allOf[1];
 const depthUpdate = tradingSchemas.definitions.DepthUpdate.allOf[1];
+const depthUpdateConstraint =
+  tradingSchemas.definitions.DepthUpdate.allOf[2];
 assert.deepEqual(
   tradingSchemas.definitions.DepthBase.required,
   ['symbol', 'updatedAt'],
@@ -57,7 +63,7 @@ assert.equal(
 assert.deepEqual(tradingSchemas.definitions.DepthSnapshotType.enum, ['SNAPSHOT']);
 assert.deepEqual(tradingSchemas.definitions.DepthUpdateType.enum, ['UPDATE']);
 assert.deepEqual(
-  depthUpdate.anyOf,
+  depthUpdateConstraint.anyOf,
   [
     { properties: { bids: { minItems: 1 } } },
     { properties: { asks: { minItems: 1 } } },
@@ -65,7 +71,7 @@ assert.deepEqual(
   'DepthUpdate must require at least one changed side',
 );
 const acceptsDepthUpdateSides = (bids, asks) =>
-  depthUpdate.anyOf.some(({ properties }) =>
+  depthUpdateConstraint.anyOf.some(({ properties }) =>
     Object.entries(properties).every(
       ([side, constraint]) =>
         ({ bids, asks })[side].length >= constraint.minItems,

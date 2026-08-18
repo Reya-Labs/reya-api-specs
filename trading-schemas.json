@@ -2957,15 +2957,44 @@
     },
     "Depth": {
       "title": "Depth",
-      "description": "Depth payload discriminated by `type`. SNAPSHOT sides are capped at 1,000 levels; UPDATE sides carry the exact bounded-view transition and may contain removals plus additions.",
-      "oneOf": [
-        {
-          "$ref": "#/definitions/DepthSnapshot"
+      "description": "Deprecated compatibility shape for depth payloads. New integrations should use DepthSnapshot or DepthUpdate: wire endpoints reference those exact variants so snapshot sides are capped at 1,000 levels and updates describe bounded-view transitions.",
+      "deprecated": true,
+      "type": "object",
+      "required": [
+        "symbol",
+        "type",
+        "bids",
+        "asks",
+        "updatedAt"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
         },
-        {
-          "$ref": "#/definitions/DepthUpdate"
+        "type": {
+          "$ref": "#/definitions/DepthType"
+        },
+        "bids": {
+          "type": "array",
+          "description": "Bid side levels aggregated by price, sorted descending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "asks": {
+          "type": "array",
+          "description": "Ask side levels aggregated by price, sorted ascending by price",
+          "items": {
+            "$ref": "#/definitions/Level"
+          }
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Matching-engine-clock timestamp (milliseconds) of the last applied depth change for this market. For a market unchanged since this API instance bootstrapped, it is the matching-engine timestamp of the depth stream tip at bootstrap. Always producer-clocked: identical across API instances and comparable across markets. Not a feed-liveness signal - a stale value means a quiet market, not a stalled feed.",
+          "example": 1747927809946
         }
-      ]
+      },
+      "additionalProperties": true
     },
     "DepthSnapshot": {
       "title": "DepthSnapshot",
@@ -3011,22 +3040,6 @@
         {
           "type": "object",
           "required": ["type", "bids", "asks"],
-          "anyOf": [
-            {
-              "properties": {
-                "bids": {
-                  "minItems": 1
-                }
-              }
-            },
-            {
-              "properties": {
-                "asks": {
-                  "minItems": 1
-                }
-              }
-            }
-          ],
           "properties": {
             "type": {
               "$ref": "#/definitions/DepthUpdateType"
@@ -3046,6 +3059,24 @@
               }
             }
           }
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "bids": {
+                  "minItems": 1
+                }
+              }
+            },
+            {
+              "properties": {
+                "asks": {
+                  "minItems": 1
+                }
+              }
+            }
+          ]
         }
       ]
     }
