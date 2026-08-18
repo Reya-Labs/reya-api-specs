@@ -45,6 +45,16 @@ const depthSnapshot = tradingSchemas.definitions.DepthSnapshot.allOf[1];
 const depthUpdate = tradingSchemas.definitions.DepthUpdate.allOf[1];
 const depthUpdateConstraint =
   tradingSchemas.definitions.DepthUpdate.allOf[2];
+assert.equal(
+  tradingSchemas.definitions.DepthSnapshot.additionalProperties,
+  true,
+  'DepthSnapshot must expose extensions in generated REST clients',
+);
+assert.equal(
+  tradingSchemas.definitions.DepthUpdate.additionalProperties,
+  true,
+  'DepthUpdate must expose extensions in generated WebSocket clients',
+);
 assert.deepEqual(
   tradingSchemas.definitions.DepthBase.required,
   ['symbol', 'updatedAt'],

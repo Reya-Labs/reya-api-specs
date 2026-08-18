@@ -2957,7 +2957,7 @@
     },
     "Depth": {
       "title": "Depth",
-      "description": "Deprecated compatibility shape for depth payloads. New integrations should use DepthSnapshot or DepthUpdate: wire endpoints reference those exact variants so snapshot sides are capped at 1,000 levels and updates describe bounded-view transitions.",
+      "description": "Deprecated compatibility shape for depth payloads. New REST integrations should use DepthSnapshot; new WebSocket integrations should use the exact DepthSnapshot and DepthUpdate exports. Wire endpoints reference those variants so snapshot sides are capped at 1,000 levels and updates describe bounded-view transitions.",
       "deprecated": true,
       "type": "object",
       "required": [
@@ -2999,6 +2999,7 @@
     "DepthSnapshot": {
       "title": "DepthSnapshot",
       "description": "A bounded depth snapshot. Each side contains at most the 1,000 best price levels.",
+      "additionalProperties": true,
       "allOf": [
         {
           "$ref": "#/definitions/DepthBase"
@@ -3033,6 +3034,7 @@
     "DepthUpdate": {
       "title": "DepthUpdate",
       "description": "An exact diff from the previous bounded depth view to the next. Either side may be empty, but at least one side contains a changed level. Update arrays are not capped at 1,000 because one boundary transition can remove old visible levels and add replacement levels in the same frame.",
+      "additionalProperties": true,
       "allOf": [
         {
           "$ref": "#/definitions/DepthBase"
