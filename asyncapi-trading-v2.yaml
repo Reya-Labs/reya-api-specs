@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.0.28
+  version: 3.0.29
   description: |
     Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
 
@@ -145,7 +145,7 @@ channels:
         received `qty`.
       - A `qty` of `0` means delete that `px` from the published view. The level
         may have been fully consumed or may merely have moved outside the
-        1,000-level boundary.
+        100-level boundary.
       - A single `UPDATE` frame may carry multiple changed levels, and levels for
         both `bids` and `asks` may appear together in the same frame. Either side
         may be empty, but every emitted `UPDATE` has at least one changed level.
