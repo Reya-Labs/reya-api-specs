@@ -162,6 +162,18 @@
       "enum": ["SNAPSHOT", "UPDATE"],
       "description": "Depth message type. On the public WebSocket, SNAPSHOT is the exact bounded view delivered on subscribe: at most the 1,000 highest bids and 1,000 lowest asks (WebSocket has no client-selected limit, and deeper levels are omitted). UPDATE transforms the previous bounded view into the next one. It may include newly visible boundary levels whose underlying quantity did not change and zero-quantity removals for displaced levels that still exist deeper in the exchange book; an underlying change outside the view may yield an empty UPDATE. Quantities are absolute, and qty 0 removes that price from the published view. Apply UPDATE frames in order to maintain the exact bounded view; reconnect and resubscribe for a fresh snapshot after interruption. REST depth snapshots use their requested/default limit within the same 1,000-level per-side maximum."
     },
+    "DepthSnapshotType": {
+      "title": "DepthSnapshotType",
+      "type": "string",
+      "enum": ["SNAPSHOT"],
+      "description": "Literal discriminator for a bounded depth snapshot."
+    },
+    "DepthUpdateType": {
+      "title": "DepthUpdateType",
+      "type": "string",
+      "enum": ["UPDATE"],
+      "description": "Literal discriminator for a bounded-view depth update."
+    },
     "RequestError": {
       "title": "RequestError",
       "type": "object",
@@ -2967,8 +2979,7 @@
           "required": ["type", "bids", "asks"],
           "properties": {
             "type": {
-              "type": "string",
-              "enum": ["SNAPSHOT"]
+              "$ref": "#/definitions/DepthSnapshotType"
             },
             "bids": {
               "type": "array",
@@ -3002,8 +3013,7 @@
           "required": ["type", "bids", "asks"],
           "properties": {
             "type": {
-              "type": "string",
-              "enum": ["UPDATE"]
+              "$ref": "#/definitions/DepthUpdateType"
             },
             "bids": {
               "type": "array",

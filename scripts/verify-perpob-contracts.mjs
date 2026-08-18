@@ -46,8 +46,16 @@ assert.deepEqual(
 );
 assert.deepEqual(depthSnapshot.required, ['type', 'bids', 'asks']);
 assert.deepEqual(depthUpdate.required, ['type', 'bids', 'asks']);
-assert.deepEqual(depthSnapshot.properties.type.enum, ['SNAPSHOT']);
-assert.deepEqual(depthUpdate.properties.type.enum, ['UPDATE']);
+assert.equal(
+  depthSnapshot.properties.type.$ref,
+  '#/definitions/DepthSnapshotType',
+);
+assert.equal(
+  depthUpdate.properties.type.$ref,
+  '#/definitions/DepthUpdateType',
+);
+assert.deepEqual(tradingSchemas.definitions.DepthSnapshotType.enum, ['SNAPSHOT']);
+assert.deepEqual(tradingSchemas.definitions.DepthUpdateType.enum, ['UPDATE']);
 for (const side of ['bids', 'asks']) {
   assert.equal(
     depthSnapshot.properties[side].maxItems,
