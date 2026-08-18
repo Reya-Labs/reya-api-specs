@@ -186,7 +186,9 @@ for (const expected of [
 const marketDepthChannel = yamlBlock(infoAsyncApi, '  marketDepth:');
 assert.ok(
   marketDepthChannel.includes('at most the 100 highest') &&
-    marketDepthChannel.includes('exact published top-100 view'),
+    marketDepthChannel.includes('exact published top-100 view') &&
+    marketDepthChannel.includes('100-level boundary') &&
+    !marketDepthChannel.includes('1,000-level boundary'),
   'WebSocket depth must document the fixed 100-level-per-side view',
 );
 for (const message of ['marketDepthSubscribed:', 'marketDepthUpdate:']) {
