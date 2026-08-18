@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.0.27
+  version: 3.0.28
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -323,7 +323,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Depth'
+                $ref: '#/components/schemas/DepthSnapshot'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -1005,6 +1005,12 @@ components:
 
     Depth:
       $ref: './trading-schemas.json#/definitions/Depth'
+
+    DepthType:
+      $ref: './trading-schemas.json#/definitions/DepthType'
+
+    DepthSnapshot:
+      $ref: './trading-schemas.json#/definitions/DepthSnapshot'
 
   responses:
     BadRequest:
