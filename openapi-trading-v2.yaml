@@ -642,20 +642,35 @@ paths:
         **Armed phase.** A `STOP_LOSS` / `TAKE_PROFIT` create carries `orderType` + `triggerPx`
         end-to-end and is **armed and tracked** by the matching engine: the trigger is held in the
         trigger store rather than the book, so it is not executable liquidity while armed. It stays
-        modifiable and cancellable, and surfaces as `OPEN` with `triggered: false` on `openOrders`,
-        the `walletOrderChanges` stream, and order history.
+        modifiable and cancellable, and surfaces as `OPEN` on `openOrders`, the `walletOrderChanges`
+        stream, and order history — carrying `triggered: false` on the first two. Order-history rows
+        omit `triggered` entirely: the stored history has no armed-vs-fired discriminator, so its
+        absence there means unknown rather than `false`.
 
         **Choosing the fired child.** `timeInForce` on a trigger create chooses what the stop
         becomes when it fires: `IOC` (fill what the book offers, cancel the remainder), `GTC` (rest
-        the remainder until cancelled) or `GTT` (rest it until `expiresAfter`). A `GTT` trigger MUST
-        carry a future `expiresAfter`; `GTC` and `IOC` triggers MUST omit it — an `IOC` trigger that
-        carries one is rejected with `INPUT_VALIDATION_ERROR` at the API edge, and with the matching
-        engine's own `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR` guard when requests reach the engine
-        directly. That single `expiresAfter`
-        is one absolute deadline shared by both phases — the armed trigger's lifetime AND the fired
-        child's hard on-chain settlement deadline — so an hour spent armed is an hour the child does
-        not get. A create that does not leave the exchange's reserved settlement headroom is rejected
-        with `ORDER_EXPIRES_TOO_SOON_ERROR`.
+        the remainder until cancelled) or `GTT` (rest it until the shared deadline below). A `GTT`
+        trigger MUST carry a future `expiresAfter`; `GTC` and `IOC` triggers MUST omit it — an `IOC`
+        trigger that carries one is rejected with `INPUT_VALIDATION_ERROR` at the API edge, and with
+        the matching engine's own `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR` guard when requests reach the
+        engine directly.
+
+        That single `expiresAfter` is one absolute deadline shared by both phases — the armed
+        trigger's lifetime AND the fired child's hard on-chain settlement deadline — so an hour spent
+        armed is an hour the child does not get. Both phases stop one **settlement headroom** BEFORE
+        that deadline rather than at it: a fill taken inside the headroom could not be settled on
+        chain before `expiresAfter` and would revert `OrderExpired`, so the exchange closes the
+        window early instead. Concretely, a `GTT` trigger stops being fireable — and a `GTT` child
+        already resting in the book stops being matchable — at `expiresAfter` minus the headroom,
+        and whichever of the two the boundary finds is cancelled there as `CANCELLED` with
+        `cancelReason: GTT_EXPIRED`. Treat the last stretch before `expiresAfter` as dead time and
+        size the deadline for the protective window PLUS the headroom.
+
+        The headroom is a venue parameter: the exchange sets it, it is the same for every market, it
+        is neither client-supplied nor published on this API, and it is at least a minute on
+        production deployments. A create whose own `expiresAfter` does not clear it is refused at
+        admission with `ORDER_EXPIRES_TOO_SOON_ERROR` — nothing is armed — rather than accepted into
+        a window it could never fire in.
 
         **Pricing the fired child.** `limitPx` is the worst price the child may execute at, not a pad
         on `triggerPx`, and admission bounds how far the two may sit apart:
@@ -676,18 +691,24 @@ paths:
         data, where the consequence for the client is the same.
 
         **Firing.** When the mark price crosses `triggerPx`, the trigger fires into an ordinary order
-        carrying the chosen `timeInForce`, and that order surfaces with `triggered: true`. Any fire
-        cancels the OCO sibling — the paired opposite-type stop on the same account and market — with
-        `cancelReason: OCO_SIBLING_FIRED`, including a fire that fills nothing: one fire consumes both
-        legs. A partial `IOC` fire leaves the residual position unprotected. Re-arming is always the
-        user's move; cancelling one leg by hand leaves the sibling armed. A firing stop that would
-        match the account's own resting liquidity sweeps those maker orders out of its way — they are
-        cancelled with `PROTECTIVE_SELF_TRADE_SWEEP` rather than the stop being cancelled, which is
-        what distinguishes the sweep from ordinary `SELF_TRADE_PREVENTION`.
+        carrying the chosen `timeInForce`, and that order surfaces with `triggered: true`. A fire
+        that commits cancels the OCO sibling — the paired opposite-type stop on the same account and
+        market — with `cancelReason: OCO_SIBLING_FIRED`, including a fire that fills nothing: one
+        fire consumes both legs. A partial `IOC` fire leaves the residual position unprotected.
+        Re-arming is always the user's move; cancelling one leg by hand leaves the sibling armed. A
+        firing stop that would match the account's own resting liquidity sweeps those maker orders
+        out of its way — they are cancelled with `PROTECTIVE_SELF_TRADE_SWEEP` rather than the stop
+        being cancelled, which is what distinguishes the sweep from ordinary
+        `SELF_TRADE_PREVENTION`.
 
-        A fire can also be refused outright: if the pre-trade risk checks reject the child order at
-        admission, there is no request to answer, so the **trigger itself is cancelled** with
-        `cancelReason: RISK_REJECTED` (`cancelReasonMessage` carries which check fired). Nothing rests,
+        A fire can also be refused before any child exists, and then BOTH legs are cancelled with the
+        reason for the refusal rather than with `OCO_SIBLING_FIRED` — that reason is written only
+        when a fire actually commits. Either there is nothing left to reduce (the position closed or
+        flipped under the stop, or what remains is below one tradeable lot), and both legs are
+        cancelled with `cancelReason: POSITION_CLOSED`; or the pre-trade risk checks refuse the close
+        itself, and both legs are cancelled with `cancelReason: RISK_REJECTED`
+        (`cancelReasonMessage` carries which check fired). No child order is created on either path,
+        so both cancellations arrive on orders that still carry `triggered: false`. Nothing rests,
         nothing fills, and the protection is terminally gone — the stop is not retried or re-armed
         when the account recovers, so re-arming is the user's move.
 
@@ -698,7 +719,8 @@ paths:
         position closes by another route. It blocks the account's own crossing orders through standard
         self-trade prevention, `POST /v2/cancelAll` clears it while an armed cancel-all-after countdown
         leaves it in place, and a `GTT` child is removed from the book by the ordinary expiry reaper
-        when it reaches the shared deadline, arriving as `CANCELLED` with `cancelReason: GTT_EXPIRED`.
+        one settlement headroom BEFORE the shared deadline — not at it — arriving as `CANCELLED`
+        with `cancelReason: GTT_EXPIRED`.
 
         Stops and their fired children are **structurally** reduce-only — they close the position and
         can never open one — while the signed `reduceOnly` field stays `false`; do not read that

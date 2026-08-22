@@ -98,7 +98,7 @@ operations:
         - $ref: '#/channels/operations/messages/createOrderResponseMessage'
     summary: Place an order
     description: |
-      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema), including the REQUIRED `timeInForce` — which, on a `STOP_LOSS`/`TAKE_PROFIT`, chooses the time in force the trigger's child order takes on when it fires. The trigger-firing contract (shared `expiresAfter` deadline, the `limitPx` band around `triggerPx`, OCO sibling cancellation, and how a fired child behaves once resting) is documented once on the REST `POST /v2/createOrder` operation and applies verbatim here. Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema), including the REQUIRED `timeInForce` — which, on a `STOP_LOSS`/`TAKE_PROFIT`, chooses the time in force the trigger's child order takes on when it fires. The trigger-firing contract (the shared `expiresAfter` deadline and the settlement headroom that closes both phases before it, the `limitPx` band around `triggerPx`, which outcomes cancel the OCO sibling and under which reason, and how a fired child behaves once resting) is documented once on the REST `POST /v2/createOrder` operation and applies verbatim here. Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
 
   sendModifyOrder:
     action: send
