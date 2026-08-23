@@ -299,16 +299,10 @@ assert.ok(
 // ── SL/TP firing (3.1.0) ────────────────────────────────────────────────────
 // These properties are load-bearing and individually droppable: an auto-merge
 // of trading-schemas.json that loses one regenerates an SDK without the field,
-// and the client then fails CLOSED for ever (an absent
-// triggerLimitBandFraction means "this market accepts no stops") with nothing
-// else going red. Pin them by name.
+// with nothing else going red. Pin them by name.
 assert.ok(
   tradingSchemas.definitions.Order.properties.triggered,
   'Order.triggered is the armed-vs-fired discriminator and must stay published',
-);
-assert.ok(
-  tradingSchemas.definitions.MarketDefinition.properties.triggerLimitBandFraction,
-  'MarketDefinition.triggerLimitBandFraction gates every SL/TP create; losing it refuses them all',
 );
 assert.ok(
   tradingSchemas.definitions.CreateOrderRequest.required.includes('timeInForce'),
@@ -319,7 +313,6 @@ for (const reason of [
   'PROTECTIVE_SELF_TRADE_SWEEP',
   'POSITION_CLOSED',
   'RISK_REJECTED',
-  'BAND_VIOLATION',
 ]) {
   assert.ok(
     tradingSchemas.definitions.CancelReason.enum.includes(reason),

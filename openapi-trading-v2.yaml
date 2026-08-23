@@ -674,21 +674,11 @@ paths:
 
         **Pricing the fired child.** `limitPx` is the worst price the child may execute at, not a pad
         on `triggerPx`, and admission bounds how far the two may sit apart:
-        `|limitPx − triggerPx| <= triggerPx × triggerLimitBandFraction`, per market. Read
-        `triggerLimitBandFraction` from `GET /v2/perpMarketDefinitions` — never hardcode a band — and
-        derive the outermost legal limit as the last `tickSize`-aligned price at or inside
-        `triggerPx × (1 ± band)`, rounding INWARD toward the trigger; with a band of `0.05` and a
-        `triggerPx` of `4000`, legal `limitPx` values lie in `[3800, 4200]`. Outside the band, the
-        create is rejected with `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`.
-
-        Read the published fraction by presence as well as by value: a positive fraction is an
-        active band; `"0"` disables the band and admits any positive `limitPx`; and a market whose
-        `MarketDefinition` carries NO `triggerLimitBandFraction` has no band configured and is not
-        currently accepting stops — every trigger create on it is rejected with the same
-        `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`, with the `message` distinguishing the two causes. An
-        absent fraction is NOT a band of `"0"`: `"0"` admits every limit price and absence admits
-        none. Absence also covers the window before the exchange has published a market's reference
-        data, where the consequence for the client is the same.
+        `|limitPx − triggerPx| <= triggerPx × band`, per market. The band is a matching-engine
+        setting and is deliberately NOT published — keep `limitPx` close to `triggerPx`. A `limitPx`
+        the band does not admit, and any trigger on a market with no band configured, are both
+        rejected with `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`, with the `message` distinguishing the two
+        causes.
 
         **Firing.** When the mark price crosses `triggerPx`, the trigger fires into an ordinary order
         carrying the chosen `timeInForce`, and that order surfaces with `triggered: true`. A fire
@@ -773,10 +763,8 @@ paths:
         time in force, or a different shared expiry, means cancelling it and creating a new one. Only an
         **armed** trigger (`triggered: false`) is modifiable — once it has fired, the resting child is
         cancel-only and a modify against it is refused. A re-priced trigger has its post-modify
-        `limitPx`/`triggerPx` pair re-checked against the market's `triggerLimitBandFraction` exactly as
-        at creation — including the three-state reading of that field, so a market that publishes no
-        fraction refuses the modify just as it refuses a create — and a pair outside the band is
-        rejected with `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`.
+        `limitPx`/`triggerPx` pair re-checked against the market's trigger band exactly as at
+        creation, and a pair outside it is rejected with `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`.
         The rest (`exchangeId`,
         `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
         `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
