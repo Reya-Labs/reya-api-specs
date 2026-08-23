@@ -706,8 +706,9 @@ paths:
         when a fire actually commits. Either there is nothing left to reduce (the position closed or
         flipped under the stop, or what remains is below one tradeable lot), and both legs are
         cancelled with `cancelReason: POSITION_CLOSED`; or the pre-trade risk checks refuse the close
-        itself, and both legs are cancelled with `cancelReason: RISK_REJECTED`
-        (`cancelReasonMessage` carries which check fired). No child order is created on either path,
+        itself, and both legs are cancelled with `cancelReason: RISK_REJECTED`. Which individual
+        risk check refused it is NOT published — `cancelReasonMessage` is a fixed explanatory string
+        per `cancelReason`, so do not parse it or branch on it. No child order is created on either path,
         so both cancellations arrive on orders that still carry `triggered: false`. Nothing rests,
         nothing fills, and the protection is terminally gone — the stop is not retried or re-armed
         when the account recovers, so re-arming is the user's move.
