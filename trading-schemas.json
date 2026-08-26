@@ -587,6 +587,7 @@
     "PerpExecution": {
       "title": "PerpExecution",
       "type": "object",
+      "description": "A settled perp execution. Maker-side fields are optional. They are always omitted for ADL and MARKET_CLOSE executions, which are single-sided and have no maker, and can also be absent on legacy executions.",
       "required": [
         "exchangeId",
         "symbol",
@@ -614,7 +615,7 @@
         },
         "makerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Maker account ID (counterparty)",
+          "description": "Maker account ID (counterparty). Absent for ADL and MARKET_CLOSE executions, which have no maker, and when no counterparty is available on a legacy execution.",
           "example": 67890
         },
         "takerOrderId": {
@@ -624,7 +625,7 @@
         },
         "makerOrderId": {
           "type": "string",
-          "description": "Order ID for the maker. Absent for legacy V2 executions and omitted when not meaningful.",
+          "description": "Order ID for the maker. Absent for legacy V2, ADL, and MARKET_CLOSE executions and omitted when not meaningful.",
           "example": "63552420037263360"
         },
         "qty": {
@@ -646,7 +647,7 @@
         },
         "makerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Signed maker fee impact in rUSD. Negative means rebate. Absent for legacy V2 executions.",
+          "description": "Signed maker fee impact in rUSD. Negative means rebate. Absent for legacy V2, ADL, and MARKET_CLOSE executions.",
           "example": "-0.10"
         },
         "takerOpeningFee": {
@@ -656,7 +657,7 @@
         },
         "makerOpeningFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and legacy V2 executions.",
+          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending, legacy V2, ADL, and MARKET_CLOSE executions.",
           "example": "-0.05"
         },
         "type": {
@@ -684,7 +685,7 @@
         },
         "makerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable or the execution is position-extending.",
+          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "example": "-12.50"
         },
         "takerPriceVariationPnl": {
@@ -694,7 +695,7 @@
         },
         "makerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "example": "-15.00"
         },
         "takerFundingPnl": {
@@ -704,7 +705,7 @@
         },
         "makerFundingPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable or the execution is position-extending.",
+          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "example": "2.50"
         }
       },
