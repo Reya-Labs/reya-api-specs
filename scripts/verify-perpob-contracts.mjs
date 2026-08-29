@@ -329,5 +329,9 @@ assert.ok(
   !tradingSchemas.definitions.RequestErrorCode.enum.includes('TRIGGER_REQUIRES_GTC_ERROR'),
   'TRIGGER_REQUIRES_GTC_ERROR was retired in 3.1.0 — triggers now choose their own TIF',
 );
+assert.ok(
+  !tradingSchemas.definitions.CancelReason.enum.includes('BAND_VIOLATION'),
+  'BAND_VIOLATION was removed from CancelReason in 3.1.0 — the band is an admission rejection, never a cancel reason',
+);
 
 console.log('Perp OB REST and AsyncAPI contract assertions passed.');

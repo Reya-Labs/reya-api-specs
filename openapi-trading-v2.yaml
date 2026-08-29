@@ -707,7 +707,10 @@ paths:
         to the position still reducible at that moment (a clamp to zero cancels the remainder with
         `POSITION_CLOSED`), so its displayed remaining quantity can exceed its fillable size; it is
         **cancel-only**, so a `modifyOrder` against it is refused; and it is **not** removed when the
-        position closes by another route. It blocks the account's own crossing orders through standard
+        position closes by another route. Firing guarantees the child order, not its execution: the
+        child rests at `limitPx` and fills only if the book comes to it, so a mark that gaps through
+        the level can leave a `GTC` / `GTT` child resting unfilled — and the position unprotected —
+        until it fills, expires, or is cancelled. It blocks the account's own crossing orders through standard
         self-trade prevention, `POST /v2/cancelAll` clears it while an armed cancel-all-after countdown
         leaves it in place, and a `GTT` child is removed from the book by the ordinary expiry reaper
         one settlement headroom BEFORE the shared deadline — not at it — arriving as `CANCELLED`
@@ -813,8 +816,14 @@ paths:
       description: |
         Cancel an existing order. Supports both spot and perp markets. All single cancels — spot and perp,
         including TP/SL — route through the matching engine on a unified `marketId` namespace. `accountId`,
-        `nonce`, and `deadline` are required and bound into the EIP-712 signature. Also available on the
-        order-entry WebSocket (`asyncapi-exec-v2.yaml`, `cancelOrder`).
+        `nonce`, and `deadline` are required and bound into the EIP-712 signature.
+
+        For a `STOP_LOSS` / `TAKE_PROFIT`, cancellation is bound to the **arming signer**: the wallet
+        that signs this cancel must be the exact wallet that armed the trigger, so a different signer
+        holding trade permission on the same account cannot cancel it and is rejected with
+        `UNAUTHORIZED_ACCOUNT_ERROR`. The same binding applies to `modifyOrder` on an armed trigger.
+
+        Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `cancelOrder`).
       operationId: cancelOrder
       tags:
         - Order Entry

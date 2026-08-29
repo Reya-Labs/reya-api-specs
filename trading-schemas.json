@@ -2438,7 +2438,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine. Always required, and always the explicit signed value: it is carried through to on-chain settlement as signed and is never inferred from `expiresAfter`. An order whose signed deadline is missing is rejected outright rather than settled against a substituted one.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Requests received after this timestamp are rejected before the order reaches the matching engine. Always required, and always the explicit signed value: it is carried through to on-chain settlement as signed and is never inferred from `expiresAfter`. An order whose signed deadline is missing is rejected outright rather than settled against a substituted one. `deadline` gates order ENTRY only: it is checked when the request is received and never again — the orders gateway recovers the signer without re-checking it, and settlement enforces `expiresAfter` instead — so it does not bound an armed `STOP_LOSS` / `TAKE_PROFIT`'s lifetime or its fired child's on-chain settlement. A `deadline` that has since lapsed leaves an already-armed stop armed, fireable, and its child settleable; `expiresAfter` is what bounds both phases.",
           "example": 1676923200
         },
         "expiresAfter": {
@@ -2641,7 +2641,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Distinct from `expiresAfter` (order lifetime). Always required, and always the explicit signed value: it is carried through to on-chain settlement as signed and is never inferred from `expiresAfter`.",
+          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `Order` envelope and enforced by the API at entry. Distinct from `expiresAfter` (order lifetime). Always required, and always the explicit signed value: it is carried through to on-chain settlement as signed and is never inferred from `expiresAfter`. Like the create-side field it gates request ENTRY only: re-signing an armed trigger with a fresh `deadline` does not extend its lifetime, and a `deadline` that lapses afterwards does not disarm it — `expiresAfter` alone bounds the armed phase and the fired child's settlement.",
           "example": 1676923200
         }
       },
@@ -2703,6 +2703,7 @@
     },
     "CancelOrderRequest": {
       "title": "CancelOrderRequest",
+      "description": "Cancels a live order by `orderId`, or by a non-zero `clientOrderId` when `orderId` is absent. Spot, perp, and protective stops all route through the matching engine on the unified `marketId` namespace. For a `STOP_LOSS` / `TAKE_PROFIT`, cancellation is bound to the arming signer: the wallet that signs this cancel must be the exact wallet that armed the trigger, so a different signer holding trade permission on the same account cannot cancel it and is rejected with `UNAUTHORIZED_ACCOUNT_ERROR`. The same binding applies to a modify against an armed trigger.",
       "type": "object",
       "required": [
         "symbol",
