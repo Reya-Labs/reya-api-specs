@@ -2353,7 +2353,7 @@
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
-      "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty` for `LIMIT` orders; `STOP_LOSS`/`TAKE_PROFIT` orders omit `qty` and sign the full-position sentinel `±int256.max` (raw, not E18; sign from `isBuy` — the sign carries the close side). Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `expiresAfter` (order lifetime — enforced on-chain at execution). Convention: if `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Order creation request. The fields carried here mirror the on-chain `OrderDetails` struct that the client signs via EIP-712. The REST surface keeps `isBuy` + `qty` as separate fields for symmetry with the rest of the API (Order, Execution, Trade schemas); on the signing side the signed `OrderDetails.quantity` is reconstructed as the signed int256 `isBuy ? +qty : -qty` for `LIMIT` orders; `STOP_LOSS`/`TAKE_PROFIT` orders omit `qty` and sign the full-position sentinel `±int256.max` (raw, not E18; sign from `isBuy` — the sign carries the close side). Two distinct time-related fields are carried and signed: `deadline` (signature validity — enforced by the API at entry) and `expiresAfter` (order lifetime — enforced on-chain at execution). Convention: if `expiresAfter > 0`, clients should ensure `deadline <= expiresAfter` to avoid signing a dead-on-arrival order. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -2425,7 +2425,7 @@
         },
         "signature": {
           "type": "string",
-          "description": "EIP-712 signature over the `Order(uint256 verifyingChainId, uint256 deadline, OrderDetails order)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "description": "EIP-712 signature over the `Order(uint256 verifyingChainId, uint256 deadline, OrderDetails order)` envelope. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
@@ -2628,7 +2628,7 @@
         },
         "signature": {
           "type": "string",
-          "description": "Fresh EIP-712 signature over the full post-modify order state — the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "description": "Fresh EIP-712 signature over the full post-modify order state — the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
@@ -2764,12 +2764,12 @@
         },
         "signature": {
           "type": "string",
-          "description": "EIP-712 signature over the `OrderCancel(uint64 verifyingChainId, uint64 deadline, OrderCancelDetails cancel)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "description": "EIP-712 signature over the `OrderCancel(uint64 verifyingChainId, uint64 deadline, OrderCancelDetails cancel)` envelope. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x5678..."
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See `docs/eip712.md`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -2825,12 +2825,12 @@
         },
         "signature": {
           "type": "string",
-          "description": "EIP-712 signature over the `MassCancel(uint64 verifyingChainId, uint64 deadline, MassCancelDetails massCancel)` envelope. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "description": "EIP-712 signature over the `MassCancel(uint64 verifyingChainId, uint64 deadline, MassCancelDetails massCancel)` envelope. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See `docs/eip712.md`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -2859,7 +2859,7 @@
     },
     "CancelAllAfterRequest": {
       "title": "CancelAllAfterRequest",
-      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels the account's open orders if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Scope: all open orders EXCEPT protective stops (`STOP_LOSS` / `TAKE_PROFIT`) — the dead-man's-switch deliberately leaves protective stops in place (they are safety orders only the user should cancel explicitly), whether the stop is still armed or has already fired into a resting child, unlike an explicit `POST /v2/cancelAll` which cancels everything. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See `docs/eip712.md` for the signing algorithm and exact typehash strings.",
+      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels the account's open orders if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Scope: all open orders EXCEPT protective stops (`STOP_LOSS` / `TAKE_PROFIT`) — the dead-man's-switch deliberately leaves protective stops in place (they are safety orders only the user should cancel explicitly), whether the stop is still armed or has already fired into a resting child, unlike an explicit `POST /v2/cancelAll` which cancels everything. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the signing algorithm and exact typehash strings.",
       "type": "object",
       "required": [
         "accountId",
@@ -2882,7 +2882,7 @@
         },
         "signature": {
           "type": "string",
-          "description": "EIP-712 signature over the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)`. See `docs/eip712.md` for the exact typehash string and signing algorithm.",
+          "description": "EIP-712 signature over the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
