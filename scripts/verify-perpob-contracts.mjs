@@ -296,4 +296,42 @@ assert.ok(
   'Execution AsyncAPI must include the current devnet server',
 );
 
+// ── SL/TP firing (3.1.0) ────────────────────────────────────────────────────
+// These properties are load-bearing and individually droppable: an auto-merge
+// of trading-schemas.json that loses one regenerates an SDK without the field,
+// with nothing else going red. Pin them by name.
+assert.ok(
+  tradingSchemas.definitions.Order.properties.triggered,
+  'Order.triggered is the armed-vs-fired discriminator and must stay published',
+);
+assert.ok(
+  tradingSchemas.definitions.CreateOrderRequest.required.includes('timeInForce'),
+  'timeInForce is REQUIRED on every create from 3.1.0 — a trigger may no longer imply GTC',
+);
+for (const reason of [
+  'OCO_SIBLING_FIRED',
+  'PROTECTIVE_SELF_TRADE_SWEEP',
+  'POSITION_CLOSED',
+  'RISK_REJECTED',
+]) {
+  assert.ok(
+    tradingSchemas.definitions.CancelReason.enum.includes(reason),
+    `CancelReason must publish ${reason} — the firing engine emits it`,
+  );
+}
+for (const code of ['TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR', 'TRIGGER_LIMIT_OUTSIDE_BAND_ERROR']) {
+  assert.ok(
+    tradingSchemas.definitions.RequestErrorCode.enum.includes(code),
+    `RequestErrorCode must publish ${code}`,
+  );
+}
+assert.ok(
+  !tradingSchemas.definitions.RequestErrorCode.enum.includes('TRIGGER_REQUIRES_GTC_ERROR'),
+  'TRIGGER_REQUIRES_GTC_ERROR was retired in 3.1.0 — triggers now choose their own TIF',
+);
+assert.ok(
+  !tradingSchemas.definitions.CancelReason.enum.includes('BAND_VIOLATION'),
+  'BAND_VIOLATION was removed from CancelReason in 3.1.0 — the band is an admission rejection, never a cancel reason',
+);
+
 console.log('Perp OB REST and AsyncAPI contract assertions passed.');
