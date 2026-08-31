@@ -263,12 +263,17 @@
         },
         "markPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last mark price, at the moment of the last market summary update",
+          "description": "Last matching-engine mark price (median of the book's impact price, index-plus-premium, and the CEX mark), at the moment of the last market summary update. Used for all risk calculations (PnL, margin, liquidations).",
           "example": "2666.48162040777"
+        },
+        "oraclePrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Stork index price for the market's underlying, sourced from CEX feeds. Quoted in USD (not rUSD) \u2014 unlike SpotMarketSummary.oraclePrice, so a spot-vs-perp basis computed across the two carries the USDC/USD peg deviation. Absent when no fresh index tick is available, and absent permanently on markets without a Stork feed. May legitimately equal markPrice on a thin or one-sided book, where the mark median collapses to its CEX-mark input.",
+          "example": "2666.12048917322"
         },
         "throttledMidPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last mid price, at the moment of the last market summary update",
+          "description": "Last mid price, at the moment of the last market summary update. Falls back to markPrice when the book is empty or one-sided — unlike the SpotMarketSummary field of the same name, which is omitted instead.",
           "example": "2666.48166680625"
         },
         "pricesUpdatedAt": {
@@ -308,8 +313,13 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Current oracle price",
+          "description": "Current oracle price: the Stork price for the market's base token, quoted in rUSD (divided by USDCUSD) \u2014 unlike the USD-quoted MarketSummary.oraclePrice on the perp summary.",
           "example": "2666.48162040777"
+        },
+        "throttledMidPrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Last spot orderbook mid price, at the moment of the last market summary update. Omitted when the book is empty or one-sided.",
+          "example": "2666.48166680625"
         }
       },
       "additionalProperties": true
