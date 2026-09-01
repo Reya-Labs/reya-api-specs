@@ -273,12 +273,12 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Stork index price for the market's underlying, sourced from CEX feeds. Quoted in USD (not rUSD) \u2014 unlike SpotMarketSummary.oraclePrice, so a spot-vs-perp basis computed across the two carries the USDC/USD peg deviation. Absent when no fresh index tick is available, and absent permanently on markets without a Stork feed. May legitimately equal markPrice on a thin or one-sided book, where the mark median collapses to its CEX-mark input.",
+          "description": "Stork index price for the market's underlying, sourced from CEX feeds. Absent when no fresh index tick is available.",
           "example": "2666.12048917322"
         },
         "throttledMidPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last mid price, at the moment of the last market summary update. Falls back to markPrice when the book is empty or one-sided \u2014 unlike the SpotMarketSummary field of the same name, which is omitted instead.",
+          "description": "Last mid price, at the moment of the last market summary update. Absent on an empty or one-sided book.",
           "example": "2666.48166680625"
         },
         "pricesUpdatedAt": {
@@ -318,7 +318,7 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Current oracle price: the Stork price for the market's base token, quoted in rUSD (divided by USDCUSD) \u2014 unlike the USD-quoted MarketSummary.oraclePrice on the perp summary.",
+          "description": "Current oracle price: the Stork price for the market's base token, quoted in rUSD (divided by USDCUSD), the same as MarketSummary.oraclePrice on the perp summary.",
           "example": "2666.48162040777"
         },
         "throttledMidPrice": {
