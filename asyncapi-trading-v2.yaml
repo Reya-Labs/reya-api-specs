@@ -1,8 +1,18 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 2.3.8
-  description: Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
+  version: 3.2.0
+  description: |
+    Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
+
+    ## Connection lifecycle, backpressure & recovery
+
+    Channels fall into two delivery classes with different backpressure behaviour:
+
+    - **Stateful channels** — market depth (`/v2/market/{symbol}/depth`) and wallet order changes (`/v2/wallet/{address}/orderChanges`) — deliver an ordered stream anchored to an initial snapshot. The server enforces per-connection backpressure: a consumer that falls too far behind is disconnected with WebSocket close code `1013` and reason `slow consumer — resubscribe for fresh snapshot`. Separately, after an internal feed resynchronization (for example a matching-engine restart), affected subscribers are closed with close code `1012`; the reason string begins `feed resync — resubscribe for fresh snapshot` and carries a runtime-appended suffix — ` (reset)` or ` (gap)` — identifying the internal cause. The same close code `1012` is also used when the server retires a connection for operational reasons — such as a graceful shutdown/deploy drain (reason prefix `server draining …`) or load management — where the reason string begins with an operationally-descriptive prefix rather than `feed resync …`. Clients must key recovery on the close **code** `1012` and treat the reason string as advisory only (do not parse the prefix or suffix).
+    - **Conflating channels** — asset oracle prices (`/v2/assetOraclePrices`) — coalesce under backpressure per symbol/asset: intermediate ticks may be dropped, but the latest value per symbol is always eventually delivered.
+
+    Recovery is identical for both `1013` and `1012`: reconnect and resubscribe. The normal subscribe path replies with a fresh, consistent snapshot of the channel's documented view. Events that occurred during the disconnection window are **not** replayed — clients must not expect gap-fill of individual updates; per-fill attribution lives in the execution channels (`.../perpExecutions`, `.../spotExecutions`) and the corresponding REST endpoints.
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -25,6 +35,10 @@ servers:
     host: ws.reya.xyz
     protocol: wss
     description: Production WebSocket server
+  devnet:
+    host: websocket-devnet.reya-cronos.network
+    protocol: wss
+    description: Devnet WebSocket server for Perp OB integration
   staging:
     host: websocket-staging.reya.xyz
     protocol: wss
@@ -58,36 +72,16 @@ channels:
     bindings:
       ws: {}
 
-  marketsSummary:
-    address: /v2/markets/summary
-    description: 'Deprecated: use `/v2/perpMarkets/summary` instead. Real-time updates for all market summaries. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
-    x-deprecated: true
-    messages:
-      marketsSummaryUpdate:
-        $ref: '#/components/messages/MarketsSummaryUpdate'
-
-  marketSummary:
-    address: /v2/market/{symbol}/summary
-    description: 'Deprecated: use `/v2/perpMarket/{symbol}/summary` instead. Real-time updates for a specific market''s summary. This un-prefixed channel still works but will be removed once integrators have migrated to the `perp*` naming. (AsyncAPI 3.0 has no native `deprecated` field on channels; flagged via `x-deprecated`.)'
-    x-deprecated: true
-    parameters:
-      symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
-    messages:
-      marketSummaryUpdate:
-        $ref: '#/components/messages/MarketSummaryUpdate'
-
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
-    description: Alias of `/v2/markets/summary` (mirrors `/v2/spotMarkets/summary`). Real-time updates for all perp market summaries
+    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all perp market summaries
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
 
   perpMarketSummary:
     address: /v2/perpMarket/{symbol}/summary
-    description: Alias of `/v2/market/{symbol}/summary` (mirrors `/v2/spotMarket/{symbol}/summary`). Real-time updates for a specific perp market's summary
+    description: Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)
@@ -127,12 +121,63 @@ channels:
 
   marketDepth:
     address: /v2/market/{symbol}/depth
-    description: Real-time L2 order book depth snapshots for a specific market
+    description: |
+      Real-time L2 order book depth for a specific market.
+
+      This is a stateful channel with snapshot + diff semantics. The nested
+      depth payload discriminator (`contents.type` on the `subscribed` frame,
+      `data.type` on `channel_data`) tells the client how to apply it:
+
+      - Subscribing delivers one bounded `SNAPSHOT`: at most the 100 highest
+        bid levels and at most the 100 lowest ask levels. Bids are sorted
+        descending by `px`; asks are sorted ascending. WebSocket subscriptions
+        have no client-selected depth limit. If a side contains more than 100
+        levels, deeper levels are omitted from the published view.
+      - Every subsequent `channel_data` frame is an `UPDATE` **diff** that carries
+        **only the price levels whose state changed in that bounded view** since
+        the previous frame — not another snapshot. When the 100-level boundary
+        moves, this includes a newly visible level even if its underlying quantity
+        did not change, and a zero-quantity removal for a displaced level even if
+        that level still exists deeper in the full exchange book. An underlying
+        change wholly outside the published view does not emit an `UPDATE`.
+      - Each level's `qty` is ABSOLUTE: it is the level's new aggregated total at
+        that `px`, not a signed delta. Overwrite the level at that `px` with the
+        received `qty`.
+      - A `qty` of `0` means delete that `px` from the published view. The level
+        may have been fully consumed or may merely have moved outside the
+        100-level boundary.
+      - A single `UPDATE` frame may carry multiple changed levels, and levels for
+        both `bids` and `asks` may appear together in the same frame. Either side
+        may be empty, but every emitted `UPDATE` has at least one changed level.
+
+      To maintain the exact published top-100 view: seed it from the `SNAPSHOT`,
+      then apply each `UPDATE` frame in the order received — for every level,
+      replace the total at its `px` (or delete the `px` when `qty` is `0`). This
+      channel does not provide a complete book when either side exceeds 100
+      levels; use a new subscription to recover a fresh bounded view.
+
+      The server enforces per-connection backpressure — a consumer that falls
+      behind is disconnected with close code `1013` (reason `slow consumer —
+      resubscribe for fresh snapshot`). After an internal feed resynchronization
+      (e.g. a matching-engine restart) subscribers are closed with close code
+      `1012`; the reason string begins `feed resync — resubscribe for fresh
+      snapshot` and carries a runtime-appended suffix (` (reset)` or ` (gap)`)
+      identifying the internal cause — key recovery on the close **code** `1012`
+      and treat the reason as advisory. The same `1012` is also sent when the
+      server retires a connection for operational reasons (e.g. a graceful
+      shutdown/deploy drain or load management), with a different reason prefix;
+      recovery is unchanged. Recovery for both `1013` and `1012` is the
+      same: reconnect and resubscribe; the subscribe path returns a fresh
+      consistent bounded `SNAPSHOT` and updates from the disconnection window
+      are not replayed. See the API overview for the shared
+      connection-lifecycle contract.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
         location: $message.payload#/symbol
     messages:
+      marketDepthSubscribed:
+        $ref: '#/components/messages/MarketDepthSubscribed'
       marketDepthUpdate:
         $ref: '#/components/messages/MarketDepthUpdate'
 
@@ -160,12 +205,45 @@ channels:
 
   walletOrderChanges:
     address: /v2/wallet/{address}/orderChanges
-    description: Real-time order change updates for wallet
+    description: |
+      Real-time order change updates for a wallet.
+
+      Two server-to-client message types arrive on this logical channel:
+      `orderChangesSubscribed` is the initial `subscribed` confirmation and
+      carries an `OrderChangesSnapshot` payload (current open orders plus a
+      `snapshotSequenceNumber` cursor); `orderChangeUpdate` is every subsequent
+      `channel_data` frame and carries order rows whose `sequenceNumber` is
+      greater than `snapshotSequenceNumber`. The cursor lets clients splice the
+      live feed against the `/wallet/{address}/orderHistory` REST endpoint.
+
+      Each `orderChangeUpdate` frame batches losslessly: the `channel_data` `data`
+      array may carry multiple order events in a single frame — every event is
+      delivered (none are conflated or dropped) and clients must process the array
+      in order.
+
+      This is a stateful channel and enforces per-connection backpressure. A
+      consumer that falls behind is disconnected with close code `1013` (reason
+      `slow consumer — resubscribe for fresh snapshot`); after an internal feed
+      resynchronization (e.g. a matching-engine restart) subscribers are closed
+      with close code `1012`, whose reason string begins `feed resync —
+      resubscribe for fresh snapshot` and carries a runtime-appended suffix
+      (` (reset)` or ` (gap)`) — key recovery on the close **code** `1012` and
+      treat the reason as advisory. The same `1012` is also sent when the server
+      retires a connection for operational reasons (e.g. a graceful
+      shutdown/deploy drain or load management), with a different reason prefix;
+      recovery is unchanged. Recovery for both is the same: reconnect and
+      resubscribe; the subscribe path returns a fresh consistent
+      `OrderChangesSnapshot` and updates
+      from the disconnection window are not replayed (the snapshot reflects the
+      resulting order state; per-fill attribution lives in the executions data).
+      See the API overview for the shared connection-lifecycle contract.
     parameters:
       address:
         description: Ethereum wallet address
         location: $message.payload#/address
     messages:
+      orderChangesSubscribed:
+        $ref: '#/components/messages/OrderChangesSubscribed'
       orderChangeUpdate:
         $ref: '#/components/messages/OrderChangeUpdate'
 
@@ -191,27 +269,27 @@ channels:
       walletSpotExecutionUpdate:
         $ref: '#/components/messages/WalletSpotExecutionUpdate'
 
-  marketSpotExecutionBusts:
-    address: /v2/market/{symbol}/spotExecutionBusts
-    description: Real-time spot execution busts (failed spot fills) for a specific market
+  marketExecutionBusts:
+    address: /v2/market/{symbol}/executionBusts
+    description: Real-time execution busts (failed fills) for a specific market, covering both spot and perp
     parameters:
       symbol:
-        description: Trading symbol (e.g., ETHRUSD, BTCRUSD)
+        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
         location: $message.payload#/symbol
     messages:
-      marketSpotExecutionBustUpdate:
-        $ref: '#/components/messages/MarketSpotExecutionBustUpdate'
+      marketExecutionBustUpdate:
+        $ref: '#/components/messages/MarketExecutionBustUpdate'
 
-  walletSpotExecutionBusts:
-    address: /v2/wallet/{address}/spotExecutionBusts
-    description: Real-time spot execution bust updates for a wallet
+  walletExecutionBusts:
+    address: /v2/wallet/{address}/executionBusts
+    description: Real-time execution bust updates (failed fills) for a wallet, covering both spot and perp
     parameters:
       address:
         description: Ethereum wallet address
         location: $message.payload#/address
     messages:
-      walletSpotExecutionBustUpdate:
-        $ref: '#/components/messages/WalletSpotExecutionBustUpdate'
+      walletExecutionBustUpdate:
+        $ref: '#/components/messages/WalletExecutionBustUpdate'
 
   walletAccountBalances:
     address: /v2/wallet/{address}/accountBalances
@@ -224,23 +302,31 @@ channels:
       accountBalanceUpdate:
         $ref: '#/components/messages/AccountBalanceUpdate'
 
-  prices:
-    address: /v2/prices
-    description: Real-time price updates for all symbols
-    messages:
-      pricesUpdate:
-        $ref: '#/components/messages/PricesUpdate'
-
-  price:
-    address: /v2/prices/{symbol}
-    description: Real-time price updates for a specific symbol
+  walletAccounts:
+    address: /v2/wallet/{address}/accounts
+    description: Real-time account creation and account-binding updates for a wallet
     parameters:
-      symbol:
-        description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
-        location: $message.payload#/symbol
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
     messages:
-      priceUpdate:
-        $ref: '#/components/messages/PriceUpdate'
+      accountUpdate:
+        $ref: '#/components/messages/AccountUpdate'
+
+  assetOraclePrices:
+    address: /v2/assetOraclePrices
+    description: |
+      Asset Stork oracle price updates. This replacement feed deliberately omits
+      AMM-era `poolPrice`.
+
+      This is a conflating channel: under backpressure the server coalesces
+      updates per asset — intermediate ticks may be dropped — but the latest
+      price per asset is always eventually delivered, so consumers converge to
+      current values. See the API overview for the shared connection-lifecycle
+      contract.
+    messages:
+      assetOraclePricesUpdate:
+        $ref: '#/components/messages/AssetOraclePricesUpdate'
 
 operations:
   sendPing:
@@ -308,31 +394,13 @@ operations:
       - $ref: '#/channels/control/messages/errorMessage'
     summary: Receive error messages
 
-  receiveMarketsSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketsSummary'
-    messages:
-      - $ref: '#/channels/marketsSummary/messages/marketsSummaryUpdate'
-    summary: 'Deprecated: use receivePerpMarketsSummary instead. Receive market summaries updates.'
-    x-deprecated: true
-
-  receiveMarketSummary:
-    action: receive
-    channel:
-      $ref: '#/channels/marketSummary'
-    messages:
-      - $ref: '#/channels/marketSummary/messages/marketSummaryUpdate'
-    summary: 'Deprecated: use receivePerpMarketSummary instead. Receive specific market summary updates.'
-    x-deprecated: true
-
   receivePerpMarketsSummary:
     action: receive
     channel:
       $ref: '#/channels/perpMarketsSummary'
     messages:
       - $ref: '#/channels/perpMarketsSummary/messages/marketsSummaryUpdate'
-    summary: Receive perp market summaries updates (alias of receiveMarketsSummary)
+    summary: Receive perp market summaries updates
 
   receivePerpMarketSummary:
     action: receive
@@ -340,7 +408,7 @@ operations:
       $ref: '#/channels/perpMarketSummary'
     messages:
       - $ref: '#/channels/perpMarketSummary/messages/marketSummaryUpdate'
-    summary: Receive specific perp market summary updates (alias of receiveMarketSummary)
+    summary: Receive specific perp market summary updates
 
   receiveSpotMarketsSummary:
     action: receive
@@ -371,8 +439,9 @@ operations:
     channel:
       $ref: '#/channels/marketDepth'
     messages:
+      - $ref: '#/channels/marketDepth/messages/marketDepthSubscribed'
       - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
-    summary: Receive L2 depth snapshots for specific market
+    summary: Receive a bounded L2 depth snapshot and subsequent view updates for a specific market
 
   receiveMarketSpotExecutions:
     action: receive
@@ -395,6 +464,7 @@ operations:
     channel:
       $ref: '#/channels/walletOrderChanges'
     messages:
+      - $ref: '#/channels/walletOrderChanges/messages/orderChangesSubscribed'
       - $ref: '#/channels/walletOrderChanges/messages/orderChangeUpdate'
     summary: Receive order change updates for wallet
 
@@ -414,21 +484,21 @@ operations:
       - $ref: '#/channels/walletSpotExecutions/messages/walletSpotExecutionUpdate'
     summary: Receive spot execution updates for wallet
 
-  receiveMarketSpotExecutionBusts:
+  receiveMarketExecutionBusts:
     action: receive
     channel:
-      $ref: '#/channels/marketSpotExecutionBusts'
+      $ref: '#/channels/marketExecutionBusts'
     messages:
-      - $ref: '#/channels/marketSpotExecutionBusts/messages/marketSpotExecutionBustUpdate'
-    summary: Receive spot execution bust updates for market
+      - $ref: '#/channels/marketExecutionBusts/messages/marketExecutionBustUpdate'
+    summary: Receive execution bust updates for market (spot + perp)
 
-  receiveWalletSpotExecutionBusts:
+  receiveWalletExecutionBusts:
     action: receive
     channel:
-      $ref: '#/channels/walletSpotExecutionBusts'
+      $ref: '#/channels/walletExecutionBusts'
     messages:
-      - $ref: '#/channels/walletSpotExecutionBusts/messages/walletSpotExecutionBustUpdate'
-    summary: Receive spot execution bust updates for wallet
+      - $ref: '#/channels/walletExecutionBusts/messages/walletExecutionBustUpdate'
+    summary: Receive execution bust updates for wallet (spot + perp)
 
   receiveWalletAccountBalances:
     action: receive
@@ -438,21 +508,21 @@ operations:
       - $ref: '#/channels/walletAccountBalances/messages/accountBalanceUpdate'
     summary: Receive account balance updates for wallet
 
-  receivePrices:
+  receiveWalletAccounts:
     action: receive
     channel:
-      $ref: '#/channels/prices'
+      $ref: '#/channels/walletAccounts'
     messages:
-      - $ref: '#/channels/prices/messages/pricesUpdate'
-    summary: Receive price updates for all symbols
+      - $ref: '#/channels/walletAccounts/messages/accountUpdate'
+    summary: Receive account creation and account-binding updates for wallet
 
-  receivePrice:
+  receiveAssetOraclePrices:
     action: receive
     channel:
-      $ref: '#/channels/price'
+      $ref: '#/channels/assetOraclePrices'
     messages:
-      - $ref: '#/channels/price/messages/priceUpdate'
-    summary: Receive price updates for specific symbol
+      - $ref: '#/channels/assetOraclePrices/messages/assetOraclePricesUpdate'
+    summary: Receive asset oracle price updates
 
 components:
   correlationIds:
@@ -503,6 +573,16 @@ components:
       payload:
         $ref: '#/components/schemas/OrderChangeUpdatePayload'
 
+    OrderChangesSubscribed:
+      name: subscribed
+      title: Order Changes Subscribed
+      summary: |
+        Initial `subscribed` confirmation for the orderChanges channel. The
+        envelope is the generic subscribe-response shape; `contents` carries the
+        typed `OrderChangesSnapshot` payload.
+      payload:
+        $ref: '#/components/schemas/OrderChangesSubscribedPayload'
+
     MarketPerpExecutionUpdate:
       name: marketPerpExecutionUpdate
       title: Market Perpetual Execution Update
@@ -513,9 +593,19 @@ components:
     MarketDepthUpdate:
       name: marketDepthUpdate
       title: Market Depth Update
-      summary: Real-time L2 order book snapshot for a specific market
+      summary: Real-time bounded L2 order book view update for a specific market
       payload:
         $ref: '#/components/schemas/MarketDepthUpdatePayload'
+
+    MarketDepthSubscribed:
+      name: subscribed
+      title: Market Depth Subscribed
+      summary: |
+        Initial `subscribed` confirmation for the market depth channel. The
+        envelope is the generic subscribe-response shape; `contents` carries a
+        bounded `DepthSnapshot` payload containing at most 100 levels per side.
+      payload:
+        $ref: '#/components/schemas/MarketDepthSubscribedPayload'
 
     MarketSpotExecutionUpdate:
       name: marketSpotExecutionUpdate
@@ -538,19 +628,19 @@ components:
       payload:
         $ref: '#/components/schemas/WalletSpotExecutionUpdatePayload'
 
-    MarketSpotExecutionBustUpdate:
-      name: marketSpotExecutionBustUpdate
-      title: Market Spot Execution Bust Update
-      summary: Real-time spot execution bust update for market
+    MarketExecutionBustUpdate:
+      name: marketExecutionBustUpdate
+      title: Market Execution Bust Update
+      summary: Real-time execution bust update for market (spot + perp)
       payload:
-        $ref: '#/components/schemas/MarketSpotExecutionBustUpdatePayload'
+        $ref: '#/components/schemas/MarketExecutionBustUpdatePayload'
 
-    WalletSpotExecutionBustUpdate:
-      name: walletSpotExecutionBustUpdate
-      title: Wallet Spot Execution Bust Update
-      summary: Real-time spot execution bust update for wallet
+    WalletExecutionBustUpdate:
+      name: walletExecutionBustUpdate
+      title: Wallet Execution Bust Update
+      summary: Real-time execution bust update for wallet (spot + perp)
       payload:
-        $ref: '#/components/schemas/WalletSpotExecutionBustUpdatePayload'
+        $ref: '#/components/schemas/WalletExecutionBustUpdatePayload'
 
     AccountBalanceUpdate:
       name: accountBalanceUpdate
@@ -559,19 +649,19 @@ components:
       payload:
         $ref: '#/components/schemas/AccountBalanceUpdatePayload'
 
-    PricesUpdate:
-      name: pricesUpdate
-      title: Prices Update
-      summary: Real-time price updates for all symbols
+    AccountUpdate:
+      name: accountUpdate
+      title: Account Update
+      summary: Real-time account creation or account-binding update for wallet
       payload:
-        $ref: '#/components/schemas/PricesUpdatePayload'
+        $ref: '#/components/schemas/AccountUpdatePayload'
 
-    PriceUpdate:
-      name: priceUpdate
-      title: Price Update
-      summary: Real-time price update for a specific symbol
+    AssetOraclePricesUpdate:
+      name: assetOraclePricesUpdate
+      title: Asset Oracle Prices Update
+      summary: Real-time asset Stork oracle price updates
       payload:
-        $ref: '#/components/schemas/PriceUpdatePayload'
+        $ref: '#/components/schemas/AssetOraclePricesUpdatePayload'
 
     PingMessage:
       name: ping
@@ -689,19 +779,19 @@ components:
     MarketsSummaryChannel:
       type: string
       enum:
-        - /v2/markets/summary
-      description: Channel for all markets summary updates
+        - /v2/perpMarkets/summary
+      description: Channel for all perp market summary updates.
 
-    PricesChannel:
+    AssetOraclePricesChannel:
       type: string
       enum:
-        - /v2/prices
-      description: Channel for all prices updates
+        - /v2/assetOraclePrices
+      description: Channel for asset oracle price updates
 
     MarketSummaryChannelPattern:
       type: string
-      pattern: '^/v2/market/[A-Za-z0-9]+/summary$'
-      description: Channel pattern for specific market summary updates
+      pattern: '^/v2/perpMarket/[A-Za-z0-9]+/summary$'
+      description: Channel pattern for specific perp market summary updates.
 
     SpotMarketsSummaryChannel:
       type: string
@@ -723,6 +813,15 @@ components:
       type: string
       pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
       description: Channel pattern for market depth snapshots
+
+    # Compatibility exports for existing SDK consumers. Wire envelopes below
+    # use the exact snapshot/update variants, while these aliases keep the
+    # previously generated Depth and DepthType imports available.
+    Depth:
+      $ref: './trading-schemas.json#/definitions/Depth'
+
+    DepthType:
+      $ref: './trading-schemas.json#/definitions/DepthType'
 
     MarketSpotExecutionsChannelPattern:
       type: string
@@ -749,25 +848,25 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotExecutions$'
       description: Channel pattern for wallet spot executions
 
-    MarketSpotExecutionBustsChannelPattern:
+    MarketExecutionBustsChannelPattern:
       type: string
-      pattern: '^/v2/market/[A-Za-z0-9]+/spotExecutionBusts$'
-      description: Channel pattern for market spot execution busts
+      pattern: '^/v2/market/[A-Za-z0-9]+/executionBusts$'
+      description: Channel pattern for market execution busts (spot + perp)
 
-    WalletSpotExecutionBustsChannelPattern:
+    WalletExecutionBustsChannelPattern:
       type: string
-      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotExecutionBusts$'
-      description: Channel pattern for wallet spot execution busts
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/executionBusts$'
+      description: Channel pattern for wallet execution busts (spot + perp)
 
     WalletAccountBalancesChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
       description: Channel pattern for wallet account balances
 
-    PriceChannelPattern:
+    WalletAccountsChannelPattern:
       type: string
-      pattern: '^/v2/prices/[A-Za-z0-9]+$'
-      description: Channel pattern for specific price updates
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accounts$'
+      description: Channel pattern for wallet account creation and binding updates
 
     BaseUpdateEnvelope:
       type: object
@@ -874,6 +973,60 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/Order'
 
+    OrderChangesSubscribedPayload:
+      type: object
+      title: OrderChangesSubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/WalletOrderChangesChannelPattern'
+        contents:
+          $ref: './trading-schemas.json#/definitions/OrderChangesSnapshot'
+
+    WebSocketDepthSnapshot:
+      # Preserve the existing generated TypeScript export name for SDK source compatibility.
+      title: DepthSnapshot
+      description: |
+        The fixed public WebSocket depth snapshot. This narrows the shared REST
+        snapshot maximum from 1,000 to the 100 levels per side published by the
+        WebSocket channel.
+      allOf:
+        - $ref: './trading-schemas.json#/definitions/DepthSnapshot'
+        - type: object
+          properties:
+            bids:
+              type: array
+              maxItems: 100
+              items:
+                $ref: './trading-schemas.json#/definitions/Level'
+            asks:
+              type: array
+              maxItems: 100
+              items:
+                $ref: './trading-schemas.json#/definitions/Level'
+
+    MarketDepthSubscribedPayload:
+      type: object
+      title: MarketDepthSubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/MarketDepthChannelPattern'
+        contents:
+          $ref: '#/components/schemas/WebSocketDepthSnapshot'
+
     MarketPerpExecutionUpdateBody:
       type: object
       title: MarketPerpExecutionUpdateBody
@@ -901,7 +1054,7 @@ components:
         channel:
           $ref: '#/components/schemas/MarketDepthChannelPattern'
         data:
-          $ref: './trading-schemas.json#/definitions/Depth'
+          $ref: './trading-schemas.json#/definitions/DepthUpdate'
 
     MarketSpotExecutionUpdateBody:
       type: object
@@ -951,37 +1104,37 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/SpotExecution'
 
-    MarketSpotExecutionBustUpdateBody:
+    MarketExecutionBustUpdateBody:
       type: object
-      title: MarketSpotExecutionBustUpdateBody
+      title: MarketExecutionBustUpdateBody
       additionalProperties: false
       required:
         - channel
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/MarketSpotExecutionBustsChannelPattern'
+          $ref: '#/components/schemas/MarketExecutionBustsChannelPattern'
         data:
           type: array
-          title: SpotExecutionBustList
+          title: ExecutionBustList
           items:
-            $ref: './trading-schemas.json#/definitions/SpotExecutionBust'
+            $ref: './trading-schemas.json#/definitions/ExecutionBust'
 
-    WalletSpotExecutionBustUpdateBody:
+    WalletExecutionBustUpdateBody:
       type: object
-      title: WalletSpotExecutionBustUpdateBody
+      title: WalletExecutionBustUpdateBody
       additionalProperties: false
       required:
         - channel
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/WalletSpotExecutionBustsChannelPattern'
+          $ref: '#/components/schemas/WalletExecutionBustsChannelPattern'
         data:
           type: array
-          title: WalletSpotExecutionBustList
+          title: WalletExecutionBustList
           items:
-            $ref: './trading-schemas.json#/definitions/SpotExecutionBust'
+            $ref: './trading-schemas.json#/definitions/ExecutionBust'
 
     AccountBalanceUpdateBody:
       type: object
@@ -999,34 +1152,66 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/AccountBalance'
 
-    PricesUpdateBody:
+    AccountUpdateData:
       type: object
-      title: PricesUpdateBody
+      title: AccountUpdateData
+      additionalProperties: false
+      required:
+        - accountId
+        - owner
+        - mainAccountId
+        - spotAccountId
+        - isMainPerpAccount
+        - isSpotAccount
+      properties:
+        accountId:
+          type: string
+          pattern: '^\\d+$'
+          description: Decimal-string account identifier whose creation or binding changed.
+          example: '7'
+        owner:
+          $ref: './trading-schemas.json#/definitions/Address'
+        mainAccountId:
+          type:
+            - string
+            - 'null'
+          pattern: '^\\d+$'
+          description: Decimal-string main perp account identifier for the owner, or null when none is bound.
+          example: '7'
+        spotAccountId:
+          type:
+            - string
+            - 'null'
+          pattern: '^\\d+$'
+          description: Decimal-string spot account identifier for the owner, or null when none is bound.
+          example: null
+        isMainPerpAccount:
+          type: boolean
+          description: Whether accountId is currently the owner's main perp account.
+          example: true
+        isSpotAccount:
+          type: boolean
+          description: Whether accountId is currently the owner's spot account.
+          example: false
+        removed:
+          type: boolean
+          description: Present and true only on the previous owner's channel during a defensive ownership rebind notification.
+
+    AssetOraclePricesUpdateBody:
+      type: object
+      title: AssetOraclePricesUpdateBody
       additionalProperties: false
       required:
         - channel
         - data
       properties:
         channel:
-          $ref: '#/components/schemas/PricesChannel'
+          $ref: '#/components/schemas/AssetOraclePricesChannel'
         data:
           type: array
-          title: PriceList
+          title: AssetOraclePriceList
           items:
-            $ref: './trading-schemas.json#/definitions/Price'
-
-    PriceUpdateBody:
-      type: object
-      title: PriceUpdateBody
-      additionalProperties: false
-      required:
-        - channel
-        - data
-      properties:
-        channel:
-          $ref: '#/components/schemas/PriceChannelPattern'
-        data:
-          $ref: './trading-schemas.json#/definitions/Price'
+            $ref: './trading-schemas.json#/definitions/AssetOraclePrice'
 
     MarketsSummaryUpdatePayload:
       title: MarketsSummaryUpdatePayload
@@ -1094,17 +1279,17 @@ components:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletSpotExecutionUpdateBody'
 
-    MarketSpotExecutionBustUpdatePayload:
-      title: MarketSpotExecutionBustUpdatePayload
+    MarketExecutionBustUpdatePayload:
+      title: MarketExecutionBustUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/MarketSpotExecutionBustUpdateBody'
+        - $ref: '#/components/schemas/MarketExecutionBustUpdateBody'
 
-    WalletSpotExecutionBustUpdatePayload:
-      title: WalletSpotExecutionBustUpdatePayload
+    WalletExecutionBustUpdatePayload:
+      title: WalletExecutionBustUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/WalletSpotExecutionBustUpdateBody'
+        - $ref: '#/components/schemas/WalletExecutionBustUpdateBody'
 
     AccountBalanceUpdatePayload:
       title: AccountBalanceUpdatePayload
@@ -1112,17 +1297,36 @@ components:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/AccountBalanceUpdateBody'
 
-    PricesUpdatePayload:
-      title: PricesUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PricesUpdateBody'
+    AccountUpdatePayload:
+      type: object
+      title: AccountUpdatePayload
+      additionalProperties: false
+      required:
+        - type
+        - timestamp
+        - channel
+        - data
+      properties:
+        type:
+          $ref: '#/components/schemas/ChannelDataMessageType'
+        timestamp:
+          type: number
+          description: Update timestamp (milliseconds)
+          example: 1747927089946
+        channel:
+          $ref: '#/components/schemas/WalletAccountsChannelPattern'
+        data:
+          type: array
+          title: AccountUpdateList
+          description: The account whose creation or owner binding changed.
+          items:
+            $ref: '#/components/schemas/AccountUpdateData'
 
-    PriceUpdatePayload:
-      title: PriceUpdatePayload
+    AssetOraclePricesUpdatePayload:
+      title: AssetOraclePricesUpdatePayload
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PriceUpdateBody'
+        - $ref: '#/components/schemas/AssetOraclePricesUpdateBody'
 
     PingMessagePayload:
       type: object
@@ -1170,7 +1374,7 @@ components:
         channel:
           type: string
           description: Channel path to subscribe to
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
         id:
           type: string
           description: Optional request identifier
@@ -1189,7 +1393,7 @@ components:
         channel:
           type: string
           description: Channel path to unsubscribe from
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
         id:
           type: string
           description: Optional request identifier
@@ -1208,7 +1412,7 @@ components:
         channel:
           type: string
           description: Channel that was subscribed to
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
         contents:
           type: object
           title: SubscriptionContents
@@ -1228,7 +1432,7 @@ components:
         channel:
           type: string
           description: Channel that was unsubscribed from
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
       required:
         - type
         - channel
@@ -1247,7 +1451,7 @@ components:
         channel:
           type: string
           description: Optional channel related to the error
-          example: /v2/markets/summary
+          example: /v2/perpMarkets/summary
       required:
         - type
         - message
