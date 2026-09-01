@@ -318,7 +318,7 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Current oracle price: the Stork price for the market's base token, quoted in rUSD (divided by USDCUSD), the same as MarketSummary.oraclePrice on the perp summary.",
+          "description": "Current oracle price: the Stork price for the market's base token, quoted in USDC (also called rUSD in reya network)",
           "example": "2666.48162040777"
         },
         "throttledMidPrice": {
