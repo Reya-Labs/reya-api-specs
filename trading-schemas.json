@@ -607,7 +607,7 @@
     "PerpExecution": {
       "title": "PerpExecution",
       "type": "object",
-      "description": "A settled perp execution. Maker-side fields are optional. They are always omitted for ADL and MARKET_CLOSE executions, which are single-sided and have no maker, and can also be absent on legacy executions.",
+      "description": "A settled perp execution. Maker-side fields are optional. They are always omitted for ADL and MARKET_CLOSE executions, which are single-sided and have no maker, and can also be absent on legacy executions. takerFee is the gross taker debit; on Fee v3 fills it is decomposed into the optional protocolFeeCredit, referrerFeeCredit, takerRebateCredit and poolFeeCredit components, which are absent on pre-Fee v3 executions and never synthesized.",
       "required": [
         "exchangeId",
         "symbol",
@@ -662,12 +662,32 @@
         },
         "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
+          "description": "Gross taker fee debit in rUSD (signed; positive means the taker paid a fee). On a Fee v3 fill this is exactly protocolFeeCredit + referrerFeeCredit + takerRebateCredit + poolFeeCredit.",
           "example": "0.50"
+        },
+        "protocolFeeCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Fee v3 component of takerFee credited to the protocol fee collector, in rUSD. Present only on Fee v3 fills; absent on pre-Fee v3 executions and never synthesized.",
+          "example": "0.30"
+        },
+        "referrerFeeCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Fee v3 component of takerFee credited to the taker's referrer, in rUSD. Zero when the taker has no referrer. Present only on Fee v3 fills; absent on pre-Fee v3 executions and never synthesized.",
+          "example": "0.05"
+        },
+        "takerRebateCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Fee v3 component of takerFee routed to the taker-rebate settlement bucket, in rUSD. It is part of the gross taker debit and is not necessarily an immediate net credit back to the taker. Present only on Fee v3 fills; absent on pre-Fee v3 executions and never synthesized.",
+          "example": "0.10"
+        },
+        "poolFeeCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Fee v3 component of takerFee credited to the passive pool, in rUSD. Present only on Fee v3 fills; absent on pre-Fee v3 executions and never synthesized.",
+          "example": "0.05"
         },
         "makerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Signed maker fee impact in rUSD. Negative means rebate. Absent for legacy V2, ADL, and MARKET_CLOSE executions.",
+          "description": "Signed net maker fee in rUSD from the legacy maker debit and credit legs (negative means rebate). Present only on pre-Fee v3 executions that recorded a maker debit or credit. Absent on every Fee v3 fill, which has no maker fee or rebate leg, and on ADL and MARKET_CLOSE executions.",
           "example": "-0.10"
         },
         "takerOpeningFee": {
@@ -677,7 +697,7 @@
         },
         "makerOpeningFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending, legacy V2, ADL, and MARKET_CLOSE executions.",
+          "description": "Opening fee portion of the maker fee in rUSD. Absent for position-extending executions and whenever makerFee is absent, including every Fee v3 fill, ADL, and MARKET_CLOSE.",
           "example": "-0.05"
         },
         "type": {
