@@ -607,7 +607,7 @@
     "PerpExecution": {
       "title": "PerpExecution",
       "type": "object",
-      "description": "A settled perp execution. Maker-side fields are optional. They are always omitted for ADL and MARKET_CLOSE executions, which are single-sided and have no maker, and can also be absent on legacy executions. takerFee is the gross taker debit; on Fee v3 fills it is decomposed into the optional protocolFeeCredit, referrerFeeCredit, takerRebateCredit and poolFeeCredit components, which are absent on pre-Fee v3 executions and never synthesized.",
+      "description": "A settled perp execution. Maker-side fields are optional. They are always omitted for ADL and MARKET_CLOSE executions, which are single-sided and have no maker, and can also be absent on legacy executions.",
       "required": [
         "exchangeId",
         "symbol",
