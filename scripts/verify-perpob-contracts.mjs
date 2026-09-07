@@ -31,6 +31,87 @@ assert.ok(
   'PaginationMeta examples must show newest-first ordering',
 );
 
+const depth = tradingSchemas.definitions.Depth;
+assert.deepEqual(
+  depth.required,
+  ['symbol', 'type', 'bids', 'asks', 'updatedAt'],
+  'Deprecated Depth must preserve its legacy source-compatible shape',
+);
+assert.equal(depth.deprecated, true);
+assert.equal(depth.properties.type.$ref, '#/definitions/DepthType');
+assert.equal(depth.properties.bids.maxItems, undefined);
+assert.equal(depth.properties.asks.maxItems, undefined);
+const depthSnapshot = tradingSchemas.definitions.DepthSnapshot.allOf[1];
+const depthUpdate = tradingSchemas.definitions.DepthUpdate.allOf[1];
+const depthUpdateConstraint =
+  tradingSchemas.definitions.DepthUpdate.allOf[2];
+assert.equal(
+  tradingSchemas.definitions.DepthSnapshot.additionalProperties,
+  true,
+  'DepthSnapshot must expose extensions in generated REST clients',
+);
+assert.equal(
+  tradingSchemas.definitions.DepthUpdate.additionalProperties,
+  true,
+  'DepthUpdate must expose extensions in generated WebSocket clients',
+);
+assert.deepEqual(
+  tradingSchemas.definitions.DepthBase.required,
+  ['symbol', 'updatedAt'],
+  'DepthBase must not widen variant discriminators or side constraints during code generation',
+);
+assert.deepEqual(depthSnapshot.required, ['type', 'bids', 'asks']);
+assert.deepEqual(depthUpdate.required, ['type', 'bids', 'asks']);
+assert.equal(
+  depthSnapshot.properties.type.$ref,
+  '#/definitions/DepthSnapshotType',
+);
+assert.equal(
+  depthUpdate.properties.type.$ref,
+  '#/definitions/DepthUpdateType',
+);
+assert.deepEqual(tradingSchemas.definitions.DepthSnapshotType.enum, ['SNAPSHOT']);
+assert.deepEqual(tradingSchemas.definitions.DepthUpdateType.enum, ['UPDATE']);
+assert.deepEqual(
+  depthUpdateConstraint.anyOf,
+  [
+    { properties: { bids: { minItems: 1 } } },
+    { properties: { asks: { minItems: 1 } } },
+  ],
+  'DepthUpdate must require at least one changed side',
+);
+const acceptsDepthUpdateSides = (bids, asks) =>
+  depthUpdateConstraint.anyOf.some(({ properties }) =>
+    Object.entries(properties).every(
+      ([side, constraint]) =>
+        ({ bids, asks })[side].length >= constraint.minItems,
+    ),
+  );
+assert.equal(
+  acceptsDepthUpdateSides([], []),
+  false,
+  'DepthUpdate must reject a no-op with both sides empty',
+);
+assert.equal(acceptsDepthUpdateSides([{ px: '1', qty: '1' }], []), true);
+assert.equal(acceptsDepthUpdateSides([], [{ px: '1', qty: '1' }]), true);
+for (const side of ['bids', 'asks']) {
+  assert.equal(
+    depthSnapshot.properties[side].maxItems,
+    1000,
+    `DepthSnapshot.${side} must be capped at 1,000 levels`,
+  );
+  assert.equal(
+    depthUpdate.properties[side].maxItems,
+    undefined,
+    `DepthUpdate.${side} must allow a boundary transition larger than the WebSocket view`,
+  );
+  assert.equal(
+    depthUpdate.properties[side].minItems,
+    undefined,
+    `DepthUpdate.${side} must allow an empty unchanged-side diff`,
+  );
+}
+
 assert.ok(
   openApi.includes('url: https://api-devnet.reya-cronos.network/v2'),
   'OpenAPI must include the current devnet server',
@@ -38,6 +119,20 @@ assert.ok(
 const asyncExecSpecOperation = yamlBlock(openApi, '  /asyncapi-exec-spec.yaml:');
 assert.ok(asyncExecSpecOperation.includes('operationId: getAsyncExecApiSpec'));
 assert.ok(asyncExecSpecOperation.includes('application/yaml:'));
+const marketDepthOperation = yamlBlock(openApi, '  /market/{symbol}/depth:');
+assert.ok(
+  marketDepthOperation.includes("$ref: '#/components/schemas/DepthSnapshot'"),
+  'REST market depth must return the bounded snapshot variant',
+);
+for (const compatibilitySchema of ['Depth', 'DepthType']) {
+  const schema = yamlBlock(openApi, `    ${compatibilitySchema}:`);
+  assert.ok(
+    schema.includes(
+      `$ref: './trading-schemas.json#/definitions/${compatibilitySchema}'`,
+    ),
+    `OpenAPI must retain the ${compatibilitySchema} SDK compatibility export`,
+  );
+}
 
 const executionTypeParam = yamlBlock(openApi, '    ExecutionTypeParam:');
 const executionTypeParamValues = Array.from(
@@ -86,6 +181,84 @@ for (const expected of [
   'AccountUpdateData:',
 ]) {
   assert.ok(infoAsyncApi.includes(expected), `Info AsyncAPI must include: ${expected}`);
+}
+
+const marketDepthChannel = yamlBlock(infoAsyncApi, '  marketDepth:');
+assert.ok(
+  marketDepthChannel.includes('at most the 100 highest') &&
+    marketDepthChannel.includes('exact published top-100 view') &&
+    marketDepthChannel.includes('100-level boundary') &&
+    !marketDepthChannel.includes('1,000-level boundary'),
+  'WebSocket depth must document the fixed 100-level-per-side view',
+);
+for (const message of ['marketDepthSubscribed:', 'marketDepthUpdate:']) {
+  assert.ok(
+    marketDepthChannel.includes(message),
+    `Market depth channel must include ${message}`,
+  );
+}
+const receiveMarketDepth = yamlBlock(infoAsyncApi, '  receiveMarketDepth:');
+for (const messageRef of [
+  '#/channels/marketDepth/messages/marketDepthSubscribed',
+  '#/channels/marketDepth/messages/marketDepthUpdate',
+]) {
+  assert.ok(
+    receiveMarketDepth.includes(messageRef),
+    `receiveMarketDepth must include ${messageRef}`,
+  );
+}
+const marketDepthSubscribedPayload = yamlBlock(
+  infoAsyncApi,
+  '    MarketDepthSubscribedPayload:',
+);
+assert.ok(
+  marketDepthSubscribedPayload.includes(
+    "$ref: '#/components/schemas/WebSocketDepthSnapshot'",
+  ),
+  'Subscribed depth contents must use the WebSocket-specific snapshot',
+);
+const webSocketDepthSnapshot = yamlBlock(
+  infoAsyncApi,
+  '    WebSocketDepthSnapshot:',
+);
+assert.ok(
+  webSocketDepthSnapshot.includes('title: DepthSnapshot'),
+  'WebSocket depth snapshot must retain the existing SDK export name',
+);
+assert.ok(
+  webSocketDepthSnapshot.includes(
+    "$ref: './trading-schemas.json#/definitions/DepthSnapshot'",
+  ),
+  'WebSocket depth snapshot must retain the shared snapshot fields',
+);
+for (const side of ['bids', 'asks']) {
+  const sideSchema = yamlBlock(
+    webSocketDepthSnapshot,
+    `            ${side}:`,
+  );
+  assert.ok(
+    sideSchema.includes('maxItems: 100'),
+    `WebSocket depth snapshot ${side} must be capped at 100 levels`,
+  );
+}
+const marketDepthUpdateBody = yamlBlock(
+  infoAsyncApi,
+  '    MarketDepthUpdateBody:',
+);
+assert.ok(
+  marketDepthUpdateBody.includes(
+    "$ref: './trading-schemas.json#/definitions/DepthUpdate'",
+  ),
+  'Depth channel_data must use DepthUpdate',
+);
+for (const compatibilitySchema of ['Depth', 'DepthType']) {
+  const schema = yamlBlock(infoAsyncApi, `    ${compatibilitySchema}:`);
+  assert.ok(
+    schema.includes(
+      `$ref: './trading-schemas.json#/definitions/${compatibilitySchema}'`,
+    ),
+    `Info AsyncAPI must retain the ${compatibilitySchema} SDK compatibility export`,
+  );
 }
 
 const accountUpdateData = yamlBlock(infoAsyncApi, '    AccountUpdateData:');
@@ -226,5 +399,43 @@ for (const [closeCode, boundTo] of [
     `Info AsyncAPI must keep close code ${closeCode} bound to "${boundTo}" (within ${BINDING_WINDOW} characters of a \`${closeCode}\` mention)`,
   );
 }
+
+// ── SL/TP firing (3.1.0) ────────────────────────────────────────────────────
+// These properties are load-bearing and individually droppable: an auto-merge
+// of trading-schemas.json that loses one regenerates an SDK without the field,
+// with nothing else going red. Pin them by name.
+assert.ok(
+  tradingSchemas.definitions.Order.properties.triggered,
+  'Order.triggered is the armed-vs-fired discriminator and must stay published',
+);
+assert.ok(
+  tradingSchemas.definitions.CreateOrderRequest.required.includes('timeInForce'),
+  'timeInForce is REQUIRED on every create from 3.1.0 — a trigger may no longer imply GTC',
+);
+for (const reason of [
+  'OCO_SIBLING_FIRED',
+  'PROTECTIVE_SELF_TRADE_SWEEP',
+  'POSITION_CLOSED',
+  'RISK_REJECTED',
+]) {
+  assert.ok(
+    tradingSchemas.definitions.CancelReason.enum.includes(reason),
+    `CancelReason must publish ${reason} — the firing engine emits it`,
+  );
+}
+for (const code of ['TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR', 'TRIGGER_LIMIT_OUTSIDE_BAND_ERROR']) {
+  assert.ok(
+    tradingSchemas.definitions.RequestErrorCode.enum.includes(code),
+    `RequestErrorCode must publish ${code}`,
+  );
+}
+assert.ok(
+  !tradingSchemas.definitions.RequestErrorCode.enum.includes('TRIGGER_REQUIRES_GTC_ERROR'),
+  'TRIGGER_REQUIRES_GTC_ERROR was retired in 3.1.0 — triggers now choose their own TIF',
+);
+assert.ok(
+  !tradingSchemas.definitions.CancelReason.enum.includes('BAND_VIOLATION'),
+  'BAND_VIOLATION was removed from CancelReason in 3.1.0 — the band is an admission rejection, never a cancel reason',
+);
 
 console.log('Perp OB REST and AsyncAPI contract assertions passed.');
