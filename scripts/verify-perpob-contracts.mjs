@@ -296,8 +296,9 @@ assert.ok(
   'Execution AsyncAPI must include the current devnet server',
 );
 
-// --- Rate limit v1 wire contract -------------------------------------------
+// --- Rate limit v1 wire contract: 400-only venue verdicts ------------------
 
+const requestErrorCodes = tradingSchemas.definitions.RequestErrorCode.enum;
 for (const code of [
   'RATE_LIMITED_ERROR',
   'OPEN_ORDER_COUNT_EXCEEDED_ERROR',
@@ -305,57 +306,61 @@ for (const code of [
   'CAPACITY_LIMITED_ERROR',
   'NOT_WHITELISTED_ERROR',
   'ACCOUNT_SUSPENDED_ERROR',
+  'UNAVAILABLE_ACCOUNT_OWNER_ERROR',
 ]) {
   assert.ok(
-    tradingSchemas.definitions.RequestErrorCode.enum.includes(code),
+    requestErrorCodes.includes(code),
     `RequestErrorCode must keep the rate-limit v1 member: ${code}`,
   );
 }
+assert.ok(
+  !requestErrorCodes.includes('OPEN_ORDER_CAP_ERROR'),
+  'OPEN_ORDER_CAP_ERROR belonged to the removed legacy TypeScript limiter and is emitted nowhere; the matching engine returns OPEN_ORDER_COUNT_EXCEEDED_ERROR / OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR instead',
+);
 
 const responseStatuses = (operationId) => {
   const pathItem = yamlBlock(openApi, `  /${operationId}:`);
   const responses = yamlBlock(yamlBlock(pathItem, '    post:'), '      responses:');
   return Array.from(responses.matchAll(/^        '(\d{3})':$/gm), (match) => match[1]);
 };
-// Exact sets: absence is the load-bearing half. A cancel that starts declaring
-// 503, or a cancelAllAfter that does, would mean risk-off traffic can be shed.
-const ACCESS_AND_LIMIT_STATUSES = ['403', '429', '503'];
-for (const [operationId, expectedStatuses] of [
-  ['createOrder', ['403', '429', '503']],
-  ['modifyOrder', ['403', '429', '503']],
-  ['cancelOrder', ['429']],
-  ['cancelAll', ['429']],
-  // Arming or refreshing a countdown from a suspended account is refused 403;
-  // disarming is not gated, and no direction is ever capacity-shed.
-  ['cancelAllAfter', ['403', '429']],
-]) {
-  const declared = responseStatuses(operationId).filter((status) =>
-    ACCESS_AND_LIMIT_STATUSES.includes(status),
-  );
+const ORDER_ENTRY_OPERATIONS = [
+  'createOrder',
+  'modifyOrder',
+  'cancelOrder',
+  'cancelAll',
+  'cancelAllAfter',
+];
+// The venue answers every verdict on 400 and puts the reason in the body's
+// `error` code. A reintroduced 429/503/403 would split one contract across two
+// signals and desynchronise REST from the order-entry WebSocket envelope.
+const VENUE_VERDICT_STATUSES = ['403', '429', '503'];
+for (const operationId of ORDER_ENTRY_OPERATIONS) {
+  const declared = responseStatuses(operationId);
+  const forbidden = declared.filter((status) => VENUE_VERDICT_STATUSES.includes(status));
   assert.deepEqual(
-    declared.sort(),
-    [...expectedStatuses].sort(),
-    `POST /v2/${operationId} must declare exactly these access/limit responses: ${expectedStatuses.join(', ')} (declares: ${declared.join(', ') || 'none'})`,
+    forbidden,
+    [],
+    `POST /v2/${operationId} must not declare a venue-verdict status: rate limits, capacity shedding, suspension and whitelist refusals are all 400 with the RequestErrorCode in the body (declares: ${forbidden.join(', ')})`,
+  );
+  assert.ok(
+    declared.includes('400'),
+    `POST /v2/${operationId} must declare the 400 that carries every venue verdict`,
   );
 }
 
-const tooManyRequests = yamlBlock(openApi, '    TooManyRequests:');
-const tooManyRequestsHeader = yamlBlock(tooManyRequests, '        Retry-After:');
+for (const orphan of ['Forbidden', 'TooManyRequests', 'ServiceUnavailable']) {
+  assert.ok(
+    !openApi.includes(`\n    ${orphan}:\n`),
+    `components.responses.${orphan} must be gone: nothing references it once venue verdicts are 400-only`,
+  );
+}
 assert.ok(
-  tooManyRequestsHeader.includes('required: true'),
-  'TooManyRequests must declare Retry-After as required',
+  !openApi.includes('Retry-After'),
+  'Trading OpenAPI must not declare a Retry-After header: the retry hint travels in the body as retryAfterMs',
 );
 assert.ok(
-  tooManyRequestsHeader.includes('minimum: 1'),
-  'TooManyRequests Retry-After must declare minimum: 1 (the edge never sends 0)',
-);
-const serviceUnavailableHeader = yamlBlock(
-  yamlBlock(openApi, '    ServiceUnavailable:'),
-  '        Retry-After:',
-);
-assert.ok(
-  serviceUnavailableHeader.includes('required: false'),
-  'ServiceUnavailable must declare Retry-After as optional',
+  !JSON.stringify(tradingSchemas).includes('Retry-After'),
+  'trading-schemas.json must not mention a Retry-After header: the retry hint travels in the body as retryAfterMs',
 );
 
 const retryAfterMs = tradingSchemas.definitions.RequestError.properties.retryAfterMs;
@@ -366,6 +371,83 @@ assert.equal(
   1,
   'RequestError.retryAfterMs must declare minimum: 1 — a zero hint is collapsed to omission',
 );
+
+const requestErrorCodeDoc = tradingSchemas.definitions.RequestErrorCode.description;
+for (const [phrase, why] of [
+  [
+    'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
+    'the 429 carve-out must stay stated, so nobody reads its absence as an oversight',
+  ],
+  [
+    'the request was NOT evaluated',
+    'UNAVAILABLE_ACCOUNT_OWNER_ERROR must keep the not-evaluated half of its contract',
+  ],
+  [
+    'retry it unchanged after a short delay',
+    'UNAVAILABLE_ACCOUNT_OWNER_ERROR must keep the retry-unchanged half of its contract',
+  ],
+  [
+    'It is deliberately distinct from `CAPACITY_LIMITED_ERROR`',
+    'a lookup failure wants an immediate retry where a shed wants a back-off; collapsing them was the defect this code fixes',
+  ],
+  [
+    'retry unchanged, after a short delay, for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR` and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`',
+    'the retry policy must name the new code alongside the other retry-unchanged codes',
+  ],
+  [
+    'retry `RATE_LIMITED_ERROR` after the `retryAfterMs` the rejection carries, and back off and retry `CAPACITY_LIMITED_ERROR` after it',
+    'the retry policy must be keyed on retryAfterMs rather than a header',
+  ],
+  [
+    'nor `NOT_WHITELISTED_ERROR` or `ACCOUNT_SUSPENDED_ERROR`, which are access decisions and not transient',
+    'the access codes must stay documented as non-retryable',
+  ],
+]) {
+  assert.ok(
+    requestErrorCodeDoc.includes(phrase),
+    `RequestErrorCode description must keep: "${phrase}" — ${why}`,
+  );
+}
+assert.ok(
+  requestErrorCodeDoc.includes('`OPEN_ORDER_CAP_ERROR`, was the legacy API-layer rate limiter'),
+  'RequestErrorCode description must record why OPEN_ORDER_CAP_ERROR was dropped, so it is not re-added by a client that still remembers it',
+);
+
+const orderEntryTag = yamlBlock(openApi, '  - name: Order Entry');
+assert.ok(
+  orderEntryTag.includes('**Every venue verdict is HTTP 400.**'),
+  'The Order Entry tag must state the 400-only contract',
+);
+assert.ok(
+  orderEntryTag.includes('HTTP 429 is\n      reserved for infrastructure-level (per-IP) limits in front of the API'),
+  'The Order Entry tag must keep the 429 carve-out',
+);
+const badRequest = yamlBlock(openApi, '    BadRequest:');
+for (const code of [
+  'RATE_LIMITED_ERROR',
+  'CAPACITY_LIMITED_ERROR',
+  'NOT_WHITELISTED_ERROR',
+  'ACCOUNT_SUSPENDED_ERROR',
+  'UNAVAILABLE_ACCOUNT_OWNER_ERROR',
+  'retryAfterMs',
+]) {
+  assert.ok(
+    badRequest.includes(code),
+    `components.responses.BadRequest must document ${code}: it is the only response the venue verdicts arrive on`,
+  );
+}
+
+const execAsyncApiInfoBlock = yamlBlock(execAsyncApi, 'info:');
+assert.ok(
+  execAsyncApiInfoBlock.includes('HTTP 400 carrying the same `error` code and the same `retryAfterMs`'),
+  'Execution AsyncAPI must cross-reference REST as 400-only, so the two transports cannot drift apart',
+);
+for (const status of ['HTTP 429 with', 'HTTP 503', 'HTTP 403']) {
+  assert.ok(
+    !execAsyncApiInfoBlock.includes(status),
+    `Execution AsyncAPI must not cross-reference REST ${status}: venue verdicts are 400-only`,
+  );
+}
 
 for (const [name, source] of [
   ['Execution AsyncAPI', execAsyncApi],
