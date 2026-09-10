@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.3.0
+  version: 3.4.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -583,6 +583,61 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/transfers:
+    get:
+      summary: Get wallet transfers
+      description: |
+        Returns the transfer history of every account of a wallet: one entry
+        per account side of every on-chain transfer leg — deposits,
+        withdrawals, transfers between accounts, pool stakes and unstakes,
+        spot trades, auto-exchanges, perp fees and rebates, liquidation
+        penalties — labelled by `type` and signed from the account's point of
+        view. A transfer between two accounts of the same wallet therefore
+        appears twice, once negative and once positive.
+
+        This is the history of net deposits (cash) only. Realized PnL, funding
+        and ADL cashflows never move net deposits and do not appear; closing a
+        profitable position shows only its fee entry. Read `realBalance` from
+        `accountBalances` and per-position PnL from `positions` and
+        `perpExecutions`; `netDepositsAfter` is not a balance to display on
+        its own.
+
+        Entries are returned newest first by `sequenceNumber`, at most
+        `limit` (default and maximum 100) per page. Pagination is by opaque
+        cursor: pass `meta.nextCursor` back as `cursor` to get the next page;
+        walking to the end visits every entry exactly once, with no
+        duplicates and no gaps, even when many entries share one block.
+        `startTime` and `endTime` are optional filters on the block
+        timestamp, not the pagination mechanism. Entries whose amount is zero
+        (some liquidation and auto-exchange legs) are hidden unless
+        `includeZero=true`.
+
+        History starts at the environment's backfill start block; earlier
+        movements are absent, not synthesised. Entries never change once
+        returned.
+      operationId: getWalletTransfers
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/TransfersLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/TransferTypeParam'
+        - $ref: '#/components/parameters/IncludeZeroParam'
+      responses:
+        '200':
+          description: Page of transfer entries, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/openOrders:
     get:
       summary: Get wallet open orders
@@ -972,6 +1027,60 @@ components:
           - MARKET_CLOSE
         example: LIQUIDATION
 
+    TransfersLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: >-
+        Maximum number of entries per page. The default and the maximum are
+        both 100; larger values are clamped to 100.
+      schema:
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
+        example: 100
+
+    CursorParam:
+      name: cursor
+      in: query
+      required: false
+      description: >-
+        Opaque page cursor returned as `meta.nextCursor` by the previous page.
+        Omit for the first page. Cursors are versioned by the server and must
+        not be constructed or parsed by clients.
+      schema:
+        type: string
+        example: djEuNTQ2MzY3NzA2LjA
+
+    TransferTypeParam:
+      name: type
+      in: query
+      required: false
+      description: >-
+        Return only entries of these types, as a comma-separated list of
+        `TransferType` values (for example `DEPOSIT,WITHDRAWAL` or
+        `PERP_TAKER_FEE,PERP_TAKER_REBATE`). Omit to return every type.
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: './trading-schemas.json#/definitions/TransferType'
+        example:
+          - DEPOSIT
+          - WITHDRAWAL
+
+    IncludeZeroParam:
+      name: includeZero
+      in: query
+      required: false
+      description: >-
+        Include entries whose amount is zero. The chain builds some
+        liquidation and auto-exchange legs even when nothing moves; they are
+        hidden by default because they are noise in a history view, but they
+        are needed to follow `netDepositsAfter` exactly.
+      schema:
+        type: boolean
+        default: false
+
     DepthLimitParam:
       name: limit
       in: query
@@ -1051,6 +1160,15 @@ components:
 
     SpotExecutionList:
       $ref: './trading-schemas.json#/definitions/SpotExecutionList'
+
+    Transfer:
+      $ref: './trading-schemas.json#/definitions/Transfer'
+
+    TransferType:
+      $ref: './trading-schemas.json#/definitions/TransferType'
+
+    TransferList:
+      $ref: './trading-schemas.json#/definitions/TransferList'
 
     ExecutionBust:
       $ref: './trading-schemas.json#/definitions/ExecutionBust'

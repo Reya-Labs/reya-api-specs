@@ -771,6 +771,156 @@
       },
       "additionalProperties": true
     },
+    "TransferType": {
+      "title": "TransferType",
+      "type": "string",
+      "enum": [
+        "DEPOSIT",
+        "WITHDRAWAL",
+        "TRANSFER",
+        "POOL_STAKE",
+        "POOL_UNSTAKE",
+        "PERP_TAKER_FEE",
+        "PERP_REFERRER_REBATE",
+        "PERP_TAKER_REBATE",
+        "PERP_POOL_REBATE",
+        "PERP_FEE",
+        "SPOT_EXECUTION",
+        "AUTO_EXCHANGE",
+        "AUTO_EXCHANGE_INSURANCE_FEE",
+        "LIQUIDATION_INSURANCE_FEE",
+        "LIQUIDATION_BACKSTOP_FEE",
+        "LIQUIDATION_LIQUIDATOR_REWARD",
+        "LIQUIDATION_KEEPER_REWARD",
+        "LIQUIDATION_BID_FEE",
+        "INSURANCE_FUND_COVERAGE",
+        "POOL_MERGE",
+        "OTHER"
+      ],
+      "description": "Purpose of a transfer entry, never its direction (direction is the sign of `amount`). DEPOSIT / WITHDRAWAL: collateral entering or leaving the protocol. TRANSFER: between two margin accounts of the same owner. POOL_STAKE / POOL_UNSTAKE: the asset leg and the share-token leg of a passive-pool stake or unstake. PERP_TAKER_FEE: the gross fee a taker pays on a perp fill (taker to protocol fee collector). PERP_REFERRER_REBATE, PERP_TAKER_REBATE, PERP_POOL_REBATE: the parts of that fee the collector forwards to the taker's referrer, back to the taker, and to the passive pool. PERP_FEE: a perp-fill fee leg settled before the Fee v3 layout (backfilled history only). SPOT_EXECUTION: the two token legs of a spot trade. AUTO_EXCHANGE / AUTO_EXCHANGE_INSURANCE_FEE: the legs of an auto-exchange, the second being the insurance-fund fee. LIQUIDATION_*: the penalty legs of a liquidation (insurance fund, backstop LP, liquidator, keeper) and the bid fee of a ranked liquidation. INSURANCE_FUND_COVERAGE, POOL_MERGE: protocol-internal movements. OTHER: a leg the API does not recognise; it is still returned with exact amounts."
+    },
+    "Transfer": {
+      "title": "Transfer",
+      "type": "object",
+      "description": "One movement of collateral into, out of, or between margin accounts, from the point of view of `accountId`: one entry per account side of an on-chain transfer leg, for every leg the chain emits (deposits, withdrawals, transfers, pool stakes, spot trades, auto-exchanges, perp fees and rebates, liquidation penalties). This is the history of net deposits (cash) only: realized PnL, funding and ADL cashflows never appear here, and `netDepositsAfter` is not `realBalance`.",
+      "required": [
+        "sequenceNumber",
+        "accountId",
+        "asset",
+        "amount",
+        "netDepositsAfter",
+        "type",
+        "timestamp",
+        "transactionHash"
+      ],
+      "properties": {
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unique id of the entry, increasing in chain order and never reused: the on-chain transfer leg sequence number times two, plus 0 for the paying side and 1 for the receiving side.",
+          "example": 273183853
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The account this entry belongs to.",
+          "example": 12345
+        },
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "RUSD"
+        },
+        "amount": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Amount moved, signed from this account's view: negative when collateral left the account, positive when it arrived. The two entries of one leg sum to zero.",
+          "example": "-0.50"
+        },
+        "netDepositsAfter": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Net deposits (cash) of `accountId` in `asset` right after this entry, as written by the chain on the transfer leg; the same basis as `AccountBalance.balanceDEPRECATED`. Not `realBalance`: realized PnL is excluded. Consecutive entries of one account and asset satisfy previous `netDepositsAfter` + `amount` = `netDepositsAfter`.",
+          "example": "1024.25"
+        },
+        "type": {
+          "$ref": "#/definitions/TransferType"
+        },
+        "counterpartyAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The other side of the leg. Absent when the other side is outside the protocol (deposits, withdrawals) or the pool contract (stakes, unstakes).",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market of the execution that caused the entry: the perp market for perp fee and rebate entries settled after the fill link was added on-chain, the spot market for spot trade and auto-exchange entries. Absent otherwise.",
+          "example": "BTCRUSDPERP"
+        },
+        "spotExecutionSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "`SpotExecution.sequenceNumber` of the spot trade or auto-exchange that caused the entry. Spot entries only.",
+          "example": 9911
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Matching-engine fill nonce of the execution that caused the entry: joins the entry to `PerpExecution.fillId` or `SpotExecution.fillId`. Absent for entries not caused by a matching-engine fill (deposits, liquidations, auto-exchanges, dust settlements) and for perp fills settled before the fill link was added on-chain.",
+          "example": "42"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Block timestamp of the transfer (milliseconds)",
+          "example": 1747927089946
+        },
+        "transactionHash": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "description": "Hash of the transaction that emitted the transfer",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
+    "CursorPaginationMeta": {
+      "title": "CursorPaginationMeta",
+      "type": "object",
+      "required": [
+        "limit",
+        "count"
+      ],
+      "properties": {
+        "limit": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items requested, after the server cap",
+          "example": 100
+        },
+        "count": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items returned",
+          "example": 50
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Opaque cursor for the next page. Pass it back as the `cursor` query parameter; walking to the end visits every item exactly once, with no duplicates and no gaps. Absent when there is no further page.",
+          "example": "djEuNTQ2MzY3NzA2LjA"
+        }
+      },
+      "additionalProperties": true
+    },
+    "TransferList": {
+      "title": "TransferList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Transfer"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/CursorPaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
     "SpotExecution": {
       "title": "SpotExecution",
       "type": "object",
