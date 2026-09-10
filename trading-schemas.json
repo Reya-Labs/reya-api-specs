@@ -817,7 +817,7 @@
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Unique id of the entry, increasing in chain order and never reused: the on-chain transfer leg sequence number times two, plus 0 for the paying side and 1 for the receiving side.",
-          "example": 273183853
+          "example": 273183852
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
