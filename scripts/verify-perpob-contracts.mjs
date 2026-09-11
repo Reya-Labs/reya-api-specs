@@ -373,49 +373,22 @@ assert.equal(
 );
 
 const requestErrorCodeDoc = tradingSchemas.definitions.RequestErrorCode.description;
-for (const [phrase, why] of [
-  [
-    'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
-    'the 429 carve-out must stay stated, so nobody reads its absence as an oversight',
-  ],
-  [
-    'the request was NOT evaluated',
-    'UNAVAILABLE_ACCOUNT_OWNER_ERROR must keep the not-evaluated half of its contract',
-  ],
-  [
-    'retry it unchanged after a short delay',
-    'UNAVAILABLE_ACCOUNT_OWNER_ERROR must keep the retry-unchanged half of its contract',
-  ],
-  [
-    'It is deliberately distinct from `CAPACITY_LIMITED_ERROR`',
-    'a lookup failure wants an immediate retry where a shed wants a back-off; collapsing them was the defect this code fixes',
-  ],
-  [
-    'retry unchanged, after a short delay, for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR` and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`',
-    'the retry policy must name the new code alongside the other retry-unchanged codes',
-  ],
-  [
-    'retry `RATE_LIMITED_ERROR` after the `retryAfterMs` the rejection carries',
-    'the rate-limit retry policy must be keyed on retryAfterMs rather than a header',
-  ],
-  [
-    'retry `CAPACITY_LIMITED_ERROR` using backoff with jitter (the current guard supplies no retry hint)',
-    'publisher recovery has no exact retry instant; do not promise a capacity retry hint',
-  ],
-  [
-    'nor `NOT_WHITELISTED_ERROR` or `ACCOUNT_SUSPENDED_ERROR`, which are access decisions and not transient',
-    'the access codes must stay documented as non-retryable',
-  ],
+for (const phrase of [
+  'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
+  '`UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was not accepted',
+  'Retry it unchanged after a short delay',
+  'retry unchanged after a short delay for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR`, and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`',
+  'It carries no retry hint; use backoff with jitter',
+  'These differ from `CAPACITY_LIMITED_ERROR`, which calls for backoff with jitter',
+  'retry `RATE_LIMITED_ERROR` after at least `retryAfterMs`',
+  'retry `CAPACITY_LIMITED_ERROR` using backoff with jitter',
+  'Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are not resolved by automatic retries',
 ]) {
   assert.ok(
     requestErrorCodeDoc.includes(phrase),
-    `RequestErrorCode description must keep: "${phrase}" — ${why}`,
+    `RequestErrorCode must retain client recovery guidance: "${phrase}"`,
   );
 }
-assert.ok(
-  requestErrorCodeDoc.includes('`OPEN_ORDER_CAP_ERROR`, was the legacy API-layer rate limiter'),
-  'RequestErrorCode description must record why OPEN_ORDER_CAP_ERROR was dropped, so it is not re-added by a client that still remembers it',
-);
 
 const orderEntryTag = yamlBlock(openApi, '  - name: Order Entry');
 assert.ok(
@@ -470,7 +443,7 @@ const infoAsyncApiInfo = yamlBlock(infoAsyncApi, 'info:');
 const BINDING_WINDOW = 200;
 for (const [closeCode, boundTo] of [
   ['1013', 'slow consumer'],
-  ['1012', 'feed resync'],
+  ['1012', 'fresh snapshot'],
 ]) {
   const token = `\`${closeCode}\``;
   let bound = false;

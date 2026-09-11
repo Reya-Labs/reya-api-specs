@@ -3,30 +3,68 @@ info:
   title: Reya DEX Order Entry WebSocket API v2
   version: 3.4.0
   description: |
-    Order-entry WebSocket API for Reya Network's decentralized exchange. This is a request/response surface for placing, modifying, and cancelling orders and managing cancel-on-disconnect over a persistent WebSocket connection — same operations and payload bodies as the REST `/v2` endpoints (`POST /v2/createOrder`, `POST /v2/modifyOrder`, `POST /v2/cancelOrder`, `POST /v2/cancelAll`, `POST /v2/cancelAllAfter`), with lower per-operation overhead.
+    Order-entry WebSocket API for placing, modifying, and cancelling orders and managing
+    cancel-on-disconnect. Operations use the same request bodies and signing model as REST
+    `POST /v2/createOrder`, `/modifyOrder`, `/cancelOrder`, `/cancelAll`, and `/cancelAllAfter`.
+    Responses are correlated with requests by `id`.
 
-    Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
+    **Signing.** Each order-operation payload carries its own EIP-712 `signature`, `nonce`, and
+    `deadline`. Create, modify, and cancel-all-after also require `signerWallet`; single and bulk
+    cancels omit it. Reya verifies signatures, signer permissions, order validity, and applicable
+    pre-trade risk checks. No connection-level authentication handshake is required.
+    `deadline` controls request acceptance; `expiresAfter` controls GTT order lifetime.
 
-    Auth is per-message: each `createOrder` / `modifyOrder` / `cancelOrder` / `cancelAll` / `cancelAllAfter` frame carries its own EIP-712 signature (`signature`, `nonce`, `deadline`; `createOrder`, `modifyOrder`, and `cancelAllAfter` payloads additionally carry `signerWallet`, while the cancel payloads recover the signer from the signature), validated server-side per-frame and byte-identical to the REST signing model. `deadline` is the EIP-712 envelope's signature-validity window — distinct from `expiresAfter`, which `createOrder` payloads carry for GTT order lifetime as the on-chain `OrderDetails.expiresAfter`. There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
+    **Heartbeat and disconnects.** The server uses RFC 6455 protocol pings, normally handled by
+    the client library, and closes connections after 120 seconds of inbound silence. Optional
+    application-level `{type:"ping", id?}` probes receive `{type:"pong", id?}` responses.
+    A disconnect does not cancel orders. An unanswered request may have been accepted;
+    reconnect and reconcile order state and executions before resubmitting it.
 
-    Heartbeat: server-side liveness uses RFC 6455 protocol-level pings (handled automatically by any standards-compliant client WebSocket library — no application-level code is required on the client). The server closes the connection after 120 seconds of inbound silence. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout), and closing does **not** trigger cancel-on-disconnect (see below). Clients may *optionally* send `{type:"ping", id?}` JSON frames for explicit application-level RTT or correlation probes; the server replies with `{type:"pong", id?}` echoing the `id`.
+    **Cancel-on-disconnect.** `cancelAllAfter` arms an account-scoped countdown with `timeoutMs`
+    in [5000, 60000] milliseconds; `0` disarms. If not refreshed before expiry, it cancels the
+    account's open orders except armed protective stops and their fired children. Only another
+    `cancelAllAfter` call refreshes it: order traffic and pings do not. A WebSocket close does
+    not fire it. The countdown stays armed across reconnects and can be managed interchangeably
+    over REST and WebSocket. For example, arm for 30000 ms and refresh every 10–15 seconds.
+    Cancellations are delivered on `walletOrderChanges`.
 
-    Cancel-on-disconnect (dead-man's-switch): `cancelAllAfter` arms an account-scoped countdown. While armed, the server mass-cancels the account's open orders — the same scope as `cancelAll` with no `symbol` filter, EXCEPT protective stops (`STOP_LOSS` / `TAKE_PROFIT`), which the dead-man's-switch deliberately leaves in place whether still armed or already fired into a resting child — unless the countdown is refreshed with another `cancelAllAfter` call before `timeoutMs` elapses (`timeoutMs` within [5000, 60000] ms; `0` disarms). The countdown — not the connection — is the trigger: RFC 6455 protocol pings and app-level `ping`/`pong` frames are connection hygiene only and do **not** refresh it; order-entry traffic does **not** refresh it; and a WebSocket close does **not** fire it. The switch is transport-agnostic — it can be armed, refreshed, or disarmed over this surface or REST `POST /v2/cancelAllAfter` interchangeably — and it stays armed across reconnects until it fires or is disarmed. Recommended pattern: arm with `timeoutMs: 30000` and refresh every ~10–15 s; orders cancelled by a fired countdown appear as `CANCELLED` on the `walletOrderChanges` stream.
+    **Account rate limits and capacity.** Operation rejections use the correlated
+    `*ResponseMessage` with `{ ok: false, error }`. They leave the connection open and do not
+    cancel other in-flight requests. Budgets are shared across markets, signers, REST, and
+    WebSocket requests for the same account. Create and modify share a placement budget;
+    single cancels, bulk cancels, and cancel-all-after control have separate budgets.
 
-    Gated launch: ordinary `createOrder` and all `modifyOrder` operations require a WHITELISTED owner wallet. Ejection atomically changes the wallet to EJECTED and schedules cancellation of ordinary resting orders across its accounts, while retaining armed protective stops and fired SL/TP children. Ejection does not close positions. The edge refuses ordinary insertion with `NOT_WHITELISTED_ERROR`; the matching engine uses `ACCOUNT_SUSPENDED_ERROR` while its eject set is active. Cancels and cancel-all-after disarms remain available; countdown arms and refreshes are refused by the matching engine for ejected accounts.
+    `RATE_LIMITED_ERROR` carries `retryAfterMs`. Wait at least that long; it is a minimum wait,
+    not a reserved slot, and concurrent requests can consume the available budget.
+    `CAPACITY_LIMITED_ERROR` applies to creates and modifications and carries no retry hint;
+    use backoff with jitter. Cancels and cancel-all-after are not refused for venue capacity,
+    though their separate account rate limits still apply. Disarming an armed countdown is
+    never throttled; a disarm when no countdown is armed can be throttled.
 
-    Perp exits while EJECTED: a `LIMIT` order with `timeInForce: IOC` and `reduceOnly: true` is allowed after signature and signer/account permission validation. It consumes the normal place bucket and passes ordinary validation and risk checks. It cannot rest. Never-whitelisted wallets and spot orders have no exception. These rules are identical on REST and ws-exec. Orderly offboarding closes exposure while WHITELISTED before ejecting. Market data, positions, balances and order state remain public.
+    `OPEN_ORDER_COUNT_EXCEEDED_ERROR` and `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR` carry no retry
+    hint. Reduce the order or existing resting orders before retrying. See `RequestErrorCode`
+    for per-code guidance. REST returns HTTP 400 carrying the same `error` code and the same `retryAfterMs`
+    when present. Infrastructure-level per-IP limits can separately return HTTP 429.
 
+    **Connection limits.** Client-sent messages also count toward a per-connection rate limit,
+    including malformed messages and invalid signatures. Exceeding it closes the socket with
+    code `4029` and an advisory reason `MSG_RATE_EXCEEDED retry_after_ms=<n>`. Wait at least the
+    suggested milliseconds before reconnecting; if the hint is absent or unparseable, use
+    exponential backoff with jitter. Reduce message frequency before resuming, and pace retries.
 
-    Rate limits and capacity: order operations are budgeted per account, and the venue sheds load when it is at its ingest ceiling. Both arrive as ordinary operation-level errors on the correlated `*ResponseMessage` — `{ ok: false, error }` — never as a framing-layer `error` envelope, and never as a connection close: the connection stays open and usable, and every other in-flight request continues normally. The one exception is the transport-level inbound message-rate cap described below, which is not an account-level verdict at all and does close the connection. `RATE_LIMITED_ERROR` carries `retryAfterMs` on the error object with the exchange's own exact retry instant in milliseconds; `CAPACITY_LIMITED_ERROR` from the current pressure guard has no retry hint: use backoff with jitter. For a rate-limit hint, wait at least that long before resending; an earlier retry only consumes more budget. Placements, single cancels, bulk cancels and cancel-all-after control are budgeted separately, so a throttled placement never blocks a cancel, and `cancelAll` and `cancelAllAfter` are never refused for venue capacity. Disarming an armed countdown (`timeoutMs: 0` while a countdown is running) is never throttled — risk-off always has a path. The carve-out is scoped to exactly that: a `timeoutMs: 0` frame sent when **no** countdown is armed cancels nothing, and if it carries a non-zero `nonce` it is charged to the cancel-all-after control budget like any other control frame and can come back `RATE_LIMITED_ERROR`. A client polling disarms as a keep-alive should therefore expect throttling; a client disarming a switch it actually armed never sees it. The account's resting-order caps (`OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`) arrive the same way but carry no `retryAfterMs`: they clear only when resting orders are cancelled or filled. Full per-code semantics are on `RequestErrorCode` in `trading-schemas.json`. REST is symmetric: the same verdicts come back as HTTP 400 carrying the same `error` code and the same `retryAfterMs` in the body, so a client branches on the code on either transport. REST reserves HTTP 429 for infrastructure-level (per-IP) limits in front of the API; the venue does not emit it.
+    Per-IP limits also apply to new connection attempts and concurrent connections. An excess
+    connection can be refused during the HTTP upgrade with status 429; the response need not
+    use the venue's JSON error format. Close an existing connection or back off before retrying.
+    Existing sibling connections remain usable. A concurrent-connection refusal can include
+    the advisory response text `IP_CONN_LIMIT_EXCEEDED max_conns=<n>`.
 
-    Inbound message-rate cap (transport level): separately from the per-account budgets above, every connection carries a cap on the rate of frames the client sends. It is a flood backstop rather than a throttle — a per-connection token bucket, checked before a frame is parsed and before its signature is verified, so malformed and badly-signed frames count against it too. A connection that exceeds it is closed with WebSocket close code `4029` and a reason string of the form `MSG_RATE_EXCEEDED retry_after_ms=<n>`, where `<n>` is the number of milliseconds until a frame would next have been admitted; reconnecting after at least that long yields a fresh budget, and reconnecting immediately will simply be closed again. Key recovery on the close **code** `4029` and treat the reason as advisory — parse `retry_after_ms` out of it if convenient, but fall back to exponential backoff with jitter if it is absent or unparseable. The cap is sized generously above the anchor rate of a legitimate market maker, and the exact rate and burst are deployment-time configuration rather than part of this contract.
+    Key recovery on the close code and treat reason text as advisory. After a `4029` close,
+    reconnect and reconcile unanswered requests against open orders, order updates, and executions.
+    An armed cancel-all-after countdown keeps running, so refresh it before expiry if protection
+    is still needed. Current rate and connection limits may differ by environment.
 
-    Do not confuse the two mechanisms. `RATE_LIMITED_ERROR` is the matching engine's per-account verdict on one operation: it names an account, carries `retryAfterMs`, leaves the connection open, and does not affect other operations. The `4029` cap is a per-connection transport guard that knows nothing about accounts: it ends the connection, takes any in-flight requests with it, and those requests must be treated as indeterminate — resolve them by reconnecting and reconciling against `GET /v2/wallet/{address}/openOrders` rather than assuming they were rejected. Note also that closing the connection does **not** trigger cancel-on-disconnect: an armed `cancelAllAfter` countdown keeps running on its own clock, so a client closed on `4029` should reconnect and refresh it before it fires.
-
-    For market data, position updates, and fill streaming, see the streaming WebSocket API (`asyncapi-trading-v2.yaml`). The recommended Market Maker integration runs both connections in parallel: this surface for order entry, the streaming surface for read-side fanout.
-    Per-IP concurrent connection caps: when enabled for a deployment, an excess connection is refused during the HTTP upgrade with status 429, before a WebSocket is opened. It carries no account-level RequestErrorCode or exact retry hint; close an existing connection or back off before retrying. Established sibling connections remain usable. This is separate from the inbound message-rate cap, which closes an already-open socket with 4029.
-
+    For market data, positions, order updates, and executions, use the separate streaming API
+    (`asyncapi-trading-v2.yaml`).
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -111,8 +149,7 @@ operations:
         - $ref: '#/channels/operations/messages/createOrderResponseMessage'
     summary: Place an order
     description: |
-      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema), including the REQUIRED `timeInForce` — which, on a `STOP_LOSS`/`TAKE_PROFIT`, chooses the time in force the trigger's child order takes on when it fires. The trigger-firing contract (the shared `expiresAfter` deadline and the settlement headroom that closes both phases before it, the `limitPx` band around `triggerPx`, which outcomes cancel the OCO sibling and under which reason, and how a fired child behaves once resting) is documented once on the REST `POST /v2/createOrder` operation and applies verbatim here. Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
-
+      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema), including the REQUIRED `timeInForce` — which, on a `STOP_LOSS`/`TAKE_PROFIT`, chooses the time in force the trigger's child order takes on when it fires. The trigger-firing contract (the shared `expiresAfter` deadline and possible early expiry to allow settlement, the `limitPx` band around `triggerPx`, which outcomes cancel the OCO sibling and under which reason, and how a fired child behaves once resting) is documented once on the REST `POST /v2/createOrder` operation and applies verbatim here. Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
   sendModifyOrder:
     action: send
     channel:
@@ -126,8 +163,7 @@ operations:
         - $ref: '#/channels/operations/messages/modifyOrderResponseMessage'
     summary: Modify a resting order in place
     description: |
-      Client modifies a resting order in place (full restate): target by `orderId` when present, otherwise by a non-zero `clientOrderId`. JSON Schema validates target presence only; the server enforces the non-zero rule for sole `clientOrderId` targets. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The body carries the same fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value, even unchanged ones; fields omitted from the request never "inherit from the resting order". The modifiable fields are class-split: for a `LIMIT` modify they are `limitPx`, `qty`, `postOnly` and `expiresAfter` (`triggerPx` forbidden); for a `STOP_LOSS`/`TAKE_PROFIT` modify ONLY `limitPx` and `triggerPx` are modifiable — `qty` stays omitted, and `postOnly=false`, the `timeInForce` chosen at creation and its `expiresAfter` are restated immutables (changing the fired-child time in force or the shared expiry means cancelling the stop and creating a new one). The rest are immutable and must match the resting order. `timeInForce` is immutable for every class: `expiresAfter` is omitted for GTC and IOC and set to a future timestamp greater than `deadline` for GTT; `triggerPx` is required on a `STOP_LOSS`/`TAKE_PROFIT` modify (full restate) and omitted for a `LIMIT` order; `qty` is omitted on a `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT` modify. Only an armed trigger (`triggered: false`) is modifiable — a fired child resting in the book is cancel-only — and a re-priced trigger has its post-modify `limitPx`/`triggerPx` pair re-checked against the market's trigger band (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`). The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including immutable-match, queue-priority, post-only, and crossing semantics. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`; per-fill detail is delivered on the streaming surface, as with `createOrder`.
-
+      Client modifies a resting order in place (full restate): target by `orderId` when present, otherwise by a non-zero `clientOrderId`. The same `clientOrderId` field restates the resting order's immutable client id for signing; if both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId` is the restated immutable. If the resting order has no client id, omit `clientOrderId`; do not send a placeholder value. The body carries the same fields as `createOrder` (the complete post-modify `OrderDetails`) plus the target id — restate every value, even unchanged ones; fields omitted from the request never "inherit from the resting order". The modifiable fields are class-split: for a `LIMIT` modify they are `limitPx`, `qty`, `postOnly` and `expiresAfter` (`triggerPx` forbidden); for a `STOP_LOSS`/`TAKE_PROFIT` modify ONLY `limitPx` and `triggerPx` are modifiable — `qty` stays omitted, and `postOnly=false`, the `timeInForce` chosen at creation and its `expiresAfter` are restated immutables (changing the fired-child time in force or the shared expiry means cancelling the stop and creating a new one). The rest are immutable and must match the resting order. `timeInForce` is immutable for every class: `expiresAfter` is omitted for GTC and IOC and set to a future timestamp greater than `deadline` for GTT; `triggerPx` is required on a `STOP_LOSS`/`TAKE_PROFIT` modify (full restate) and omitted for a `LIMIT` order; `qty` is omitted on a `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT` modify. Only an armed trigger (`triggered: false`) is modifiable — a fired child resting in the book is cancel-only — and a re-priced trigger has its post-modify `limitPx`/`triggerPx` pair re-checked against the market's trigger band (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`). The `payload` body is identical to the REST `POST /v2/modifyOrder` body (`ModifyOrderRequest` schema), including immutable fields, queue priority, post-only behavior, and immediate execution. Server replies with `ModifyOrderResponseMessage` correlated by the same `id`; per-fill detail is delivered on the streaming surface, as with `createOrder`.
   sendCancelOrder:
     action: send
     channel:
@@ -156,8 +192,7 @@ operations:
         - $ref: '#/channels/operations/messages/cancelAllResponseMessage'
     summary: Cancel all orders for an account, optionally scoped to a market
     description: |
-      Client mass-cancels open orders for an account, optionally scoped to a specific market via `symbol` (omit to cancel across all the signer's markets). The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Supports both spot and perp markets via the unified `marketId` namespace. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
-
+      Client mass-cancels open orders for an account, optionally scoped to a specific market via `symbol` (omit to cancel across all markets for the account). The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Supports both spot and perp markets. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
   sendCancelAllAfter:
     action: send
     channel:
@@ -186,7 +221,7 @@ operations:
         - $ref: '#/channels/operations/messages/pongMessage'
     summary: Send a ping (optional)
     description: |
-      Optional client-initiated application-level liveness/RTT probe. Server replies with `PongMessage` echoing the optional `id`. Server-side liveness detection uses RFC 6455 protocol-level pings (`sendPings: true`, `idleTimeout: 120`) and does not depend on this operation.
+      Optional application-level liveness or round-trip-time probe. The server replies with `PongMessage`, echoing the optional `id`. Connection liveness also uses RFC 6455 protocol pings, normally handled by the client library; this operation is not required to keep the connection alive.
 
   receiveError:
     action: receive
@@ -196,8 +231,10 @@ operations:
       - $ref: '#/channels/operations/messages/errorMessage'
     summary: Receive a top-level error envelope
     description: |
-      Server emits an `error` envelope when it cannot parse a request at all (malformed JSON, unknown `type`, in-flight `id` collision). Connection stays open. Operation-specific errors instead come back as `{ ok: false, error }` on the corresponding `*ResponseMessage` correlated by `id` — including every rate-limit, capacity and access rejection (`RATE_LIMITED_ERROR`, `OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`, `CAPACITY_LIMITED_ERROR`, `NOT_WHITELISTED_ERROR`, `ACCOUNT_SUSPENDED_ERROR`), which carry `retryAfterMs` where a wait helps and never appear here.
-
+      The server returns an `error` envelope for malformed JSON, an unknown `type`, a reused
+      in-flight `id`, or another connection-level request error. The connection stays open.
+      Operation-specific rejections, including account rate limits, instead use the corresponding
+      `*ResponseMessage` with `{ ok: false, error }`, correlated by request `id`.
 components:
   correlationIds:
     requestId:
@@ -639,7 +676,7 @@ components:
         - `MALFORMED_JSON` — the frame was not valid JSON.
         - `UNKNOWN_TYPE` — the frame `type` is not a recognised operation.
         - `DUPLICATE_REQUEST_ID` — a frame reused an in-flight `id`.
-        - `SERVER_SHUTTING_DOWN` — the server is draining and rejected the frame (reconnect to another instance).
+        - `SERVER_SHUTTING_DOWN` — the server is shutting down and rejected the request; reconnect before retrying.
         - `TOO_MANY_INFLIGHT` — the connection exceeded its per-connection in-flight request cap; retry after awaiting outstanding responses.
         - `INTERNAL` — an unexpected server-side framing error.
       enum:

@@ -496,29 +496,19 @@ paths:
     get:
       summary: Get wallet order history
       description: |
-        Returns up to 100 historical matching-engine order state updates for a
-        wallet, newest first. Each row is one public `Order` projection emitted
-        by the matching engine for one of the wallet's accounts, covering both
-        spot and perp markets once the matching-engine order-history writer is
-        enabled for the environment.
+        Returns up to 100 historical order state updates for a wallet, newest first.
+        Each row is one `Order` update for one of the wallet's accounts, across spot and perp markets.
 
-        This endpoint is for retail/account-history views and support tooling.
-        It is not intended for market-maker ingestion, audit logs, or
-        high-throughput reconciliation. The backing service stores bounded
-        history per account and can automatically exclude high-throughput
-        accounts from persistence; market makers should capture their own
-        durable order timeline from the `orderChanges` WebSocket stream.
+        History is limited and may be unavailable for high-volume accounts. This endpoint is for
+        account-history views; it is not a complete audit log. Market makers should maintain their
+        own order history from the `orderChanges` WebSocket stream and reconcile against current
+        open orders after a disconnect.
 
-        Pagination follows the same descending time-window convention as the
-        wallet execution endpoints. `startTime` and `endTime` are millisecond
-        POSIX timestamps matched against each row's matching-engine event time
-        (`lastUpdateAt`). Results are returned newest-first; `meta.startTime`
-        is the newest returned row timestamp and `meta.endTime` is the oldest
-        returned row timestamp. Because `endTime` is an inclusive upper bound,
-        clients that pass the previous `meta.endTime` may receive boundary
-        rows again and should deduplicate overlap by `Order.sequenceNumber`.
-        Clients that do not need to preserve same-millisecond boundary ties may
-        page backward with `endTime = meta.endTime - 1`.
+        `startTime` and `endTime` are millisecond Unix timestamps matched against `lastUpdateAt`.
+        Results are newest-first: `meta.startTime` is the newest returned timestamp and `meta.endTime`
+        is the oldest. `endTime` is inclusive, so passing the previous `meta.endTime` may repeat
+        boundary rows; deduplicate using `Order.sequenceNumber`. Clients that do not need to preserve
+        same-millisecond boundary ties may page backward with `endTime = meta.endTime - 1`.
       operationId: getWalletOrderHistory
       tags:
         - Wallet Data
@@ -631,94 +621,57 @@ paths:
     post:
       summary: Create order
       description: |
-        Create a new order (IOC, GTC, GTT, SL, TP). Supports both spot and perp markets.
+        Create a new spot or perp order. `timeInForce` is required for every order class.
+        STOP_LOSS and TAKE_PROFIT orders are supported only on perp markets.
 
-        All order types route through the matching engine on a unified `marketId` namespace;
-        the legacy off-chain conditional-order (DB-backed) path is retired. `timeInForce` is
-        REQUIRED on every create, for every order class — earlier revisions let a trigger create omit
-        it, implying `GTC`; from 3.1.0 an omitted `timeInForce` fails schema validation. Triggers are
-        **perp-only** — a `STOP_LOSS` / `TAKE_PROFIT` on a spot market is rejected.
+        **Armed stops.** A protective stop is not executable liquidity until it fires. While armed,
+        it remains modifiable and cancellable and appears as `OPEN`, with `triggered: false` in
+        `openOrders` and `walletOrderChanges`. Order-history rows omit `triggered`; its absence
+        there means unknown, not `false`.
 
-        **Armed phase.** A `STOP_LOSS` / `TAKE_PROFIT` create carries `orderType` + `triggerPx`
-        end-to-end and is **armed and tracked** by the matching engine: the trigger is held in the
-        trigger store rather than the book, so it is not executable liquidity while armed. It stays
-        modifiable and cancellable, and surfaces as `OPEN` on `openOrders`, the `walletOrderChanges`
-        stream, and order history — carrying `triggered: false` on the first two. Order-history rows
-        omit `triggered` entirely: the stored history has no armed-vs-fired discriminator, so its
-        absence there means unknown rather than `false`.
+        **Time in force and expiry.** For a stop, `timeInForce` selects the fired child's behavior:
+        IOC fills available liquidity and cancels the remainder; GTC rests the remainder until
+        cancelled; GTT rests it until expiry. Only GTT carries `expiresAfter`, which must be in the
+        future and strictly greater than the signature's `deadline`. GTC and IOC must omit it.
+        Invalid combinations return `INPUT_VALIDATION_ERROR` or `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR`.
 
-        **Choosing the fired child.** `timeInForce` on a trigger create chooses what the stop
-        becomes when it fires: `IOC` (fill what the book offers, cancel the remainder), `GTC` (rest
-        the remainder until cancelled) or `GTT` (rest it until the shared deadline below). A `GTT`
-        trigger MUST carry a future `expiresAfter`; `GTC` and `IOC` triggers MUST omit it — an `IOC`
-        trigger that carries one is rejected with `INPUT_VALIDATION_ERROR` at the API edge, and with
-        the matching engine's own `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR` guard when requests reach the
-        engine directly.
+        A GTT stop and its child share one absolute `expiresAfter`; firing does not start a new
+        lifetime. The stop or resting child can be cancelled before that timestamp to allow
+        settlement, with `cancelReason: GTT_EXPIRED`. Choose an expiry with sufficient time for
+        both protection and settlement. An expiry that is too near returns `ORDER_EXPIRES_TOO_SOON_ERROR`.
+        The signature's `deadline` controls request acceptance only; passing it does not disarm
+        an accepted stop or prevent its child from executing.
 
-        That single `expiresAfter` is one absolute deadline shared by both phases — the armed
-        trigger's lifetime AND the fired child's hard on-chain settlement deadline — so an hour spent
-        armed is an hour the child does not get. Both phases stop one **settlement headroom** BEFORE
-        that deadline rather than at it: a fill taken inside the headroom could not be settled on
-        chain before `expiresAfter` and would revert `OrderExpired`, so the exchange closes the
-        window early instead. Concretely, a `GTT` trigger stops being fireable — and a `GTT` child
-        already resting in the book stops being matchable — at `expiresAfter` minus the headroom,
-        and whichever of the two the boundary finds is cancelled there as `CANCELLED` with
-        `cancelReason: GTT_EXPIRED`. Treat the last stretch before `expiresAfter` as dead time and
-        size the deadline for the protective window PLUS the headroom.
+        **Execution price.** `limitPx` is the child's worst acceptable execution price, not an
+        offset from `triggerPx`. It must be within the permitted range around `triggerPx`.
+        `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR` indicates an out-of-range limit or that stops are
+        unavailable for the market. If the limit is out of range, move it closer to the trigger
+        and re-sign; changing the price will not resolve market unavailability.
 
-        The headroom is a venue parameter: the exchange sets it, it is the same for every market, it
-        is neither client-supplied nor published on this API, and it is at least a minute on
-        production deployments. A create whose own `expiresAfter` does not clear it is refused at
-        admission with `ORDER_EXPIRES_TOO_SOON_ERROR` — nothing is armed — rather than accepted into
-        a window it could never fire in.
+        **Firing and paired stops.** When the mark price crosses `triggerPx`, the stop attempts
+        to create its child. A created child has `triggered: true` and cancels the paired stop
+        on the same account and market with `OCO_SIBLING_FIRED`, even if it fills nothing.
+        A partial IOC fill can leave the remaining position without protection. Protection is
+        not automatically re-armed. Manually cancelling one protective leg leaves its sibling armed.
+        If a protective child would self-trade, the account's conflicting resting maker orders
+        are cancelled with `PROTECTIVE_SELF_TRADE_SWEEP` so the child can execute.
 
-        **Pricing the fired child.** `limitPx` is the worst price the child may execute at, not a pad
-        on `triggerPx`, and admission bounds how far the two may sit apart:
-        `|limitPx − triggerPx| <= triggerPx × band`, per market. The band is a matching-engine
-        setting and is deliberately NOT published — keep `limitPx` close to `triggerPx`. A `limitPx`
-        the band does not admit, and any trigger on a market with no band configured, are both
-        rejected with `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`, with the `message` distinguishing the two
-        causes.
+        If no tradeable position remains to reduce (the position closed, reversed, or is below one
+        lot), both legs are cancelled with `POSITION_CLOSED`. If the proposed child fails pre-trade
+        risk checks, both legs are cancelled with `RISK_REJECTED`. In either case, no child is created,
+        both orders retain `triggered: false`, and protection is not automatically retried or re-armed.
+        Use `cancelReason` for handling; do not parse `cancelReasonMessage`.
 
-        **Firing.** When the mark price crosses `triggerPx`, the trigger fires into an ordinary order
-        carrying the chosen `timeInForce`, and that order surfaces with `triggered: true`. A fire
-        that commits cancels the OCO sibling — the paired opposite-type stop on the same account and
-        market — with `cancelReason: OCO_SIBLING_FIRED`, including a fire that fills nothing: one
-        fire consumes both legs. A partial `IOC` fire leaves the residual position unprotected.
-        Re-arming is always the user's move; cancelling one leg by hand leaves the sibling armed. A
-        firing stop that would match the account's own resting liquidity sweeps those maker orders
-        out of its way — they are cancelled with `PROTECTIVE_SELF_TRADE_SWEEP` rather than the stop
-        being cancelled, which is what distinguishes the sweep from ordinary
-        `SELF_TRADE_PREVENTION`.
+        **Resting children.** Firing does not guarantee a fill. A GTC/GTT child can remain unfilled
+        at `limitPx` if the market moves past it. Its fills cannot exceed the current reducible
+        position, so displayed remaining quantity can exceed what can execute. A zero reducible
+        quantity when it attempts to fill cancels the remainder with `POSITION_CLOSED`; closing the
+        position by another route does not immediately remove the child. A fired child is cancel-only:
+        `modifyOrder` is refused. Ordinary self-trade prevention applies to the account's new crossing
+        orders. Explicit `cancelAll` includes the child; cancel-all-after leaves it in place.
 
-        A fire can also be refused before any child exists, and then BOTH legs are cancelled with the
-        reason for the refusal rather than with `OCO_SIBLING_FIRED` — that reason is written only
-        when a fire actually commits. Either there is nothing left to reduce (the position closed or
-        flipped under the stop, or what remains is below one tradeable lot), and both legs are
-        cancelled with `cancelReason: POSITION_CLOSED`; or the pre-trade risk checks refuse the close
-        itself, and both legs are cancelled with `cancelReason: RISK_REJECTED`. Which individual
-        risk check refused it is NOT published — `cancelReasonMessage` is a fixed explanatory string
-        per `cancelReason`, so do not parse it or branch on it. No child order is created on either path,
-        so both cancellations arrive on orders that still carry `triggered: false`. Nothing rests,
-        nothing fills, and the protection is terminally gone — the stop is not retried or re-armed
-        when the account recovers, so re-arming is the user's move.
-
-        A resting fired child is an ordinary book order with three exceptions: its fills are clamped
-        to the position still reducible at that moment (a clamp to zero cancels the remainder with
-        `POSITION_CLOSED`), so its displayed remaining quantity can exceed its fillable size; it is
-        **cancel-only**, so a `modifyOrder` against it is refused; and it is **not** removed when the
-        position closes by another route. Firing guarantees the child order, not its execution: the
-        child rests at `limitPx` and fills only if the book comes to it, so a mark that gaps through
-        the level can leave a `GTC` / `GTT` child resting unfilled — and the position unprotected —
-        until it fills, expires, or is cancelled. It blocks the account's own crossing orders through standard
-        self-trade prevention, `POST /v2/cancelAll` clears it while an armed cancel-all-after countdown
-        leaves it in place, and a `GTT` child is removed from the book by the ordinary expiry reaper
-        one settlement headroom BEFORE the shared deadline — not at it — arriving as `CANCELLED`
-        with `cancelReason: GTT_EXPIRED`.
-
-        Stops and their fired children are **structurally** reduce-only — they close the position and
-        can never open one — while the signed `reduceOnly` field stays `false`; do not read that
-        `false` as permission to open a position.
+        Stops and their children only reduce positions, even though their signed `reduceOnly`
+        field is `false`. They cannot open a new position.
 
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
       operationId: createOrder
@@ -748,8 +701,6 @@ paths:
       description: |
         Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`.
         Target by `orderId` when present, otherwise by a non-zero `clientOrderId`.
-        JSON Schema validates target presence only; the server enforces the non-zero rule for
-        sole `clientOrderId` targets.
         The same `clientOrderId` field restates the resting order's immutable client id for signing.
         If both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId`
         is the restated immutable. If the resting order has no client id, omit `clientOrderId`;
@@ -759,10 +710,10 @@ paths:
         never "inherit from the resting order".
         The modifiable fields are class-split: for a `LIMIT` modify they are `limitPx`, `qty`, `postOnly`,
         `expiresAfter` (and `triggerPx` is forbidden); for a `STOP_LOSS`/`TAKE_PROFIT` modify ONLY
-        `limitPx` and `triggerPx` are modifiable — `qty` stays omitted (wire quantity 0; the signed
+        `limitPx` and `triggerPx` are modifiable — `qty` stays omitted (the signed
         quantity restates the full-position sentinel), and `postOnly=false`, the `timeInForce` chosen
         at creation and its `expiresAfter` are restated immutables (changing any returns
-        `INPUT_VALIDATION_ERROR` from the ME's immutable-match): giving a stop a different fired-child
+        `INPUT_VALIDATION_ERROR`): giving a stop a different fired-child
         time in force, or a different shared expiry, means cancelling it and creating a new one. Only an
         **armed** trigger (`triggered: false`) is modifiable — once it has fired, the resting child is
         cancel-only and a modify against it is refused. A re-priced trigger has its post-modify
@@ -771,8 +722,7 @@ paths:
         The rest (`exchangeId`,
         `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
         `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
-        is rejected with `INPUT_VALIDATION_ERROR` (the ME's internal `MODIFY_IMMUTABLE_MISMATCH` is
-        surfaced as `INPUT_VALIDATION_ERROR`). A `STOP_LOSS`/`TAKE_PROFIT` order is re-priced in
+        is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is re-priced in
         place (full restate): `triggerPx` is REQUIRED on a trigger modify — a trigger modify that
         omits it is rejected with `INPUT_VALIDATION_ERROR`. `qty` is omitted on a
         `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT`
@@ -814,8 +764,7 @@ paths:
     post:
       summary: Cancel order
       description: |
-        Cancel an existing order. Supports both spot and perp markets. All single cancels — spot and perp,
-        including TP/SL — route through the matching engine on a unified `marketId` namespace. `accountId`,
+        Cancel an existing order. Supports spot, perp, and protective stop orders. `accountId`,
         `nonce`, and `deadline` are required and bound into the EIP-712 signature.
 
         For a `STOP_LOSS` / `TAKE_PROFIT`, cancellation is bound to the **arming signer**: the wallet
@@ -877,16 +826,14 @@ paths:
         Arm, refresh, or disarm an account-scoped dead-man's-switch countdown. While armed, all open
         orders for `accountId` — the same scope as `POST /v2/cancelAll` with no `symbol` filter, EXCEPT
         protective stops (`STOP_LOSS` / `TAKE_PROFIT`), which are deliberately left in place whether
-        still armed in the matching engine's trigger store or already fired into a resting child — are
+        still armed or already fired into a resting child — are
         mass-cancelled if the countdown is not refreshed with another call before `timeoutMs` elapses.
         `timeoutMs: 0` disarms; non-zero values must be within [5000, 60000] milliseconds. Refresh is
         explicit only — order entry, WebSocket ping/pong, and connection close neither refresh nor
         trigger the countdown. `accountId`, `timeoutMs`, `nonce`, and `deadline` are bound into the
         EIP-712 `CancelAllAfter` signature; `deadline` is the signature-validity window (Unix seconds),
         not the countdown trigger time. The response returns an advisory trigger timestamp (`triggerAt`,
-        milliseconds; omitted when disarming). Arming or refreshing (non-zero `timeoutMs`) from a
-        suspended account is refused with `ACCOUNT_SUSPENDED_ERROR`; disarming
-        (`timeoutMs: 0`) is never refused for access control. Also available on the order-entry
+        milliseconds; omitted when disarming). Also available on the order-entry
         WebSocket (`asyncapi-exec-v2.yaml`, `cancelAllAfter`).
       operationId: cancelAllAfter
       tags:
@@ -933,11 +880,10 @@ components:
       in: query
       required: false
       description: >-
-        Return results at or after this time (inclusive lower bound).
-        Millisecond POSIX timestamp, matched against the endpoint's record
-        timestamp. Execution and bust endpoints use on-chain block timestamps;
-        orderHistory uses the matching-engine event timestamp exposed as
-        `lastUpdateAt`.
+        Return results at or after this time (inclusive lower bound). Millisecond
+        POSIX timestamp, matched against the endpoint's record timestamp. Execution
+        and bust endpoints use on-chain block timestamps; orderHistory uses the order
+        event timestamp exposed as `lastUpdateAt`.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
         example: 1756733379000
@@ -947,14 +893,13 @@ components:
       in: query
       required: false
       description: >-
-        Return results at or before this time (inclusive upper bound).
-        Millisecond POSIX timestamp, matched against the endpoint's record
-        timestamp. Execution and bust endpoints use on-chain block timestamps;
-        orderHistory uses the matching-engine event timestamp exposed as
-        `lastUpdateAt`. Results are returned newest-first and capped at a
-        maximum that varies by endpoint. Because this bound is inclusive,
-        passing the oldest timestamp from the previous page can repeat boundary
-        rows; clients can deduplicate overlap or subtract 1ms when same-ms
+        Return results at or before this time (inclusive upper bound). Millisecond
+        POSIX timestamp, matched against the endpoint's record timestamp. Execution
+        and bust endpoints use on-chain block timestamps; orderHistory uses the order
+        event timestamp exposed as `lastUpdateAt`. Results are returned newest-first
+        and capped at a maximum that varies by endpoint. Because this bound is
+        inclusive, passing the oldest timestamp from the previous page can repeat
+        boundary rows; clients can deduplicate overlap or subtract 1ms when same-ms
         boundary ties are not relevant.
       schema:
         $ref: './trading-schemas.json#/definitions/UnsignedInteger'
@@ -1108,35 +1053,23 @@ components:
   responses:
     BadRequest:
       description: |
-        The request was refused. The `RequestError` body carries the machine-readable
-        `error` code and, where a wait helps, `retryAfterMs`.
+        The request was refused. Every venue rejection on an order-entry request uses HTTP 400
+        with a `RequestError` body. Branch on its `error` code to decide how to recover.
+        REST and the order-entry WebSocket use the same error codes and optional `retryAfterMs`.
 
-        **Every venue verdict on an order-entry request is a 400.** Malformed input,
-        pre-trade risk failures, throttling (`RATE_LIMITED_ERROR`), the account's
-        resting-order caps (`OPEN_ORDER_COUNT_EXCEEDED_ERROR`,
-        `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`), load shedding
-        (`CAPACITY_LIMITED_ERROR`) and access decisions (`NOT_WHITELISTED_ERROR`,
-        `ACCOUNT_SUSPENDED_ERROR`) all arrive on this status. The status says only
-        that the venue refused; the `error` code says exactly why, and it is the
-        code — never the status — that a client branches on. This keeps REST and
-        the order-entry WebSocket symmetric: the same code and the same
-        `retryAfterMs` reach a client on either transport.
+        - `RATE_LIMITED_ERROR`: wait at least `retryAfterMs` before retrying.
+        - `CAPACITY_LIMITED_ERROR`: retry with backoff and jitter; no retry hint is provided.
+        - `OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`: change the
+          order or reduce existing resting orders before retrying; waiting alone is insufficient.
+        - `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR`,
+          `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: retry the unchanged request after a short delay.
+        - `NOT_WHITELISTED_ERROR`, `ACCOUNT_SUSPENDED_ERROR`: permission errors; do not
+          automatically retry. Contact support if an expected operation is refused.
+        - Validation and pre-trade risk failures require correcting the request or addressing
+          the account or market conditions. See `RequestErrorCode` for individual remedies.
 
-        HTTP 429 is deliberately not used for any of these codes. It is reserved for
-        infrastructure-level (per-IP) limits sitting in front of the API, which the
-        venue does not emit; a 429 therefore never carries a `RequestErrorCode` and
-        never means an account-level verdict.
-
-        Retry policy is keyed on the code: retry `RATE_LIMITED_ERROR` after
-        `retryAfterMs`. Retry `CAPACITY_LIMITED_ERROR` using backoff with jitter;
-        the current pressure guard supplies no retry hint. `UNAVAILABLE_ACCOUNT_OWNER_ERROR`
-        and `UNAVAILABLE_MATCHING_ENGINE_ERROR` are retryable unchanged after a
-        short delay, and `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
-        access decisions and are not retryable. `POST /v2/cancelOrder` and
-        `POST /v2/cancelAll` are never refused for venue capacity or access control,
-        and disarming a countdown (`timeoutMs: 0`) is never refused for access
-        control either — flattening a book and turning off a dead-man's switch
-        always have a path. Per-code semantics are on `RequestErrorCode`.
+        Infrastructure-level per-IP limits can return HTTP 429 separately from these venue
+        errors. Such responses need not use the `RequestError` JSON format.
       content:
         application/json:
           schema:
@@ -1166,50 +1099,16 @@ tags:
     description: Accounts, positions, trades, etc.
   - name: Order Entry
     description: |
-      Order entry operations.
+      Place, modify, and cancel orders, or manage an account's cancel-all-after countdown.
+      Reya verifies signatures, signer permissions, order validity, and applicable pre-trade
+      risk checks before accepting requests.
 
-      **Gated launch.** Order *insertion* on this deployment is gated: only
-      WHITELISTED wallets may place or modify orders; authenticated EJECTED
-      wallets retain the perp exit exception below. A wallet that is not on the list is refused with
-      `NOT_WHITELISTED_ERROR` at the API edge, before the request reaches the
-      matching engine. Market data, positions, balances and order state are
-      public and are never gated.
+      **Rate limits.** Account budgets are shared across markets, signers, REST, and WebSocket
+      requests. Create and modify share a placement budget; single cancels, bulk cancels, and
+      cancel-all-after control have separate budgets. Resting orders also have count and
+      notional limits. See `RequestErrorCode` for errors and recovery guidance.
 
-      **Cancelling is never gated.** `cancelOrder` and `cancelAll` are outside
-      the allowlist check entirely: a wallet that has been removed from the
-      allowlist, or whose account has been suspended, can still cancel its
-      resting orders individually or en masse. Access control never traps a
-      position.
-
-      **The cancel-all-after countdown is gated in one direction only.**
-      Disarming (`timeoutMs: 0`) is never refused for access control — a
-      dead-man's switch can always be turned off. Arming or refreshing
-      (non-zero `timeoutMs`) is refused with
-      `ACCOUNT_SUSPENDED_ERROR` while EJECTED, even while protective orders remain.
-      The supported removal operation atomically marks the wallet EJECTED and
-      schedules ordinary resting orders for cancellation.
-
-      **Ejection** moves the owner wallet to EJECTED and schedules its accounts'
-      ordinary resting orders for cancellation. Armed protective stops and fired
-      SL/TP children are retained: ejecting does not close positions. Ordinary
-      creates, all modifies, and countdown arms/refreshes are refused. Cancels
-      and countdown disarms remain available.
-
-      **Perp exits remain available while EJECTED.** A `LIMIT` order with
-      `timeInForce: IOC` and `reduceOnly: true` may close existing perp exposure.
-      The edge validates the signature and signer/account permission before
-      granting this exception. It consumes the normal place bucket and passes
-      the ordinary validation and risk checks; it cannot rest. A wallet that
-      was never whitelisted has no exception, and spot orders have none.
-      Orderly offboarding should close exposure while WHITELISTED before ejecting.
-
-      Order entry is also rate limited and load shed; see `RATE_LIMITED_ERROR`,
-      `OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`
-      and `CAPACITY_LIMITED_ERROR` on `RequestErrorCode`.
-
-      **Every venue verdict is HTTP 400.** Throttling, capacity shedding and
-      access decisions come back on the same status as any other refusal, with
-      the reason in the body's `error` code and, where a wait helps,
-      `retryAfterMs`. Branch on the code, never on the status. HTTP 429 is
-      reserved for infrastructure-level (per-IP) limits in front of the API and
-      is not emitted by the venue.
+      **Every venue verdict is HTTP 400.** Rejections carry the reason in the body's `error`
+      code and an optional `retryAfterMs`. Branch on the code to decide how to recover. HTTP 429 is
+      reserved for infrastructure-level (per-IP) limits in front of the API and need not use
+      the venue's JSON error format.
