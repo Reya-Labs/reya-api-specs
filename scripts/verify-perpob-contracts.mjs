@@ -296,6 +296,170 @@ assert.ok(
   'Execution AsyncAPI must include the current devnet server',
 );
 
+// --- Rate limit v1 wire contract: 400-only venue verdicts ------------------
+
+const requestErrorCodes = tradingSchemas.definitions.RequestErrorCode.enum;
+for (const code of [
+  'RATE_LIMITED_ERROR',
+  'OPEN_ORDER_COUNT_EXCEEDED_ERROR',
+  'OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR',
+  'CAPACITY_LIMITED_ERROR',
+  'NOT_WHITELISTED_ERROR',
+  'ACCOUNT_SUSPENDED_ERROR',
+  'UNAVAILABLE_ACCOUNT_OWNER_ERROR',
+]) {
+  assert.ok(
+    requestErrorCodes.includes(code),
+    `RequestErrorCode must keep the rate-limit v1 member: ${code}`,
+  );
+}
+assert.ok(
+  !requestErrorCodes.includes('OPEN_ORDER_CAP_ERROR'),
+  'OPEN_ORDER_CAP_ERROR belonged to the removed legacy TypeScript limiter and is emitted nowhere; the matching engine returns OPEN_ORDER_COUNT_EXCEEDED_ERROR / OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR instead',
+);
+
+const responseStatuses = (operationId) => {
+  const pathItem = yamlBlock(openApi, `  /${operationId}:`);
+  const responses = yamlBlock(yamlBlock(pathItem, '    post:'), '      responses:');
+  return Array.from(responses.matchAll(/^        '(\d{3})':$/gm), (match) => match[1]);
+};
+const ORDER_ENTRY_OPERATIONS = [
+  'createOrder',
+  'modifyOrder',
+  'cancelOrder',
+  'cancelAll',
+  'cancelAllAfter',
+];
+// The venue answers every verdict on 400 and puts the reason in the body's
+// `error` code. A reintroduced 429/503/403 would split one contract across two
+// signals and desynchronise REST from the order-entry WebSocket envelope.
+const VENUE_VERDICT_STATUSES = ['403', '429', '503'];
+for (const operationId of ORDER_ENTRY_OPERATIONS) {
+  const declared = responseStatuses(operationId);
+  const forbidden = declared.filter((status) => VENUE_VERDICT_STATUSES.includes(status));
+  assert.deepEqual(
+    forbidden,
+    [],
+    `POST /v2/${operationId} must not declare a venue-verdict status: rate limits, capacity shedding, suspension and whitelist refusals are all 400 with the RequestErrorCode in the body (declares: ${forbidden.join(', ')})`,
+  );
+  assert.ok(
+    declared.includes('400'),
+    `POST /v2/${operationId} must declare the 400 that carries every venue verdict`,
+  );
+}
+
+for (const orphan of ['Forbidden', 'TooManyRequests', 'ServiceUnavailable']) {
+  assert.ok(
+    !openApi.includes(`\n    ${orphan}:\n`),
+    `components.responses.${orphan} must be gone: nothing references it once venue verdicts are 400-only`,
+  );
+}
+assert.ok(
+  !openApi.includes('Retry-After'),
+  'Trading OpenAPI must not declare a Retry-After header: the retry hint travels in the body as retryAfterMs',
+);
+assert.ok(
+  !JSON.stringify(tradingSchemas).includes('Retry-After'),
+  'trading-schemas.json must not mention a Retry-After header: the retry hint travels in the body as retryAfterMs',
+);
+
+const retryAfterMs = tradingSchemas.definitions.RequestError.properties.retryAfterMs;
+assert.ok(retryAfterMs, 'RequestError must carry retryAfterMs');
+assert.equal(retryAfterMs.type, 'integer', 'RequestError.retryAfterMs must be an integer');
+assert.equal(
+  retryAfterMs.minimum,
+  1,
+  'RequestError.retryAfterMs must declare minimum: 1 — a zero hint is collapsed to omission',
+);
+
+const badRequest = yamlBlock(openApi, '    BadRequest:');
+// Per-code guidance lives in the multiline REST response reference.
+const requestErrorCodeDoc = badRequest.replace(/\s+/g, ' ');
+for (const phrase of [
+  'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
+  '`UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was not accepted',
+  'Retry it unchanged after a short delay',
+  'retry unchanged after a short delay for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR`, and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`',
+  'It carries no retry hint; use backoff with jitter',
+  'These differ from `CAPACITY_LIMITED_ERROR`, which calls for backoff with jitter',
+  'retry `RATE_LIMITED_ERROR` after at least `retryAfterMs`',
+  'retry `CAPACITY_LIMITED_ERROR` using backoff with jitter',
+  'Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are not resolved by automatic retries',
+]) {
+  assert.ok(
+    requestErrorCodeDoc.includes(phrase),
+    `HTTP 400 response must retain client recovery guidance: "${phrase}"`,
+  );
+}
+
+const orderEntryTag = yamlBlock(openApi, '  - name: Order Entry');
+assert.ok(
+  orderEntryTag.includes('**Every venue verdict is HTTP 400.**'),
+  'The Order Entry tag must state the 400-only contract',
+);
+assert.ok(
+  orderEntryTag.includes('HTTP 429 is\n      reserved for infrastructure-level (per-IP) limits in front of the API'),
+  'The Order Entry tag must keep the 429 carve-out',
+);
+for (const code of [
+  'RATE_LIMITED_ERROR',
+  'CAPACITY_LIMITED_ERROR',
+  'NOT_WHITELISTED_ERROR',
+  'ACCOUNT_SUSPENDED_ERROR',
+  'UNAVAILABLE_ACCOUNT_OWNER_ERROR',
+  'retryAfterMs',
+]) {
+  assert.ok(
+    badRequest.includes(code),
+    `components.responses.BadRequest must document ${code}: it is the only response the venue verdicts arrive on`,
+  );
+}
+
+const execAsyncApiInfoBlock = yamlBlock(execAsyncApi, 'info:');
+assert.ok(
+  execAsyncApiInfoBlock.includes('HTTP 400 carrying the same `error` code and the same `retryAfterMs`'),
+  'Execution AsyncAPI must cross-reference REST as 400-only, so the two transports cannot drift apart',
+);
+for (const status of ['HTTP 429 with', 'HTTP 503', 'HTTP 403']) {
+  assert.ok(
+    !execAsyncApiInfoBlock.includes(status),
+    `Execution AsyncAPI must not cross-reference REST ${status}: venue verdicts are 400-only`,
+  );
+}
+
+for (const [name, source] of [
+  ['Execution AsyncAPI', execAsyncApi],
+  ['Info AsyncAPI', infoAsyncApi],
+]) {
+  const info = yamlBlock(source, 'info:');
+  assert.ok(info.includes('4029'), `${name} info description must document close code 4029`);
+  assert.ok(
+    info.includes('MSG_RATE_EXCEEDED retry_after_ms='),
+    `${name} info description must document the 4029 close reason grammar verbatim`,
+  );
+}
+// Proximity rather than two independent substring hits, so a code cannot stay
+// "documented" while its reason drifts to a different close code.
+const infoAsyncApiInfo = yamlBlock(infoAsyncApi, 'info:');
+const BINDING_WINDOW = 200;
+for (const [closeCode, boundTo] of [
+  ['1013', 'slow consumer'],
+  ['1012', 'fresh snapshot'],
+]) {
+  const token = `\`${closeCode}\``;
+  let bound = false;
+  for (let at = infoAsyncApiInfo.indexOf(token); at !== -1; at = infoAsyncApiInfo.indexOf(token, at + 1)) {
+    if (infoAsyncApiInfo.slice(at, at + BINDING_WINDOW).includes(boundTo)) {
+      bound = true;
+      break;
+    }
+  }
+  assert.ok(
+    bound,
+    `Info AsyncAPI must keep close code ${closeCode} bound to "${boundTo}" (within ${BINDING_WINDOW} characters of a \`${closeCode}\` mention)`,
+  );
+}
+
 // ── SL/TP firing (3.1.0) ────────────────────────────────────────────────────
 // These properties are load-bearing and individually droppable: an auto-merge
 // of trading-schemas.json that loses one regenerates an SDK without the field,

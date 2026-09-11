@@ -1,18 +1,42 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.3.0
+  version: 3.4.0
   description: |
-    Real-time WebSocket API for Reya Network's decentralized exchange. This version provides user-friendly real-time updates with simplified data structures, removing blockchain-specific details and using human-readable formats!
+    Real-time market data, order, position, and execution updates for Reya Network.
 
-    ## Connection lifecycle, backpressure & recovery
+    ## Connection lifecycle and recovery
 
-    Channels fall into two delivery classes with different backpressure behaviour:
+    Market depth (`/v2/market/{symbol}/depth`) and wallet order changes
+    (`/v2/wallet/{address}/orderChanges`) provide ordered updates after an initial snapshot.
+    A client that cannot keep up is disconnected with code `1013` (slow consumer).
+    Code `1012` means the connection must be restarted, for example to obtain a fresh snapshot.
+    For either code, reconnect and resubscribe. Treat the reason text as advisory.
 
-    - **Stateful channels** — market depth (`/v2/market/{symbol}/depth`) and wallet order changes (`/v2/wallet/{address}/orderChanges`) — deliver an ordered stream anchored to an initial snapshot. The server enforces per-connection backpressure: a consumer that falls too far behind is disconnected with WebSocket close code `1013` and reason `slow consumer — resubscribe for fresh snapshot`. Separately, after an internal feed resynchronization (for example a matching-engine restart), affected subscribers are closed with close code `1012`; the reason string begins `feed resync — resubscribe for fresh snapshot` and carries a runtime-appended suffix — ` (reset)` or ` (gap)` — identifying the internal cause. The same close code `1012` is also used when the server retires a connection for operational reasons — such as a graceful shutdown/deploy drain (reason prefix `server draining …`) or load management — where the reason string begins with an operationally-descriptive prefix rather than `feed resync …`. Clients must key recovery on the close **code** `1012` and treat the reason string as advisory only (do not parse the prefix or suffix).
-    - **Conflating channels** — asset oracle prices (`/v2/assetOraclePrices`) — coalesce under backpressure per symbol/asset: intermediate ticks may be dropped, but the latest value per symbol is always eventually delivered.
+    Resubscribing returns a fresh snapshot of the channel's documented view. Updates from the
+    disconnection window are not replayed. Reconcile current state from the snapshot and use
+    the execution channels and corresponding REST endpoints for individual fills.
 
-    Recovery is identical for both `1013` and `1012`: reconnect and resubscribe. The normal subscribe path replies with a fresh, consistent snapshot of the channel's documented view. Events that occurred during the disconnection window are **not** replayed — clients must not expect gap-fill of individual updates; per-fill attribution lives in the execution channels (`.../perpExecutions`, `.../spotExecutions`) and the corresponding REST endpoints.
+    Asset oracle price updates may omit intermediate ticks when a client falls behind, while
+    delivering the latest value per asset.
+
+    ## Rate and connection limits
+
+    Client-sent subscribe, unsubscribe, and ping messages count toward a per-connection rate
+    limit, including malformed messages. This limit applies to messages you send, not market
+    data you receive. Pace subscriptions and retries, including after reconnecting.
+
+    Exceeding the message limit closes the connection with code `4029` and advisory reason
+    `MSG_RATE_EXCEEDED retry_after_ms=<n>`. Wait at least the suggested milliseconds before
+    reconnecting; if absent or unparseable, use exponential backoff with jitter. Reduce message
+    frequency before resuming. Key recovery on the close code and treat reason text as advisory.
+
+    Per-IP limits also apply to new connection attempts and concurrent connections. An excess
+    connection can be refused during the HTTP upgrade with status 429; the response need not
+    use the venue's JSON error format. Close an existing connection or back off before retrying.
+    Existing sibling connections remain usable. A connection-limit refusal may instead arrive
+    as close code `4029` with advisory reason `IP_CONN_LIMIT_EXCEEDED max_conns=<n>`.
+    Current rate and connection limits may differ by environment.
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -156,21 +180,8 @@ channels:
       channel does not provide a complete book when either side exceeds 100
       levels; use a new subscription to recover a fresh bounded view.
 
-      The server enforces per-connection backpressure — a consumer that falls
-      behind is disconnected with close code `1013` (reason `slow consumer —
-      resubscribe for fresh snapshot`). After an internal feed resynchronization
-      (e.g. a matching-engine restart) subscribers are closed with close code
-      `1012`; the reason string begins `feed resync — resubscribe for fresh
-      snapshot` and carries a runtime-appended suffix (` (reset)` or ` (gap)`)
-      identifying the internal cause — key recovery on the close **code** `1012`
-      and treat the reason as advisory. The same `1012` is also sent when the
-      server retires a connection for operational reasons (e.g. a graceful
-      shutdown/deploy drain or load management), with a different reason prefix;
-      recovery is unchanged. Recovery for both `1013` and `1012` is the
-      same: reconnect and resubscribe; the subscribe path returns a fresh
-      consistent bounded `SNAPSHOT` and updates from the disconnection window
-      are not replayed. See the API overview for the shared
-      connection-lifecycle contract.
+      For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
+      in the streaming API overview.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
@@ -221,22 +232,9 @@ channels:
       delivered (none are conflated or dropped) and clients must process the array
       in order.
 
-      This is a stateful channel and enforces per-connection backpressure. A
-      consumer that falls behind is disconnected with close code `1013` (reason
-      `slow consumer — resubscribe for fresh snapshot`); after an internal feed
-      resynchronization (e.g. a matching-engine restart) subscribers are closed
-      with close code `1012`, whose reason string begins `feed resync —
-      resubscribe for fresh snapshot` and carries a runtime-appended suffix
-      (` (reset)` or ` (gap)`) — key recovery on the close **code** `1012` and
-      treat the reason as advisory. The same `1012` is also sent when the server
-      retires a connection for operational reasons (e.g. a graceful
-      shutdown/deploy drain or load management), with a different reason prefix;
-      recovery is unchanged. Recovery for both is the same: reconnect and
-      resubscribe; the subscribe path returns a fresh consistent
-      `OrderChangesSnapshot` and updates
-      from the disconnection window are not replayed (the snapshot reflects the
-      resulting order state; per-fill attribution lives in the executions data).
-      See the API overview for the shared connection-lifecycle contract.
+      For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
+      in the streaming API overview.
+      For cancellation codes, see Cancellation reasons in the REST API Order Entry section.
     parameters:
       address:
         description: Ethereum wallet address
@@ -316,14 +314,9 @@ channels:
   assetOraclePrices:
     address: /v2/assetOraclePrices
     description: |
-      Asset Stork oracle price updates. This replacement feed deliberately omits
-      AMM-era `poolPrice`.
-
-      This is a conflating channel: under backpressure the server coalesces
-      updates per asset — intermediate ticks may be dropped — but the latest
-      price per asset is always eventually delivered, so consumers converge to
-      current values. See the API overview for the shared connection-lifecycle
-      contract.
+      Asset oracle price updates. Intermediate ticks may be omitted when a client falls behind;
+      the latest value per asset is delivered. See Connection lifecycle and recovery in the
+      streaming API overview.
     messages:
       assetOraclePricesUpdate:
         $ref: '#/components/messages/AssetOraclePricesUpdate'
@@ -342,8 +335,7 @@ operations:
         - $ref: '#/channels/control/messages/pongMessage'
     summary: Send a ping (optional)
     description: |
-      Optional client-initiated application-level liveness/RTT probe. Server replies with `PongMessage` echoing the optional `id`. Server-side liveness detection uses RFC 6455 protocol-level pings (`sendPings: true`, `idleTimeout: 120`) and does not depend on this operation.
-
+      Optional application-level liveness or round-trip-time probe. The server replies with `PongMessage`, echoing the optional `id`. Connection liveness also uses RFC 6455 protocol pings, normally handled by the client library; this operation is not required to keep the connection alive.
   sendSubscribe:
     action: send
     channel:
