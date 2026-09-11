@@ -1169,8 +1169,8 @@ tags:
       Order entry operations.
 
       **Gated launch.** Order *insertion* on this deployment is gated: only
-      wallets on the exchange's order-entry allowlist may place or modify
-      orders. A wallet that is not on the list is refused with
+      WHITELISTED wallets may place or modify orders; authenticated EJECTED
+      wallets retain the perp exit exception below. A wallet that is not on the list is refused with
       `NOT_WHITELISTED_ERROR` at the API edge, before the request reaches the
       matching engine. Market data, positions, balances and order state are
       public and are never gated.
@@ -1191,20 +1191,19 @@ tags:
       does not gate it: a removed wallet whose account is not suspended may
       still arm, refresh and disarm.
 
-      Losing access has two distinct forms, and they are not the same thing.
-      **Removal** from the allowlist stops new placements shortly after it is
-      made (the allowlist is polled, not pushed) and deliberately leaves the
-      wallet's resting orders live — offboarding is graceful, and an accidental
-      removal can never flatten a book. **Ejection** is a separate, explicit
-      decision under which the exchange cancels the account's resting orders
-      itself — except armed protective stops (`STOP_LOSS` / `TAKE_PROFIT`),
-      which ejection deliberately leaves armed, because ejecting an account
-      does not close its positions and it must not be left holding exposure it
-      can no longer re-protect. While ejection is in force the matching engine
-      refuses new placements — and countdown arms and refreshes — with
-      `ACCOUNT_SUSPENDED_ERROR`, while the client's own cancels and countdown
-      disarms continue to be accepted throughout. Neither state is retryable
-      from the client side.
+      **Ejection** moves the owner wallet to EJECTED and schedules its accounts'
+      ordinary resting orders for cancellation. Armed protective stops and fired
+      SL/TP children are retained: ejecting does not close positions. Ordinary
+      creates, all modifies, and countdown arms/refreshes are refused. Cancels
+      and countdown disarms remain available.
+
+      **Perp exits remain available while EJECTED.** A `LIMIT` order with
+      `timeInForce: IOC` and `reduceOnly: true` may close existing perp exposure.
+      The edge validates the signature and signer/account permission before
+      granting this exception. It consumes the normal place bucket and passes
+      the ordinary validation and risk checks; it cannot rest. A wallet that
+      was never whitelisted has no exception, and spot orders have none.
+      Orderly offboarding should close exposure while WHITELISTED before ejecting.
 
       Order entry is also rate limited and load shed; see `RATE_LIMITED_ERROR`,
       `OPEN_ORDER_COUNT_EXCEEDED_ERROR`, `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`
