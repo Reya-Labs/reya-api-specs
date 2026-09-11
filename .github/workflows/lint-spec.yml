@@ -20,6 +20,7 @@ on:
       - 'asyncapi-exec-v2.yaml'
       - 'trading-schemas.json'
       - 'scripts/verify-perpob-contracts.mjs'
+      - 'scripts/test-order-requests.py'
       - '.github/workflows/lint-spec.yml'
   workflow_dispatch:
 
@@ -72,3 +73,8 @@ jobs:
 
       - name: Assert Perp OB integration contracts
         run: node scripts/verify-perpob-contracts.mjs
+
+      - name: Validate order request payload matrix
+        run: |
+          python -m pip install jsonschema==4.23.0
+          python scripts/test-order-requests.py
