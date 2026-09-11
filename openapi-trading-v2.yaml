@@ -587,33 +587,69 @@ paths:
     get:
       summary: Get wallet transfers
       description: |
-        Returns the transfer history of every account of a wallet: one entry
-        per account side of every on-chain transfer leg — deposits,
-        withdrawals, transfers between accounts, pool stakes and unstakes,
-        spot trades, auto-exchanges, perp fees and rebates, liquidation
-        penalties — labelled by `type` and signed from the account's point of
-        view. A transfer between two accounts of the same wallet therefore
-        appears twice, once negative and once positive.
+        Return settled collateral movements for every account of a wallet, newest first.
+        The streaming `walletTransfers` channel delivers the same entries as live updates.
 
-        This is the history of net deposits (cash) only. Realized PnL, funding
-        and ADL cashflows never move net deposits and do not appear; closing a
-        profitable position shows only its fee entry. Read `realBalance` from
-        `accountBalances` and per-position PnL from `positions` and
-        `perpExecutions`; `netDepositsAfter` is not a balance to display on
-        its own.
+        **Coverage**
 
-        Entries are returned newest first by `sequenceNumber`, at most
-        `limit` (default and maximum 100) per page. Pagination is by opaque
-        cursor: pass `meta.nextCursor` back as `cursor` to get the next page;
-        walking to the end visits every entry exactly once, with no
-        duplicates and no gaps, even when many entries share one block.
-        `startTime` and `endTime` are optional filters on the block
-        timestamp, not the pagination mechanism. Entries whose amount is zero
-        (some liquidation and auto-exchange legs) are never returned.
+        Each entry belongs to one account and asset, with `amount` signed from that account's
+        perspective. Moving 100 rUSD between two accounts of the same wallet produces two
+        entries: -100 for the sending account and +100 for the receiving account.
 
-        History starts at the environment's backfill start block; earlier
-        movements are absent, not synthesised. Entries never change once
-        returned.
+        This is a history of net deposits, not a complete balance or PnL history. Realized PnL,
+        funding, and ADL cashflows are excluded; closing a profitable position shows its fee
+        movements, not its profit. Use `accountBalances.realBalance` for realized balance and
+        `positions` / `perpExecutions` for position and execution PnL.
+
+        Zero-amount entries are excluded. Historical coverage varies by environment; movements
+        before the available history begins are absent. Returned entries do not change.
+
+        **Transfer types**
+
+        `type` describes the purpose of a movement, not its direction; use the sign of `amount`
+        for direction. The following meanings apply to REST and WebSocket entries.
+
+        | Type | Meaning |
+        | --- | --- |
+        | `DEPOSIT` / `WITHDRAWAL` | Collateral entering or leaving the protocol. |
+        | `TRANSFER` | Transfer between margin accounts of the same owner. |
+        | `POOL_STAKE` / `POOL_UNSTAKE` | Passive-pool staking or unstaking; entries cover the asset and share token. |
+        | `PERP_TAKER_FEE` | Gross fee paid by the taker on a perp fill. |
+        | `PERP_REFERRER_REBATE` | Rebate for the taker's referrer. |
+        | `PERP_TAKER_REBATE` | Rebate returned to the taker. |
+        | `PERP_POOL_REBATE` | Rebate credited to the passive pool. |
+        | `PERP_FEE` | Perp fee recorded in older execution history. |
+        | `SPOT_EXECUTION` | Token movements from a spot trade, recorded separately per asset. |
+        | `AUTO_EXCHANGE` / `AUTO_EXCHANGE_INSURANCE_FEE` | Auto-exchange movements and the associated insurance-fund fee. |
+        | `LIQUIDATION_INSURANCE_FEE` | Liquidation fee for the insurance fund. |
+        | `LIQUIDATION_BACKSTOP_FEE` | Liquidation fee for the backstop liquidity provider. |
+        | `LIQUIDATION_LIQUIDATOR_REWARD` / `LIQUIDATION_KEEPER_REWARD` | Liquidator or keeper reward. |
+        | `LIQUIDATION_BID_FEE` | Bid fee for a ranked liquidation. |
+        | `INSURANCE_FUND_COVERAGE` / `POOL_MERGE` | Insurance coverage or pool consolidation transfer. |
+        | `OTHER` | Unclassified movement; the reported amounts remain exact. |
+
+        **Pagination**
+
+        - Results are ordered newest first by `sequenceNumber`. `limit` defaults to 100 and is
+          capped at 100 entries per page.
+        - Omit `cursor` for the first page. Pass the returned `meta.nextCursor` unchanged for
+          the next page, keeping the same filters. Stop when `nextCursor` is absent.
+        - Cursor traversal visits each matching entry once, including when entries share a
+          block timestamp. Use cursors rather than timestamps to advance between pages.
+        - `startTime` and `endTime` filter the block timestamp in milliseconds. `type` filters
+          by a comma-separated list of `TransferType` values; omit it to include all types.
+
+        **Reconciliation**
+
+        For a complete history of one account and asset, process entries in chronological order:
+        `previous netDepositsAfter + amount = netDepositsAfter`. Do not use a type-filtered or
+        incomplete history to check that equality. `netDepositsAfter` is not the account's
+        `realBalance` and should not be displayed as its complete balance.
+
+        Use `sequenceNumber` to merge and deduplicate REST history, the WebSocket snapshot, and
+        live entries. Use `fillId` or `spotExecutionSequenceNumber`, when present, to associate
+        movements with executions. Optional fields and historical availability are documented
+        on `Transfer`; see `walletTransfers` for snapshot and live-frame delivery.
       operationId: getWalletTransfers
       tags:
         - Wallet Data
@@ -1040,10 +1076,9 @@ components:
       name: cursor
       in: query
       required: false
-      description: >-
-        Opaque page cursor returned as `meta.nextCursor` by the previous page.
-        Omit for the first page. Cursors are versioned by the server and must
-        not be constructed or parsed by clients.
+      description: |
+        Opaque page cursor from the previous response's `meta.nextCursor`. Omit for the
+        first page; otherwise pass it unchanged. Do not construct or parse cursor values.
       schema:
         type: string
         example: djEuNTQ2MzY3NzA2LjA

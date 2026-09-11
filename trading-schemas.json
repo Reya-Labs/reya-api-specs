@@ -797,12 +797,12 @@
         "POOL_MERGE",
         "OTHER"
       ],
-      "description": "Purpose of a transfer entry, never its direction (direction is the sign of `amount`). DEPOSIT / WITHDRAWAL: collateral entering or leaving the protocol. TRANSFER: between two margin accounts of the same owner. POOL_STAKE / POOL_UNSTAKE: the asset leg and the share-token leg of a passive-pool stake or unstake. PERP_TAKER_FEE: the gross fee a taker pays on a perp fill (taker to protocol fee collector). PERP_REFERRER_REBATE, PERP_TAKER_REBATE, PERP_POOL_REBATE: the parts of that fee the collector forwards to the taker's referrer, back to the taker, and to the passive pool. PERP_FEE: a perp-fill fee leg settled before the Fee v3 layout (backfilled history only). SPOT_EXECUTION: the two token legs of a spot trade. AUTO_EXCHANGE / AUTO_EXCHANGE_INSURANCE_FEE: the legs of an auto-exchange, the second being the insurance-fund fee. LIQUIDATION_*: the penalty legs of a liquidation (insurance fund, backstop LP, liquidator, keeper) and the bid fee of a ranked liquidation. INSURANCE_FUND_COVERAGE, POOL_MERGE: protocol-internal movements. OTHER: a leg the API does not recognise; it is still returned with exact amounts."
+      "description": "Purpose of a transfer entry; direction is given by the sign of amount. See GET /v2/wallet/{address}/transfers, Transfer types, for the meaning of each value."
     },
     "Transfer": {
       "title": "Transfer",
       "type": "object",
-      "description": "One movement of collateral into, out of, or between margin accounts, from the point of view of `accountId`: one entry per account side of an on-chain transfer leg, for every leg the chain emits (deposits, withdrawals, transfers, pool stakes, spot trades, auto-exchanges, perp fees and rebates, liquidation penalties). This is the history of net deposits (cash) only: realized PnL, funding and ADL cashflows never appear here, and `netDepositsAfter` is not `realBalance`.",
+      "description": "A settled collateral movement from the perspective of accountId. See GET /v2/wallet/{address}/transfers for coverage, transfer types, pagination, and reconciliation. Field descriptions define signs, units, and optional execution links.",
       "required": [
         "sequenceNumber",
         "accountId",
@@ -816,7 +816,7 @@
       "properties": {
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unique id of the entry, increasing in chain order and never reused: the on-chain transfer leg sequence number times two, plus 0 for the paying side and 1 for the receiving side.",
+          "description": "Unique entry ID, increasing in settlement order and never reused. Use it to order and deduplicate entries; do not infer transfer details from its numeric value.",
           "example": 273183852
         },
         "accountId": {
@@ -830,12 +830,12 @@
         },
         "amount": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Amount moved, signed from this account's view: negative when collateral left the account, positive when it arrived. The two entries of one leg sum to zero.",
+          "description": "Amount in asset, signed from this account's perspective: negative for outgoing collateral and positive for incoming collateral.",
           "example": "-0.50"
         },
         "netDepositsAfter": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Net deposits (cash) of `accountId` in `asset` right after this entry, as written by the chain on the transfer leg; the same basis as `AccountBalance.balanceDEPRECATED`. Not `realBalance`: realized PnL is excluded. Consecutive entries of one account and asset satisfy previous `netDepositsAfter` + `amount` = `netDepositsAfter`.",
+          "description": "Net deposits of accountId in asset immediately after this entry, on the same basis as AccountBalance.balanceDEPRECATED. Excludes realized PnL and is not realBalance. See the transfers endpoint's Reconciliation section.",
           "example": "1024.25"
         },
         "type": {
@@ -843,12 +843,12 @@
         },
         "counterpartyAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "The other side of the leg. Absent when the other side is outside the protocol (deposits, withdrawals) or the pool contract (stakes, unstakes).",
+          "description": "The other account involved in the transfer. Omitted for deposits, withdrawals, pool stakes, and pool unstakes.",
           "example": 1
         },
         "symbol": {
           "$ref": "#/definitions/Symbol",
-          "description": "Market of the execution that caused the entry: the perp market for perp fee and rebate entries settled after the fill link was added on-chain, the spot market for spot trade and auto-exchange entries. Absent otherwise.",
+          "description": "Market of the related execution: the perp market for fee and rebate entries, or the spot market for spot trades and auto-exchanges. Omitted for unrelated movements and may be absent on historical perp fee entries.",
           "example": "BTCRUSDPERP"
         },
         "spotExecutionSequenceNumber": {
@@ -858,7 +858,7 @@
         },
         "fillId": {
           "type": "string",
-          "description": "Matching-engine fill nonce of the execution that caused the entry: joins the entry to `PerpExecution.fillId` or `SpotExecution.fillId`. Absent for entries not caused by a matching-engine fill (deposits, liquidations, auto-exchanges, dust settlements) and for perp fills settled before the fill link was added on-chain.",
+          "description": "Fill identifier linking this entry to PerpExecution.fillId or SpotExecution.fillId. Omitted for deposits, liquidations, auto-exchanges, and dust settlements; historical perp fee entries may also omit it.",
           "example": "42"
         },
         "timestamp": {
@@ -895,7 +895,7 @@
         },
         "nextCursor": {
           "type": "string",
-          "description": "Opaque cursor for the next page. Pass it back as the `cursor` query parameter; walking to the end visits every item exactly once, with no duplicates and no gaps. Absent when there is no further page.",
+          "description": "Opaque cursor for the next page. Pass it unchanged as cursor; omitted when no further page is available. See the transfers endpoint's Pagination section for traversal rules.",
           "example": "djEuNTQ2MzY3NzA2LjA"
         }
       },

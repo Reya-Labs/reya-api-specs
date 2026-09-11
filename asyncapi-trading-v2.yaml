@@ -305,13 +305,19 @@ channels:
   walletTransfers:
     address: /v2/wallet/{address}/transfers
     description: |
-      Transfer history updates for a wallet: one `Transfer` entry per account
-      side of every on-chain transfer leg, the same entries
-      `GET /v2/wallet/{address}/transfers` returns. The `subscribed`
-      acknowledgement carries the most recent entries in `contents.data`,
-      newest first; every later `channel_data` frame carries one new entry as
-      the chain emits it. Net deposits only: realized PnL and funding never
-      appear.
+      Live settled transfer entries for a wallet, using the same `Transfer` records as
+      `GET /v2/wallet/{address}/transfers`. See that operation for coverage, type meanings,
+      pagination, and reconciliation.
+
+      **Snapshot and updates**
+
+      - The `subscribed` acknowledgement contains the most recent entries in `contents.data`,
+        newest first. This is a recent-history snapshot, not the complete transfer history.
+      - Each subsequent `channel_data` frame carries one new entry in its `data` array.
+
+      To build a local ledger, subscribe and buffer live entries while paging REST history.
+      Merge the snapshot, REST results, and buffered updates by `sequenceNumber` to avoid
+      counting the same entry twice.
     parameters:
       address:
         description: Ethereum wallet address
@@ -1203,7 +1209,9 @@ components:
         data:
           type: array
           title: WalletTransferList
-          description: Transfer entries, newest first. Live frames carry one new entry each; the recent-entries snapshot arrives in the `subscribed` acknowledgement's `contents.data`.
+          description: |
+            Transfer entries carried by this live update. See the walletTransfers channel for snapshot and live-frame delivery.
+
           items:
             $ref: './trading-schemas.json#/definitions/Transfer'
 
