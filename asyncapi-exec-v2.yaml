@@ -25,6 +25,8 @@ info:
     Do not confuse the two mechanisms. `RATE_LIMITED_ERROR` is the matching engine's per-account verdict on one operation: it names an account, carries `retryAfterMs`, leaves the connection open, and does not affect other operations. The `4029` cap is a per-connection transport guard that knows nothing about accounts: it ends the connection, takes any in-flight requests with it, and those requests must be treated as indeterminate — resolve them by reconnecting and reconciling against `GET /v2/wallet/{address}/openOrders` rather than assuming they were rejected. Note also that closing the connection does **not** trigger cancel-on-disconnect: an armed `cancelAllAfter` countdown keeps running on its own clock, so a client closed on `4029` should reconnect and refresh it before it fires.
 
     For market data, position updates, and fill streaming, see the streaming WebSocket API (`asyncapi-trading-v2.yaml`). The recommended Market Maker integration runs both connections in parallel: this surface for order entry, the streaming surface for read-side fanout.
+    Per-IP concurrent connection caps: when enabled for a deployment, an excess connection is refused during the HTTP upgrade with status 429, before a WebSocket is opened. It carries no account-level RequestErrorCode or exact retry hint; close an existing connection or back off before retrying. Established sibling connections remain usable. This is separate from the inbound message-rate cap, which closes an already-open socket with 4029.
+
   contact:
     name: Reya Network
     url: https://reya.xyz
