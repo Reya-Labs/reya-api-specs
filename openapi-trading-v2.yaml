@@ -1127,9 +1127,9 @@ components:
         venue does not emit; a 429 therefore never carries a `RequestErrorCode` and
         never means an account-level verdict.
 
-        Retry policy is keyed on the code: `RATE_LIMITED_ERROR` and
-        `CAPACITY_LIMITED_ERROR` are retryable after `retryAfterMs`
-        (back off for `CAPACITY_LIMITED_ERROR`), `UNAVAILABLE_ACCOUNT_OWNER_ERROR`
+        Retry policy is keyed on the code: retry `RATE_LIMITED_ERROR` after
+        `retryAfterMs`. Retry `CAPACITY_LIMITED_ERROR` using backoff with jitter;
+        the current pressure guard supplies no retry hint. `UNAVAILABLE_ACCOUNT_OWNER_ERROR`
         and `UNAVAILABLE_MATCHING_ENGINE_ERROR` are retryable unchanged after a
         short delay, and `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
         access decisions and are not retryable. `POST /v2/cancelOrder` and
@@ -1185,11 +1185,9 @@ tags:
       Disarming (`timeoutMs: 0`) is never refused for access control — a
       dead-man's switch can always be turned off. Arming or refreshing
       (non-zero `timeoutMs`) is refused with
-      `ACCOUNT_SUSPENDED_ERROR` once the account is suspended, because the
-      exchange is already cancelling that account's resting orders and a fresh
-      deadline has nothing left to protect. Mere removal from the allowlist
-      does not gate it: a removed wallet whose account is not suspended may
-      still arm, refresh and disarm.
+      `ACCOUNT_SUSPENDED_ERROR` while EJECTED, even while protective orders remain.
+      The supported removal operation atomically marks the wallet EJECTED and
+      schedules ordinary resting orders for cancellation.
 
       **Ejection** moves the owner wallet to EJECTED and schedules its accounts'
       ordinary resting orders for cancellation. Armed protective stops and fired
