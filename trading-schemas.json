@@ -92,7 +92,7 @@
         "ACCOUNT_SUSPENDED_ERROR",
         "UNAVAILABLE_ACCOUNT_OWNER_ERROR"
       ],
-      "description": "Standardized error codes for API responses. Branch on `error`, not the free-text `message` or HTTP status. Every venue rejection on REST uses HTTP 400 with a `RequestError` body. The order-entry WebSocket returns the same code and optional `retryAfterMs` in its `{ ok: false, error }` response. HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict.\n\nValidation and authorization:\n- `INPUT_VALIDATION_ERROR`: correct the request's fields or order-class combination before resubmitting. Immutable fields on a modify must match the existing order.\n- `SYMBOL_NOT_FOUND_ERROR`, `NO_ACCOUNTS_FOUND_ERROR`, `NO_PRICES_FOUND_FOR_SYMBOL_ERROR`: the requested market, account data, or price data is unavailable; check the request and current market/account state.\n- `NUMERIC_OVERFLOW_ERROR`, `PRICE_QTY_BOUNDS_ERROR`: a numeric value is out of range, or price/quantity is invalid for the market. Check price increments and quantity limits.\n- `UNAUTHORIZED_SIGNATURE_ERROR`: the signature is invalid or unauthorized. `UNAUTHORIZED_ACCOUNT_ERROR`: the signer is not permitted to act on the target order. For an armed protective stop, modify and cancel require the signer that created it.\n- `INVALID_NONCE_ERROR`: use a fresh, monotonically increasing nonce for the signer and re-sign.\n- `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the signature's `deadline` has passed or is too far in the future. Correct it and re-sign. This deadline controls request acceptance, not the lifetime of an accepted order.\n- `ORDER_EXPIRES_TOO_SOON_ERROR`: a GTT order's `expiresAfter` leaves insufficient time for execution and settlement. Choose a later expiry and re-sign. GTT orders can be cancelled before their signed expiry to allow settlement; for a protective stop this applies to both its armed phase and its fired child.\n- `SERVICE_DISABLED_ERROR`, `TRADING_HALTED_ERROR`: order entry is unavailable for the market. Check market availability before submitting again.\n- `DUPLICATE_CLIENT_ORDER_ID_ERROR`: the client ID belongs to a live order. Reconcile that order before submitting another.\n- `ORDER_NOT_FOUND_ERROR`: the target order was not found. Refresh its state before retrying.\n- `EMPTY_MODIFY_ERROR`: a LIMIT modification makes no change. An armed trigger may be re-signed at unchanged prices.\n- `MODIFY_QTY_BELOW_FILLED_ERROR`: the modified total quantity must exceed the quantity already filled.\n- `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately. Choose a non-crossing price or change the post-only intent and re-sign.\n- The `*_OTHER_ERROR` codes are operation-specific failures without a more specific code. Use `message` for display or troubleshooting; do not parse it as a stable machine-readable contract.\n\nPre-trade risk checks:\n- `ACCOUNT_BELOW_LIQUIDATION_MARGIN_ERROR`: the account does not meet the required liquidation-margin or balance conditions.\n- `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`: the proposed trade does not meet the account's initial-margin or collateral requirements. An account already below initial margin may trade only when the trade improves its health.\n- `INSUFFICIENT_BALANCE_ERROR`: the account cannot fund the order.\n- `OPEN_INTEREST_CAP_ERROR`, `OPEN_INTEREST_BUDGET_ERROR`: the trade exceeds the market's available open-interest capacity.\n- `REDUCE_ONLY_CONDITION_NOT_MET_ERROR`: the order would not strictly reduce the current position, for example because there is no position, the side is wrong, or the size would reverse it.\n\nA request refused by risk checks is rejected in full. A rejected create produces no order; a rejected modify leaves the existing order unchanged. These failures require a change in account or market state, a smaller order, more collateral, or a user decision; do not automatically retry them unchanged. Resting-order cancellations appear separately as `cancelReason: RISK_CANCELLED`. A protective stop whose child fails risk checks is cancelled with `RISK_REJECTED`; see `CancelReason`.\n\nProtective stops:\n- `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR`: an IOC trigger cannot carry `expiresAfter`. Only GTT orders carry an expiry; GTC and IOC must omit it. Invalid time-in-force/expiry combinations can also return `INPUT_VALIDATION_ERROR`. Correct the combination and re-sign.\n- `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`: the stop's `limitPx` is outside the permitted range around `triggerPx`, or stops are unavailable for the market. Move the limit closer to the trigger and re-sign when the price is out of range. If the message indicates stops are unavailable, changing the price will not resolve it.\n- `TRIGGER_ALREADY_EXISTS_ERROR`: the account already has an armed stop of the same type on that market. At most one stop-loss and one take-profit may be armed per account and market. Modify or cancel the existing stop before replacing it.\n\nRate limits and resting-order caps:\n- `RATE_LIMITED_ERROR`: the account's request budget for this operation is exhausted. Create and modify share a placement budget; single cancels, bulk cancels, and cancel-all-after control have separate budgets. Budgets are shared across markets, signers, REST, and WebSocket requests for the same account. Wait at least `retryAfterMs` milliseconds before retrying. This is a minimum wait, not a reserved request slot; concurrent traffic can use the available budget. Disarming an armed cancel-all-after countdown is never throttled. A disarm when no countdown is armed can be throttled.\n- `OPEN_ORDER_COUNT_EXCEEDED_ERROR`: a new resting order would exceed the account's total or per-market resting-order count. Cancel orders or allow them to fill before placing more. Modifications do not increase the count.\n- `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR`: the account's combined resting-order notional would exceed its limit. Notional is remaining quantity multiplied by limit price for resting GTC/GTT orders. Creates are checked against the submitted quantity before any immediate fills; modifications are checked against the resulting notional. IOC orders and armed triggers are exempt; fired trigger children that rest count toward the limits. Cancel or shrink resting orders, or submit a smaller order.\n\nResting-order cap errors carry no `retryAfterMs`: waiting alone does not resolve them. `CAPACITY_LIMITED_ERROR` means the venue temporarily cannot accept a create or modify. It carries no retry hint; use backoff with jitter. Cancels and cancel-all-after operations are not refused for venue capacity, though their separate account rate limits still apply.\n\nTemporary availability:\n- `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`: an order that would execute immediately cannot currently pass the required pre-trade checks. Retry after a short delay. Existing resting orders remain in place; non-crossing orders and cancellations remain available.\n- `UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was not accepted. Retry it unchanged after a short delay. These differ from `CAPACITY_LIMITED_ERROR`, which calls for backoff with jitter.\n\nPermission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are not resolved by automatic retries. Contact support if an expected operation is refused.\n\nRetry policy: retry unchanged after a short delay for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR`, and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`; retry `RATE_LIMITED_ERROR` after at least `retryAfterMs`; retry `CAPACITY_LIMITED_ERROR` using backoff with jitter. Correct validation failures and re-sign where required. Reconcile order state before retrying an unanswered request, because a transport timeout or disconnect does not establish that the request was rejected."
+      "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
@@ -138,7 +138,7 @@
       "title": "OrderStatus",
       "type": "string",
       "enum": ["OPEN", "FILLED", "CANCELLED"],
-      "description": "Order status. An armed but not-yet-fired `STOP_LOSS` / `TAKE_PROFIT` trigger surfaces as `OPEN`, and so does the resting child it fires into; the `triggered` flag on the `Order` schema tells the two apart."
+      "description": "OPEN includes partially filled resting orders, armed protective stops, and their resting children. FILLED and CANCELLED are terminal states. Use Order.triggered to distinguish armed stops from fired children. Requests rejected before order creation return errors, not order-status rows."
     },
     "CancelReason": {
       "title": "CancelReason",
@@ -158,7 +158,7 @@
         "OCO_SIBLING_FIRED",
         "POSITION_CLOSED"
       ],
-      "description": "Reason for a terminal `CANCELLED` order. `cancelReason` and `cancelReasonMessage` are omitted for other statuses and may be omitted when a cancellation reason is unavailable. Branch on `cancelReason`; `cancelReasonMessage` is explanatory text, not a stable contract to parse.\n\n- `NO_LIQUIDITY`: an IOC order filled nothing at its limit.\n- `IOC_REMAINDER`: an IOC order partially filled and its unfilled quantity was cancelled because no further executable liquidity was available. Both IOC reasons appear on create/modify responses.\n- `USER_CANCEL`, `MASS_CANCEL`, `CANCEL_ALL_AFTER`, `GTT_EXPIRED`: cancellation by a single cancel, bulk cancel, expired cancel-all-after countdown, or GTT expiry. These appear on `walletOrderChanges`.\n- `SELF_TRADE_PREVENTION`: an order would trade against the account's own resting order. Only the incoming order is cancelled; the resting order stays in place. This can appear on create/modify responses or a crossing modification's order-change event. Any fills already completed remain recorded.\n- `FEED_RESET`: rebuild the local order view from the following order events or `GET /v2/wallet/{address}/openOrders`. This notification does not mean the orders were cancelled on the exchange.\n- `RISK_CANCELLED`: a resting order was cancelled because it did not pass pre-trade risk checks when it was about to fill. Delivered on `walletOrderChanges`, with any previous fills preserved. A create or modify refused at request acceptance instead returns a `RequestErrorCode`.\n- `OCO_SIBLING_FIRED`: the paired stop-loss or take-profit fired and created its child order. The sibling is cancelled even when the child fills nothing. Cancelling a leg manually leaves its sibling armed; protection is not automatically re-armed.\n- `PROTECTIVE_SELF_TRADE_SWEEP`: a resting maker order was cancelled to allow a protective stop to execute without self-trading. This reason appears on the maker's cancellation, unlike `SELF_TRADE_PREVENTION`, which cancels the incoming order.\n- `POSITION_CLOSED`: no tradeable quantity remains to reduce. If the position has closed, reversed, or fallen below one lot before a stop fires, both protective legs are cancelled with `triggered: false` and no child is created. A fired child's remaining quantity is limited by the current reducible position; if that quantity is zero when it attempts to fill, its remainder is cancelled.\n- `RISK_REJECTED`: the proposed protective child failed pre-trade risk checks. Both protective legs are cancelled with `triggered: false`; no child is created and protection is not automatically retried or re-armed.\n\nA GTT stop or its resting child can be cancelled with `GTT_EXPIRED` before the signed `expiresAfter` to allow settlement. Explicit `cancelAll` includes fired children and reports `MASS_CANCEL`; cancel-all-after leaves armed protective stops and their fired children in place."
+      "description": "Machine-readable cancellation reason. Present only on CANCELLED orders and may be omitted when unavailable. See Cancellation reasons in the REST API Order Entry section for per-code meanings and handling."
     },
     "TierType": {
       "title": "TierType",
@@ -170,7 +170,7 @@
       "title": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
-      "description": "Depth message type. On the public WebSocket, SNAPSHOT is the exact bounded view delivered on subscribe: at most the 100 highest bids and 100 lowest asks (WebSocket has no client-selected limit, and deeper levels are omitted). UPDATE transforms the previous bounded view into the next one. It may include newly visible boundary levels whose underlying quantity did not change and zero-quantity removals for displaced levels that still exist deeper in the exchange book; an underlying change wholly outside the view does not emit an UPDATE. Quantities are absolute, and qty 0 removes that price from the published view. Apply UPDATE frames in order to maintain the exact bounded view; reconnect and resubscribe for a fresh snapshot after interruption. REST depth snapshots use their requested/default limit within the same 1,000-level per-side maximum."
+      "description": "SNAPSHOT replaces the current depth view; UPDATE applies changed price levels to that view. See the streaming API marketDepth channel for view limits, absolute quantities, boundary changes, and update handling. REST snapshot limits are documented on GET /v2/market/{symbol}/depth."
     },
     "DepthSnapshotType": {
       "title": "DepthSnapshotType",
@@ -392,7 +392,7 @@
     "Order": {
       "title": "Order",
       "type": "object",
-      "description": "Represents a public order state. Emitted as openOrders snapshots, orderChanges WS events, and orderHistory REST rows. For event-style emissions (orderChanges WS, orderHistory REST), `lastUpdateAt` reflects the order event time and a single order may produce multiple rows as it moves through the public `OPEN`, `FILLED`, and `CANCELLED` statuses. Partially filled orders with a resting remainder remain `OPEN`; request-level rejects are returned as errors rather than order-status rows. Event-style emissions include `sequenceNumber`; resting snapshots omit it.",
+      "description": "Order state returned by openOrders, orderChanges, and orderHistory. Event streams and history can contain multiple updates for the same order. Field descriptions specify snapshot/event availability; see OrderStatus for lifecycle states.",
       "required": [
         "exchangeId",
         "symbol",
@@ -472,7 +472,7 @@
         },
         "triggered": {
           "type": "boolean",
-          "description": "Armed-vs-fired discriminator for protective stops. `false` while a `STOP_LOSS` / `TAKE_PROFIT` is armed: it holds no place in the book, is not executable liquidity, and stays modifiable and cancellable. `true` once it has fired and the resulting child order is resting in the book under the `timeInForce` the create chose. Use it to know that a `modifyOrder` will be refused — a fired child is cancel-only. A fired child's remaining quantity is an upper bound rather than a fillable size: every fill is clamped to the position still reducible at that instant, a clamp to zero cancels the remainder with `cancelReason: POSITION_CLOSED`, and the child is not removed when the position closes by some other route. It blocks the account's own crossing orders through standard self-trade prevention, `POST /v2/cancelAll` cancels it like any other resting order, and an armed cancel-all-after countdown leaves it in place exactly as it leaves an armed trigger. Never `true` on a `LIMIT` order. Read absence by surface. It is omitted on `orderHistory` REST rows, always: its absence there means unknown — do not read it as `false`, and use `openOrders` or the `walletOrderChanges` stream when you need the discriminator. On those two surfaces it is present whenever the deployment supports trigger firing, and an omitted value means a deployment that predates it and so may be treated as `false`.",
+          "description": "For protective stops, false means armed and true means fired; never true for LIMIT orders. Fired children are cancel-only. Omitted on orderHistory, where absence means unknown: use openOrders or walletOrderChanges to distinguish phases. On those two surfaces, omission on older deployments can be treated as false. See POST /v2/createOrder for firing and child-order behavior.",
           "example": false
         },
         "timeInForce": {
@@ -523,7 +523,7 @@
     "OrderChangesSnapshot": {
       "title": "OrderChangesSnapshot",
       "type": "object",
-      "description": "Initial payload returned in the `subscribed` confirmation for the `/v2/wallet/{address}/orderChanges` WS channel. Combines the current open-orders snapshot with a `snapshotSequenceNumber` cursor; subsequent orderChanges WS messages carry orders with a greater `sequenceNumber`, so clients can splice the live feed against the orderHistory REST endpoint.",
+      "description": "Initial orderChanges subscription payload: current open orders and the sequence cursor that separates this snapshot from subsequent updates. See the walletOrderChanges channel for stream handling.",
       "required": [
         "data",
         "snapshotSequenceNumber"
@@ -2394,7 +2394,7 @@
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
-      "description": "Order creation request. Clients sign the EIP-712 `OrderDetails` using the requested values. For LIMIT orders, `OrderDetails.quantity` is `isBuy ? +qty : -qty`. STOP_LOSS/TAKE_PROFIT orders omit `qty` and sign the full-position sentinel `±int256.max` (raw, not E18; the sign follows `isBuy`). `deadline` controls signature validity for request acceptance; `expiresAfter` controls GTT order lifetime and must be strictly greater than `deadline`. See the EIP-712 signing reference (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the signing algorithm and exact typehash strings.",
+      "description": "Create an order with an EIP-712 signature, nonce, and deadline. Field descriptions define signed values and order-class requirements. See POST /v2/createOrder for execution and protective-stop behavior.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -2436,7 +2436,7 @@
         },
         "qty": {
           "$ref": "#/definitions/Qty",
-          "description": "Unsigned order quantity. Required for `LIMIT` orders. Omit for `STOP_LOSS` / `TAKE_PROFIT` orders; trigger orders sign the full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`) and derive executable size from the live position when the trigger fires. Combined with `isBuy`, forms the signed `OrderDetails.quantity` for LIMIT orders.",
+          "description": "Unsigned quantity, required for LIMIT orders; its sign in OrderDetails.quantity follows isBuy. Omit for STOP_LOSS/TAKE_PROFIT and sign the full-position sentinel ±int256.max (raw, not E18), with sign from isBuy. A protective stop takes its executable size from the position when it fires.",
           "example": "0.1"
         },
         "orderType": {
@@ -2446,7 +2446,7 @@
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "Time in force, required for every order class. Maps to signed `OrderDetails.timeInForce` (0 = GTC, 1 = IOC, 2 = GTT). For a protective stop, it determines the child's behavior when the stop fires: IOC fills available liquidity and cancels the remainder; GTC rests the remainder until cancelled; GTT rests it until expiry. Only GTT carries `expiresAfter`; GTC and IOC must omit it. Invalid combinations return `INPUT_VALIDATION_ERROR` or `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR`. GTT stops and their resting children can expire early to allow settlement.",
+          "description": "Required signed OrderDetails.timeInForce (0 = GTC, 1 = IOC, 2 = GTT). For a protective stop, selects its fired child's time in force. Only GTT carries expiresAfter; GTC and IOC omit it. See POST /v2/createOrder for execution, expiry, and invalid-combination handling.",
           "example": "GTC"
         },
         "triggerPx": {
@@ -2485,12 +2485,12 @@
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Signed GTT order expiry (`OrderDetails.expiresAfter`). Required for GTT and must be in the future and strictly greater than `deadline` (`deadline < expiresAfter`). Omit for GTC and IOC; invalid combinations return `INPUT_VALIDATION_ERROR` or `TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR`. For a protective stop, this is one absolute expiry shared by the armed stop and its fired child; firing does not start a new lifetime. The stop or its resting child can be cancelled before this timestamp to allow settlement, with `cancelReason: GTT_EXPIRED`. Choose an expiry with sufficient time for both protection and settlement. An expiry that is too near is rejected with `ORDER_EXPIRES_TOO_SOON_ERROR`; a fill that settles after expiry can revert with `OrderExpired`.",
+          "description": "GTT expiry in Unix seconds, signed as OrderDetails.expiresAfter. Required for GTT, in the future and strictly greater than deadline; omitted for GTC/IOC. A protective stop and its child share this expiry. See POST /v2/createOrder for early cancellation, settlement, and expiry errors.",
           "example": 1676923200
         },
         "clientOrderId": {
           "type": "string",
-          "description": "Client-provided order ID for tracking and correlation, as a decimal string. Maps to the on-chain `OrderDetails.clientOrderId` (`uint64`) — signed as part of the EIP-712 payload but not enforced on-chain. Omit when the order has no client id; provided values must be non-zero and are carried as strings to preserve precision, like `orderId` and `nonce`.",
+          "description": "Client-provided correlation ID, signed as OrderDetails.clientOrderId (uint64). Omit when unused; otherwise send a non-zero decimal string to preserve precision.",
           "example": "123456789"
         }
       },
@@ -2538,12 +2538,12 @@
         },
         "firstFillId": {
           "type": "string",
-          "description": "Identifier of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous ID range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. For a non-IOC (resting) taker, the same first fill ID also appears on the order's taker update in the orderChanges channel; an IOC taker is not published to orderChanges, so this response is the only place its fill range is delivered.",
+          "description": "First fill ID produced by this request. With fillCount, identifies [firstFillId, firstFillId + fillCount - 1]. Omitted if no fill occurred. See POST /v2/createOrder, Responses and fill correlation, for joining responses to streamed executions.",
           "example": "7205759403792794624"
         },
         "fillCount": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry (so it is >= 1 whenever present).",
+          "description": "Number of fills produced by this request, starting at firstFillId. Omitted if no fill occurred; positive whenever present.",
           "example": 2
         }
       },
@@ -2691,7 +2691,7 @@
     },
     "ModifyOrderResponse": {
       "title": "ModifyOrderResponse",
-      "description": "Result of a modification. The response fields match `CreateOrderResponse`; `orderId` is always the same ID the order had before the modification. If the modification crossed the book it executed immediately: `execQty` carries the quantity it filled and `status` reflects the outcome (`OPEN` for a partial fill leaving a remainder resting, `FILLED` for a complete fill, or `CANCELLED` when a non-post-only crossing modify self-matches the account's own resting liquidity — self-match prevention cancels the taker, so the order is removed and rests nowhere). Per-fill detail (prices, fees) is delivered on the wallet executions and `walletOrderChanges` streams, exactly as for `createOrder`.",
+      "description": "Result of a modification, with the same orderId as before. Fields report immediate execution and resulting order state. See POST /v2/modifyOrder for outcomes and POST /v2/createOrder for shared fill-correlation rules.",
       "type": "object",
       "required": [
         "status",
@@ -2732,12 +2732,12 @@
         },
         "firstFillId": {
           "type": "string",
-          "description": "Identifier of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous ID range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. For a non-IOC (resting) taker, the same first fill ID also appears on the order's taker update in the orderChanges channel; an IOC taker is not published to orderChanges, so this response is the only place its fill range is delivered.",
+          "description": "First fill ID produced by this request. With fillCount, identifies [firstFillId, firstFillId + fillCount - 1]. Omitted if no fill occurred. See POST /v2/createOrder, Responses and fill correlation, for joining responses to streamed executions.",
           "example": "7205759403792794624"
         },
         "fillCount": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry (so it is >= 1 whenever present).",
+          "description": "Number of fills produced by this request, starting at firstFillId. Omitted if no fill occurred; positive whenever present.",
           "example": 2
         }
       },
@@ -2745,7 +2745,7 @@
     },
     "CancelOrderRequest": {
       "title": "CancelOrderRequest",
-      "description": "Cancels a live order by `orderId`, or by a non-zero `clientOrderId` when `orderId` is absent. Supports spot, perp, and protective stop orders. For a `STOP_LOSS` / `TAKE_PROFIT`, cancellation is bound to the arming signer: the wallet that signs this cancel must be the exact wallet that armed the trigger, so a different signer holding trade permission on the same account cannot cancel it and is rejected with `UNAUTHORIZED_ACCOUNT_ERROR`. The same binding applies to a modify against an armed trigger.",
+      "description": "Cancel a live order by orderId, or a non-zero clientOrderId when orderId is absent. Supports spot, perp, and protective stops. See POST /v2/cancelOrder for signer requirements.",
       "type": "object",
       "required": [
         "symbol",
@@ -2815,7 +2815,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `OrderCancel` envelope and enforced by the API at entry.",
+          "description": "Unix seconds. Signature-validity deadline signed into the OrderCancel envelope. Requests received after this timestamp are rejected.",
           "example": 1676923200
         }
       },
@@ -2876,7 +2876,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `MassCancel` envelope and enforced by the API at entry.",
+          "description": "Unix seconds. Signature-validity deadline signed into the MassCancel envelope. Requests received after this timestamp are rejected.",
           "example": 1676923200
         }
       },
@@ -2900,7 +2900,7 @@
     },
     "CancelAllAfterRequest": {
       "title": "CancelAllAfterRequest",
-      "description": "Arms, refreshes, or disarms the account-scoped cancel-all-after countdown (dead-man's-switch / cancel-on-disconnect). While armed, the server mass-cancels the account's open orders if the countdown is not refreshed with another `cancelAllAfter` call before `timeoutMs` elapses. Scope: all open orders EXCEPT protective stops (`STOP_LOSS` / `TAKE_PROFIT`) — the dead-man's-switch deliberately leaves protective stops in place (they are safety orders only the user should cancel explicitly), whether the stop is still armed or has already fired into a resting child, unlike an explicit `POST /v2/cancelAll` which cancels everything. Refresh is explicit only: order-entry traffic, WebSocket protocol pings, and app-level `ping`/`pong` frames do NOT refresh the countdown, and closing a WebSocket connection does NOT trigger it — only countdown expiry does. The switch is transport-agnostic (arm over REST, refresh over WS, or vice versa) and survives reconnects until it fires or is disarmed. `accountId`, `timeoutMs`, and `nonce` are signed via EIP-712 into the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)` and `deadline` is the signature validity. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the signing algorithm and exact typehash strings.",
+      "description": "Arm, refresh, or disarm the account's cancel-all-after countdown using a signed request. See POST /v2/cancelAllAfter for affected orders, refresh rules, disconnect behavior, and throttling.",
       "type": "object",
       "required": [
         "accountId",
@@ -2918,7 +2918,7 @@
         },
         "timeoutMs": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Countdown duration in milliseconds. `0` disarms an armed countdown (no-op if none is armed); any non-zero value must be within [5000, 60000] and arms a fresh countdown of that duration, replacing any previously armed one (re-arming with the same value is the refresh/heartbeat). Values outside `{0} ∪ [5000, 60000]` are rejected with `INPUT_VALIDATION_ERROR`. Signed into the `CancelAllAfter` envelope.",
+          "description": "Countdown duration in milliseconds: 0 disarms; 5000–60000 arms or refreshes. Other values return INPUT_VALIDATION_ERROR. Signed into CancelAllAfterDetails. See POST /v2/cancelAllAfter for countdown and throttling behavior.",
           "example": 30000
         },
         "signature": {
@@ -2937,7 +2937,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. EIP-712 signature validity deadline — signed into the `CancelAllAfter` envelope and enforced by the API at entry. NOT the countdown trigger time; the countdown is `timeoutMs` relative to server receipt.",
+          "description": "Unix seconds. Signature-validity deadline signed into the CancelAllAfter envelope. It controls request acceptance, not countdown expiry; see timeoutMs and the response's triggerAt.",
           "example": 1676923200
         }
       },

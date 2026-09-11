@@ -180,10 +180,8 @@ channels:
       channel does not provide a complete book when either side exceeds 100
       levels; use a new subscription to recover a fresh bounded view.
 
-      A client that falls behind is disconnected with close code `1013`. A connection that must
-      be restarted closes with `1012`. For either code, reconnect and resubscribe to obtain a fresh
-      snapshot. Treat the reason text as advisory. Updates from the disconnection window are not
-      replayed. See the API overview for the shared connection-lifecycle contract.
+      For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
+      in the streaming API overview.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
@@ -234,11 +232,9 @@ channels:
       delivered (none are conflated or dropped) and clients must process the array
       in order.
 
-      A client that falls behind is disconnected with close code `1013`. A connection that must
-      be restarted closes with `1012`. For either code, reconnect and resubscribe to obtain a fresh
-      snapshot. Treat the reason text as advisory. Updates from the disconnection window are not
-      replayed. See the API overview for the shared connection-lifecycle contract.
-      The new `OrderChangesSnapshot` reflects current order state; use executions data for individual fills.
+      For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
+      in the streaming API overview.
+      For cancellation codes, see Cancellation reasons in the REST API Order Entry section.
     parameters:
       address:
         description: Ethereum wallet address
@@ -318,13 +314,9 @@ channels:
   assetOraclePrices:
     address: /v2/assetOraclePrices
     description: |
-      Asset oracle price updates.
-
-      This is a conflating channel: under backpressure the server coalesces
-      updates per asset — intermediate ticks may be dropped — but the latest
-      price per asset is always eventually delivered, so consumers converge to
-      current values. See the API overview for the shared connection-lifecycle
-      contract.
+      Asset oracle price updates. Intermediate ticks may be omitted when a client falls behind;
+      the latest value per asset is delivered. See Connection lifecycle and recovery in the
+      streaming API overview.
     messages:
       assetOraclePricesUpdate:
         $ref: '#/components/messages/AssetOraclePricesUpdate'

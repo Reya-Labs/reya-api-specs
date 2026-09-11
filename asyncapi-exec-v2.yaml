@@ -20,31 +20,17 @@ info:
     A disconnect does not cancel orders. An unanswered request may have been accepted;
     reconnect and reconcile order state and executions before resubmitting it.
 
-    **Cancel-on-disconnect.** `cancelAllAfter` arms an account-scoped countdown with `timeoutMs`
-    in [5000, 60000] milliseconds; `0` disarms. If not refreshed before expiry, it cancels the
-    account's open orders except armed protective stops and their fired children. Only another
-    `cancelAllAfter` call refreshes it: order traffic and pings do not. A WebSocket close does
-    not fire it. The countdown stays armed across reconnects and can be managed interchangeably
-    over REST and WebSocket. For example, arm for 30000 ms and refresh every 10–15 seconds.
-    Cancellations are delivered on `walletOrderChanges`.
+    **Cancel-on-disconnect.** A WebSocket close does not cancel orders or fire an armed
+    countdown. Use `cancelAllAfter` for timed cancellation and refresh it explicitly; pings
+    and order traffic do not refresh it. See REST `POST /v2/cancelAllAfter` for the shared
+    countdown controls, affected orders, and recovery rules.
 
     **Account rate limits and capacity.** Operation rejections use the correlated
     `*ResponseMessage` with `{ ok: false, error }`. They leave the connection open and do not
-    cancel other in-flight requests. Budgets are shared across markets, signers, REST, and
-    WebSocket requests for the same account. Create and modify share a placement budget;
-    single cancels, bulk cancels, and cancel-all-after control have separate budgets.
-
-    `RATE_LIMITED_ERROR` carries `retryAfterMs`. Wait at least that long; it is a minimum wait,
-    not a reserved slot, and concurrent requests can consume the available budget.
-    `CAPACITY_LIMITED_ERROR` applies to creates and modifications and carries no retry hint;
-    use backoff with jitter. Cancels and cancel-all-after are not refused for venue capacity,
-    though their separate account rate limits still apply. Disarming an armed countdown is
-    never throttled; a disarm when no countdown is armed can be throttled.
-
-    `OPEN_ORDER_COUNT_EXCEEDED_ERROR` and `OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR` carry no retry
-    hint. Reduce the order or existing resting orders before retrying. See `RequestErrorCode`
-    for per-code guidance. REST returns HTTP 400 carrying the same `error` code and the same `retryAfterMs`
-    when present. Infrastructure-level per-IP limits can separately return HTTP 429.
+    cancel other in-flight requests. REST returns HTTP 400 carrying the same `error` code and the same `retryAfterMs`
+    when present. See the REST HTTP 400 response reference for account budgets, order caps,
+    capacity errors, and per-code recovery guidance. Infrastructure-level per-IP limits can
+    separately return HTTP 429.
 
     **Connection limits.** Client-sent messages also count toward a per-connection rate limit,
     including malformed messages and invalid signatures. Exceeding it closes the socket with
@@ -149,7 +135,12 @@ operations:
         - $ref: '#/channels/operations/messages/createOrderResponseMessage'
     summary: Place an order
     description: |
-      Client places a spot, perp IOC, or perp GTC/GTT/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema), including the REQUIRED `timeInForce` — which, on a `STOP_LOSS`/`TAKE_PROFIT`, chooses the time in force the trigger's child order takes on when it fires. The trigger-firing contract (the shared `expiresAfter` deadline and possible early expiry to allow settlement, the `limitPx` band around `triggerPx`, which outcomes cancel the OCO sibling and under which reason, and how a fired child behaves once resting) is documented once on the REST `POST /v2/createOrder` operation and applies verbatim here. Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+      Create an order using the same CreateOrderRequest payload and signing requirements as
+      REST POST /v2/createOrder. See that operation for execution, SL/TP firing, expiry,
+      cancellation outcomes, and fill correlation.
+
+      The server returns CreateOrderResponseMessage with the same request id. Execution and
+      order updates are delivered on the separate streaming API.
   sendModifyOrder:
     action: send
     channel:
@@ -183,8 +174,9 @@ operations:
         - $ref: '#/channels/operations/messages/cancelOrderResponseMessage'
     summary: Cancel an order
     description: |
-      Client cancels a previously placed order. The `payload` body is identical to the REST `POST /v2/cancelOrder` body (existing `CancelOrderRequest` schema). Server replies with `CancelOrderResponseMessage` correlated by the same `id`.
-
+      Cancel an order using the same CancelOrderRequest payload as REST POST /v2/cancelOrder.
+      See that operation for targeting and protective-stop signer requirements. The server
+      returns CancelOrderResponseMessage with the same request id.
   sendCancelAll:
     action: send
     channel:
@@ -198,7 +190,9 @@ operations:
         - $ref: '#/channels/operations/messages/cancelAllResponseMessage'
     summary: Cancel all orders for an account, optionally scoped to a market
     description: |
-      Client mass-cancels open orders for an account, optionally scoped to a specific market via `symbol` (omit to cancel across all markets for the account). The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Supports both spot and perp markets. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
+      Cancel an account's orders using the same MassCancelRequest payload and filters as
+      REST POST /v2/cancelAll. The server returns CancelAllResponseMessage with the same
+      request id.
   sendCancelAllAfter:
     action: send
     channel:
@@ -212,8 +206,9 @@ operations:
         - $ref: '#/channels/operations/messages/cancelAllAfterResponseMessage'
     summary: Arm, refresh, or disarm the cancel-all-after countdown (cancel-on-disconnect)
     description: |
-      Client arms, refreshes, or disarms the account-scoped dead-man's-switch countdown. The `payload` body is identical to the REST `POST /v2/cancelAllAfter` body (`CancelAllAfterRequest` schema). `timeoutMs: 0` disarms; non-zero values within [5000, 60000] milliseconds (re-)arm. The countdown is refreshed only by another `cancelAllAfter` call — ping/pong frames and order-entry traffic do not refresh it, and a WebSocket close does not trigger it (see the cancel-on-disconnect section above). Server replies with `CancelAllAfterResponseMessage` correlated by the same `id`.
-
+      Manage the account's countdown using the same CancelAllAfterRequest payload as REST
+      POST /v2/cancelAllAfter. See that operation for controls, affected orders, refresh rules,
+      and throttling. The server returns CancelAllAfterResponseMessage with the same request id.
   sendPing:
     action: send
     channel:

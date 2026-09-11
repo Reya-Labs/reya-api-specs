@@ -372,7 +372,9 @@ assert.equal(
   'RequestError.retryAfterMs must declare minimum: 1 — a zero hint is collapsed to omission',
 );
 
-const requestErrorCodeDoc = tradingSchemas.definitions.RequestErrorCode.description;
+const badRequest = yamlBlock(openApi, '    BadRequest:');
+// Per-code guidance lives in the multiline REST response reference.
+const requestErrorCodeDoc = badRequest.replace(/\s+/g, ' ');
 for (const phrase of [
   'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
   '`UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was not accepted',
@@ -386,7 +388,7 @@ for (const phrase of [
 ]) {
   assert.ok(
     requestErrorCodeDoc.includes(phrase),
-    `RequestErrorCode must retain client recovery guidance: "${phrase}"`,
+    `HTTP 400 response must retain client recovery guidance: "${phrase}"`,
   );
 }
 
@@ -399,7 +401,6 @@ assert.ok(
   orderEntryTag.includes('HTTP 429 is\n      reserved for infrastructure-level (per-IP) limits in front of the API'),
   'The Order Entry tag must keep the 429 carve-out',
 );
-const badRequest = yamlBlock(openApi, '    BadRequest:');
 for (const code of [
   'RATE_LIMITED_ERROR',
   'CAPACITY_LIMITED_ERROR',
