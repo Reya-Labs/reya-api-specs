@@ -395,8 +395,12 @@ for (const [phrase, why] of [
     'the retry policy must name the new code alongside the other retry-unchanged codes',
   ],
   [
-    'retry `RATE_LIMITED_ERROR` after the `retryAfterMs` the rejection carries, and back off and retry `CAPACITY_LIMITED_ERROR` after it',
-    'the retry policy must be keyed on retryAfterMs rather than a header',
+    'retry `RATE_LIMITED_ERROR` after the `retryAfterMs` the rejection carries',
+    'the rate-limit retry policy must be keyed on retryAfterMs rather than a header',
+  ],
+  [
+    'retry `CAPACITY_LIMITED_ERROR` using backoff with jitter (the current guard supplies no retry hint)',
+    'publisher recovery has no exact retry instant; do not promise a capacity retry hint',
   ],
   [
     'nor `NOT_WHITELISTED_ERROR` or `ACCOUNT_SUSPENDED_ERROR`, which are access decisions and not transient',
