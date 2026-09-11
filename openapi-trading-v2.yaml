@@ -699,46 +699,47 @@ paths:
     post:
       summary: Modify order
       description: |
-        Modify a resting order in place. The order keeps its `orderId` and `clientOrderId`.
-        Target by `orderId` when present, otherwise by a non-zero `clientOrderId`.
-        The same `clientOrderId` field restates the resting order's immutable client id for signing.
-        If both identifiers are supplied, `orderId` is canonical for lookup and `clientOrderId`
-        is the restated immutable. If the resting order has no client id, omit `clientOrderId`;
-        do not send a placeholder value.
-        **Full restate:** the body carries the same fields as `createOrder` (the complete post-modify
-        `OrderDetails`) plus the target id — restate every value, even unchanged ones; omitted fields
-        never "inherit from the resting order".
-        The modifiable fields are class-split: for a `LIMIT` modify they are `limitPx`, `qty`, `postOnly`,
-        `expiresAfter` (and `triggerPx` is forbidden); for a `STOP_LOSS`/`TAKE_PROFIT` modify ONLY
-        `limitPx` and `triggerPx` are modifiable — `qty` stays omitted (the signed
-        quantity restates the full-position sentinel), and `postOnly=false`, the `timeInForce` chosen
-        at creation and its `expiresAfter` are restated immutables (changing any returns
-        `INPUT_VALIDATION_ERROR`): giving a stop a different fired-child
-        time in force, or a different shared expiry, means cancelling it and creating a new one. Only an
-        **armed** trigger (`triggered: false`) is modifiable — once it has fired, the resting child is
-        cancel-only and a modify against it is refused. A re-priced trigger has its post-modify
-        `limitPx`/`triggerPx` pair re-checked against the market's trigger band exactly as at
-        creation, and a pair outside it is rejected with `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`.
-        The rest (`exchangeId`,
-        `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`, `accountId`,
-        `signerWallet`) are immutable and must be restated at the resting order's values — a mismatch
-        is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is re-priced in
-        place (full restate): `triggerPx` is REQUIRED on a trigger modify — a trigger modify that
-        omits it is rejected with `INPUT_VALIDATION_ERROR`. `qty` is omitted on a
-        `STOP_LOSS`/`TAKE_PROFIT` modify (the signed quantity restates the full-position sentinel `±int256.max`, sign from `isBuy`) and required for a `LIMIT`
-        modify. A `LIMIT` request whose post-modify state equals the
-        order's current state is rejected with `EMPTY_MODIFY_ERROR`; a trigger restated at unchanged
-        `limitPx` and `triggerPx` is instead accepted and applied, so a stop can be re-signed with a
-        fresh `signature`, `nonce` and `deadline` without moving its prices. Queue priority: a `qty` decrease
-        at an unchanged `limitPx` preserves the order's place in the book; any `limitPx` change or
-        `qty` increase loses it. `timeInForce` is immutable for every class, so `expiresAfter` is
-        omitted for GTC and IOC and set to a future timestamp greater than `deadline` for GTT. A post-only modification that
-        would cross is rejected with no mutation; a non-post-only modification that crosses executes —
-        the response reports `execQty` and `status`, with per-fill detail on the streaming surface, as
-        with `createOrder`. Omit `triggerPx` for a `LIMIT` order. The fresh EIP-712 signature (same
-        `Order` / `OrderDetails` envelope as `createOrder`) is verified over exactly the restated
-        fields; a fresh `nonce` is required.
-        Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `modifyOrder`).
+        Modify a resting order in place, preserving its `orderId` and `clientOrderId`.
+        The same rules apply to the order-entry WebSocket `modifyOrder` operation.
+
+        **Target and signature**
+
+        - Target by `orderId`, or a non-zero `clientOrderId` if `orderId` is absent.
+        - If both are supplied, `orderId` selects the order and `clientOrderId` must
+          match its existing client ID. Omit `clientOrderId` if the order has none.
+        - Send the complete intended post-modify `OrderDetails`, including unchanged
+          values. Omitted fields do not inherit the resting order's values.
+        - Sign the restated fields with a fresh EIP-712 signature and nonce, using
+          the same `Order` / `OrderDetails` envelope as `createOrder`.
+
+        **Fields that can change**
+
+        | Order class | Modifiable fields | Requirements |
+        | --- | --- | --- |
+        | `LIMIT` | `limitPx`, `qty`, `postOnly`, `expiresAfter` | Omit `triggerPx`. Send total `qty`, strictly greater than `cumQty`; otherwise `MODIFY_QTY_BELOW_FILLED_ERROR`. |
+        | Armed `STOP_LOSS` / `TAKE_PROFIT` | `limitPx`, `triggerPx` | Send `triggerPx`; omit `qty` and sign the full-position sentinel `±int256.max`, with sign from `isBuy`. Restate `postOnly: false`. |
+
+        `exchangeId`, `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`,
+        `accountId`, and `signerWallet` must match the existing order. A mismatch returns
+        `INPUT_VALIDATION_ERROR`. For all order classes, omit `expiresAfter` for GTC/IOC;
+        GTT requires a future expiry strictly greater than `deadline`.
+
+        Only armed stops (`triggered: false`) can be modified; fired children are
+        cancel-only. A stop's `timeInForce` and shared `expiresAfter` cannot change:
+        cancel and recreate it to change either. Its post-modify `limitPx` and
+        `triggerPx` must satisfy the market's trigger-price band, or the request returns
+        `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`.
+
+        **Priority and execution**
+
+        - Decreasing `qty` at unchanged `limitPx` preserves queue priority. Increasing
+          `qty` or changing `limitPx` loses priority.
+        - An unchanged LIMIT request returns `EMPTY_MODIFY_ERROR`. An armed stop may
+          be re-signed with a fresh `signature`, `nonce`, and `deadline` at unchanged prices.
+        - A post-only modification that would cross returns `POST_ONLY_WOULD_CROSS_ERROR`
+          and leaves the order unchanged. A non-post-only crossing modification can
+          execute immediately; the response reports `execQty` and `status`.
+        - Per-fill details are delivered on the execution and order-change streams.
       operationId: modifyOrder
       tags:
         - Order Entry
