@@ -609,8 +609,7 @@ paths:
         duplicates and no gaps, even when many entries share one block.
         `startTime` and `endTime` are optional filters on the block
         timestamp, not the pagination mechanism. Entries whose amount is zero
-        (some liquidation and auto-exchange legs) are hidden unless
-        `includeZero=true`.
+        (some liquidation and auto-exchange legs) are never returned.
 
         History starts at the environment's backfill start block; earlier
         movements are absent, not synthesised. Entries never change once
@@ -625,7 +624,6 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/TransferTypeParam'
-        - $ref: '#/components/parameters/IncludeZeroParam'
       responses:
         '200':
           description: Page of transfer entries, newest first
@@ -1067,19 +1065,6 @@ components:
         example:
           - DEPOSIT
           - WITHDRAWAL
-
-    IncludeZeroParam:
-      name: includeZero
-      in: query
-      required: false
-      description: >-
-        Include entries whose amount is zero. The chain builds some
-        liquidation and auto-exchange legs even when nothing moves; they are
-        hidden by default because they are noise in a history view, but they
-        are needed to follow `netDepositsAfter` exactly.
-      schema:
-        type: boolean
-        default: false
 
     DepthLimitParam:
       name: limit
