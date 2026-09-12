@@ -1,6 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "TriggerOrderType": {
+      "type": "string",
+      "enum": ["STOP_LOSS", "TAKE_PROFIT"]
+    },
+    "LimitOrderType": {
+      "type": "string",
+      "enum": ["LIMIT"]
+    },
     "Symbol": {
       "title": "Symbol",
       "type": "string",
@@ -2611,7 +2619,7 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "Post-only (maker-only) intent: the order must rest and never cross as a taker. Valid on GTC/GTT; rejected on IOC. An order that would cross at insertion is rejected with `POST_ONLY_WOULD_CROSS_ERROR`. Maps to on-chain `OrderDetails.postOnly`.",
+          "description": "Post-only (maker-only) intent for LIMIT GTC/GTT orders; rejected on IOC. Omit for STOP_LOSS/TAKE_PROFIT, including false: triggers sign OrderDetails.postOnly=false. A post-only LIMIT that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR.",
           "example": false
         },
         "signature": {
@@ -2644,7 +2652,34 @@
           "example": "123456789"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "description": "TP/SL requests must omit both fixed Boolean fields, even when false.",
+            "properties": {
+              "orderType": {
+                "$ref": "#/definitions/TriggerOrderType"
+              }
+            },
+            "required": [
+              "orderType"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "reduceOnly"
+                ]
+              },
+              {
+                "required": [
+                  "postOnly"
+                ]
+              }
+            ]
+          }
+        ]
+      }
     },
     "CreateOrderResponse": {
       "title": "CreateOrderResponse",
@@ -2711,39 +2746,91 @@
         "limitPx",
         "orderType",
         "timeInForce",
-        "reduceOnly",
-        "postOnly",
         "signature",
         "nonce",
         "signerWallet",
         "deadline"
       ],
       "not": {
-        "description": "At least one target identifier is required. If `orderId` is absent, `clientOrderId` must be non-zero.",
-        "allOf": [
+        "anyOf": [
           {
-            "not": {
-              "properties": {
-                "orderId": {
-                  "type": "string"
+            "description": "At least one target identifier is required. If `orderId` is absent, `clientOrderId` must be non-zero.",
+            "allOf": [
+              {
+                "not": {
+                  "properties": {
+                    "orderId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "orderId"
+                  ]
                 }
               },
-              "required": [
-                "orderId"
-              ]
-            }
+              {
+                "not": {
+                  "properties": {
+                    "clientOrderId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "clientOrderId"
+                  ]
+                }
+              }
+            ]
           },
           {
-            "not": {
-              "properties": {
-                "clientOrderId": {
-                  "type": "string"
+            "description": "TP/SL requests must omit both fixed Boolean fields, even when false.",
+            "properties": {
+              "orderType": {
+                "$ref": "#/definitions/TriggerOrderType"
+              }
+            },
+            "required": [
+              "orderType"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "reduceOnly"
+                ]
+              },
+              {
+                "required": [
+                  "postOnly"
+                ]
+              }
+            ]
+          },
+          {
+            "description": "LIMIT modifications must restate both Boolean fields.",
+            "properties": {
+              "orderType": {
+                "$ref": "#/definitions/LimitOrderType"
+              }
+            },
+            "required": [
+              "orderType"
+            ],
+            "anyOf": [
+              {
+                "not": {
+                  "required": [
+                    "reduceOnly"
+                  ]
                 }
               },
-              "required": [
-                "clientOrderId"
-              ]
-            }
+              {
+                "not": {
+                  "required": [
+                    "postOnly"
+                  ]
+                }
+              }
+            ]
           }
         ]
       },
@@ -2794,7 +2881,7 @@
         },
         "reduceOnly": {
           "type": "boolean",
-          "description": "On-chain `OrderDetails.reduceOnly`. Immutable — restate the resting order's value. A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
+          "description": "Signed OrderDetails.reduceOnly. Required and immutable on LIMIT modifications. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false; omission never inherits stored state.",
           "example": false
         },
         "limitPx": {
@@ -2809,7 +2896,7 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "The post-modify post-only (maker-only) flag. Always required — send the complete intended value even when it is unchanged from the resting order. If true and the post-modify order would cross, the modification is rejected with `POST_ONLY_WOULD_CROSS_ERROR` and the resting order is unchanged.",
+          "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged.",
           "example": false
         },
         "expiresAfter": {

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.4.1
+  version: 3.5.1
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -712,6 +712,9 @@ paths:
       description: |
         Create a new spot or perp order. `timeInForce` is required for every order class.
         STOP_LOSS and TAKE_PROFIT orders are supported only on perp markets.
+        On trigger creates and modifications, omit `reduceOnly` and `postOnly`, including
+        `false`. Supplied flags return `INPUT_VALIDATION_ERROR`. SDK signing and server
+        verification reconstruct both as `false`; they never inherit stored values.
 
         **Armed stops.** A protective stop is not executable liquidity until it fires. While armed,
         it remains modifiable and cancellable and appears as `OPEN`, with `triggered: false` in
@@ -808,7 +811,7 @@ paths:
         - If both are supplied, `orderId` selects the order and `clientOrderId` must
           match its existing client ID. Omit `clientOrderId` if the order has none.
         - Send the complete intended post-modify `OrderDetails`, including unchanged
-          values. Omitted fields do not inherit the resting order's values.
+          values, except the fixed trigger flags described below. Omitted fields do not inherit the resting order's values.
         - Sign the restated fields with a fresh EIP-712 signature and nonce, using
           the same `Order` / `OrderDetails` envelope as `createOrder`.
 
@@ -817,10 +820,12 @@ paths:
         | Order class | Modifiable fields | Requirements |
         | --- | --- | --- |
         | `LIMIT` | `limitPx`, `qty`, `postOnly`, `expiresAfter` | Omit `triggerPx`. Send total `qty`, strictly greater than `cumQty`; otherwise `MODIFY_QTY_BELOW_FILLED_ERROR`. |
-        | Armed `STOP_LOSS` / `TAKE_PROFIT` | `limitPx`, `triggerPx` | Send `triggerPx`; omit `qty` and sign the full-position sentinel `±int256.max`, with sign from `isBuy`. Restate `postOnly: false`. |
+        | Armed `STOP_LOSS` / `TAKE_PROFIT` | `limitPx`, `triggerPx` | Send `triggerPx`; omit `qty` and sign the full-position sentinel `±int256.max`, with sign from `isBuy`. Omit `reduceOnly` and `postOnly`; sign both as `false`. Supplied flags, including `false`, are rejected. |
 
-        `exchangeId`, `isBuy`, `orderType`, `timeInForce`, `reduceOnly`, `clientOrderId`,
-        `accountId`, and `signerWallet` must match the existing order. A mismatch returns
+        `exchangeId`, `isBuy`, `orderType`, `timeInForce`, `clientOrderId`,
+        `accountId`, and `signerWallet` must match the existing order. LIMIT modifies also
+        restate `reduceOnly`; triggers reconstruct `reduceOnly=false` and `postOnly=false`
+        before signature verification and engine submission. A mismatch returns
         `INPUT_VALIDATION_ERROR`. For all order classes, omit `expiresAfter` for GTC/IOC;
         GTT requires a future expiry strictly greater than `deadline`.
 
@@ -1122,6 +1127,10 @@ components:
         example: '1m'
 
   schemas:
+    TriggerOrderType:
+      $ref: './trading-schemas.json#/definitions/TriggerOrderType'
+    LimitOrderType:
+      $ref: './trading-schemas.json#/definitions/LimitOrderType'
     RequestError:
       $ref: './trading-schemas.json#/definitions/RequestError'
 
