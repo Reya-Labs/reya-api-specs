@@ -52,6 +52,28 @@ class OrderRequestsTest(unittest.TestCase):
             self.assertFalse(validator.is_valid(omitted))
         validator.validate({**payload, "postOnly": True})
 
+    def test_modify_variants_are_disjoint_and_preserve_common_requirements(self):
+        Draft7Validator.check_schema(SCHEMA)
+        variants = {
+            name: Draft7Validator({**SCHEMA, "$ref": f"#/definitions/{name}"})
+            for name in ("LimitModifyOrderRequest", "TriggerModifyOrderRequest")
+        }
+        validator = self.validator("Modify")
+        for order_type in ("LIMIT", "STOP_LOSS", "TAKE_PROFIT"):
+            payload = self.payload("Modify", order_type)
+            expected = "LimitModifyOrderRequest" if order_type == "LIMIT" else "TriggerModifyOrderRequest"
+            with self.subTest(order_type=order_type):
+                self.assertEqual([name for name, v in variants.items() if v.is_valid(payload)], [expected])
+                for field in ("exchangeId", "symbol", "accountId", "isBuy", "limitPx", "orderType", "timeInForce", "signature", "nonce", "signerWallet", "deadline"):
+                    self.assertFalse(validator.is_valid({key: value for key, value in payload.items() if key != field}), field)
+                no_target = {key: value for key, value in payload.items() if key != "orderId"}
+                self.assertFalse(validator.is_valid(no_target))
+                validator.validate({**no_target, "clientOrderId": "456"})
+                # The existing API permits additional fields; the union must
+                # not accidentally reject them while forbidding the flags.
+                validator.validate({**payload, "futureField": "value"})
+                self.assertFalse(validator.is_valid({**payload, "orderType": "UNKNOWN"}))
+
 
 if __name__ == "__main__":
     unittest.main()
