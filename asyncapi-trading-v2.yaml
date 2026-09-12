@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.5.0
+  version: 3.5.1
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -300,6 +300,30 @@ channels:
       accountBalanceUpdate:
         $ref: '#/components/messages/AccountBalanceUpdate'
 
+  walletTransfers:
+    address: /v2/wallet/{address}/transfers
+    description: |
+      Live settled transfer entries for a wallet, using the same `Transfer` records as
+      `GET /v2/wallet/{address}/transfers`. See that operation for coverage, type meanings,
+      pagination, and reconciliation.
+
+      **Snapshot and updates**
+
+      - The `subscribed` acknowledgement contains the most recent entries in `contents.data`,
+        newest first. This is a recent-history snapshot, not the complete transfer history.
+      - Each subsequent `channel_data` frame carries one new entry in its `data` array.
+
+      To build a local ledger, subscribe and buffer live entries while paging REST history.
+      Merge the snapshot, REST results, and buffered updates by `sequenceNumber` to avoid
+      counting the same entry twice.
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      walletTransferUpdate:
+        $ref: '#/components/messages/WalletTransferUpdate'
+
   walletAccounts:
     address: /v2/wallet/{address}/accounts
     description: Real-time account creation and account-binding updates for a wallet
@@ -500,6 +524,14 @@ operations:
       - $ref: '#/channels/walletAccountBalances/messages/accountBalanceUpdate'
     summary: Receive account balance updates for wallet
 
+  receiveWalletTransfers:
+    action: receive
+    channel:
+      $ref: '#/channels/walletTransfers'
+    messages:
+      - $ref: '#/channels/walletTransfers/messages/walletTransferUpdate'
+    summary: Receive transfer history updates for wallet
+
   receiveWalletAccounts:
     action: receive
     channel:
@@ -640,6 +672,13 @@ components:
       summary: Real-time account balance update for wallet
       payload:
         $ref: '#/components/schemas/AccountBalanceUpdatePayload'
+
+    WalletTransferUpdate:
+      name: walletTransferUpdate
+      title: Wallet Transfer Update
+      summary: Transfer history entries for wallet, newest first
+      payload:
+        $ref: '#/components/schemas/WalletTransferUpdatePayload'
 
     AccountUpdate:
       name: accountUpdate
@@ -854,6 +893,11 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
       description: Channel pattern for wallet account balances
+
+    WalletTransfersChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/transfers$'
+      description: Channel pattern for wallet transfer history
 
     WalletAccountsChannelPattern:
       type: string
@@ -1144,6 +1188,25 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/AccountBalance'
 
+    WalletTransferUpdateBody:
+      type: object
+      title: WalletTransferUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletTransfersChannelPattern'
+        data:
+          type: array
+          title: WalletTransferList
+          description: |
+            Transfer entries carried by this live update. See the walletTransfers channel for snapshot and live-frame delivery.
+
+          items:
+            $ref: './trading-schemas.json#/definitions/Transfer'
+
     AccountUpdateData:
       type: object
       title: AccountUpdateData
@@ -1288,6 +1351,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/AccountBalanceUpdateBody'
+
+    WalletTransferUpdatePayload:
+      title: WalletTransferUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/WalletTransferUpdateBody'
 
     AccountUpdatePayload:
       type: object

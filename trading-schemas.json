@@ -790,6 +790,156 @@
       },
       "additionalProperties": true
     },
+    "TransferType": {
+      "title": "TransferType",
+      "type": "string",
+      "enum": [
+        "DEPOSIT",
+        "WITHDRAWAL",
+        "TRANSFER",
+        "POOL_STAKE",
+        "POOL_UNSTAKE",
+        "PERP_TAKER_FEE",
+        "PERP_REFERRER_REBATE",
+        "PERP_TAKER_REBATE",
+        "PERP_POOL_REBATE",
+        "PERP_FEE",
+        "SPOT_EXECUTION",
+        "AUTO_EXCHANGE",
+        "AUTO_EXCHANGE_INSURANCE_FEE",
+        "LIQUIDATION_INSURANCE_FEE",
+        "LIQUIDATION_BACKSTOP_FEE",
+        "LIQUIDATION_LIQUIDATOR_REWARD",
+        "LIQUIDATION_KEEPER_REWARD",
+        "LIQUIDATION_BID_FEE",
+        "INSURANCE_FUND_COVERAGE",
+        "POOL_MERGE",
+        "OTHER"
+      ],
+      "description": "Purpose of a transfer entry; direction is given by the sign of amount. See GET /v2/wallet/{address}/transfers, Transfer types, for the meaning of each value."
+    },
+    "Transfer": {
+      "title": "Transfer",
+      "type": "object",
+      "description": "A settled collateral movement from the perspective of accountId. See GET /v2/wallet/{address}/transfers for coverage, transfer types, pagination, and reconciliation. Field descriptions define signs, units, and optional execution links.",
+      "required": [
+        "sequenceNumber",
+        "accountId",
+        "asset",
+        "amount",
+        "netDepositsAfter",
+        "type",
+        "timestamp",
+        "transactionHash"
+      ],
+      "properties": {
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unique entry ID, increasing in settlement order and never reused. Use it to order and deduplicate entries; do not infer transfer details from its numeric value.",
+          "example": 273183852
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The account this entry belongs to.",
+          "example": 12345
+        },
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "RUSD"
+        },
+        "amount": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Amount in asset, signed from this account's perspective: negative for outgoing collateral and positive for incoming collateral.",
+          "example": "-0.50"
+        },
+        "netDepositsAfter": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Net deposits of accountId in asset immediately after this entry, on the same basis as AccountBalance.balanceDEPRECATED. Excludes realized PnL and is not realBalance. See the transfers endpoint's Reconciliation section.",
+          "example": "1024.25"
+        },
+        "type": {
+          "$ref": "#/definitions/TransferType"
+        },
+        "counterpartyAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The other account involved in the transfer. Omitted for deposits, withdrawals, pool stakes, and pool unstakes.",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market of the related execution: the perp market for fee and rebate entries, or the spot market for spot trades and auto-exchanges. Omitted for unrelated movements and may be absent on historical perp fee entries.",
+          "example": "BTCRUSDPERP"
+        },
+        "spotExecutionSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "`SpotExecution.sequenceNumber` of the spot trade or auto-exchange that caused the entry. Spot entries only.",
+          "example": 9911
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Fill identifier linking this entry to PerpExecution.fillId or SpotExecution.fillId. Omitted for deposits, liquidations, auto-exchanges, and dust settlements; historical perp fee entries may also omit it.",
+          "example": "42"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Block timestamp of the transfer (milliseconds)",
+          "example": 1747927089946
+        },
+        "transactionHash": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "description": "Hash of the transaction that emitted the transfer",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
+    "CursorPaginationMeta": {
+      "title": "CursorPaginationMeta",
+      "type": "object",
+      "required": [
+        "limit",
+        "count"
+      ],
+      "properties": {
+        "limit": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items requested, after the server cap",
+          "example": 100
+        },
+        "count": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items returned",
+          "example": 50
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Opaque cursor for the next page. Pass it unchanged as cursor; omitted when no further page is available. See the transfers endpoint's Pagination section for traversal rules.",
+          "example": "djEuNTQ2MzY3NzA2LjA"
+        }
+      },
+      "additionalProperties": true
+    },
+    "TransferList": {
+      "title": "TransferList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Transfer"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/CursorPaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
     "SpotExecution": {
       "title": "SpotExecution",
       "type": "object",
