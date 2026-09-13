@@ -1,17 +1,56 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Order Entry WebSocket API v2
-  version: 2.3.8
+  version: 3.5.2
   description: |
-    Order-entry WebSocket API for Reya Network's decentralized exchange. This is a request/response surface for placing and cancelling orders over a persistent WebSocket connection — same operations and payload bodies as the REST `/v2` endpoints (`POST /v2/createOrder`, `POST /v2/cancelOrder`, `POST /v2/cancelAll`), with lower per-operation overhead.
+    Order-entry WebSocket API for placing, modifying, and cancelling orders and managing
+    cancel-on-disconnect. Operations use the same request bodies and signing model as REST
+    `POST /v2/createOrder`, `/modifyOrder`, `/cancelOrder`, `/cancelAll`, and `/cancelAllAfter`.
+    Responses are correlated with requests by `id`.
 
-    Payload bodies are reused verbatim from REST via `$ref` into `trading-schemas.json`. Request/response envelopes are id-correlated.
+    **Signing.** Each order-operation payload carries its own EIP-712 `signature`, `nonce`, and
+    `deadline`. Create, modify, and cancel-all-after also require `signerWallet`; single and bulk
+    cancels omit it. Reya verifies signatures, signer permissions, order validity, and applicable
+    pre-trade risk checks. No connection-level authentication handshake is required.
+    `deadline` controls request acceptance; `expiresAfter` controls GTT order lifetime.
 
-    Auth is per-message: each `createOrder` / `cancelOrder` / `cancelAll` frame carries its own EIP-712 signature (`signature`, `nonce`, `signerWallet`, `expiresAfter`), validated server-side per-frame and byte-identical to the REST signing model. There is no per-connection handshake or session, so no `security:` scheme is declared on the servers.
+    **Heartbeat and disconnects.** The server uses RFC 6455 protocol pings, normally handled by
+    the client library, and closes connections after 120 seconds of inbound silence. Optional
+    application-level `{type:"ping", id?}` probes receive `{type:"pong", id?}` responses.
+    A disconnect does not cancel orders. An unanswered request may have been accepted;
+    reconnect and reconcile order state and executions before resubmitting it.
 
-    Heartbeat: server-side liveness uses RFC 6455 protocol-level pings (handled automatically by any standards-compliant client WebSocket library — no application-level code is required on the client). The server closes the connection after 120 seconds of inbound silence. Closing the WS has zero persistent side effects — an in-flight `createOrder` whose response can't be delivered still settles on-chain (same as a REST timeout). Clients may *optionally* send `{type:"ping", id?}` JSON frames for explicit application-level RTT or correlation probes; the server replies with `{type:"pong", id?}` echoing the `id`.
+    **Cancel-on-disconnect.** A WebSocket close does not cancel orders or fire an armed
+    countdown. Use `cancelAllAfter` for timed cancellation and refresh it explicitly; pings
+    and order traffic do not refresh it. See REST `POST /v2/cancelAllAfter` for the shared
+    countdown controls, affected orders, and recovery rules.
 
-    For market data, position updates, and fill streaming, see the streaming WebSocket API (`asyncapi-trading-v2.yaml`). The recommended Market Maker integration runs both connections in parallel: this surface for order entry, the streaming surface for read-side fanout.
+    **Account rate limits and capacity.** Operation rejections use the correlated
+    `*ResponseMessage` with `{ ok: false, error }`. They leave the connection open and do not
+    cancel other in-flight requests. REST returns HTTP 400 carrying the same `error` code and the same `retryAfterMs`
+    when present. See the REST HTTP 400 response reference for account budgets, order caps,
+    capacity errors, and per-code recovery guidance. Infrastructure-level per-IP limits can
+    separately return HTTP 429.
+
+    **Connection limits.** Client-sent messages also count toward a per-connection rate limit,
+    including malformed messages and invalid signatures. Exceeding it closes the socket with
+    code `4029` and an advisory reason `MSG_RATE_EXCEEDED retry_after_ms=<n>`. Wait at least the
+    suggested milliseconds before reconnecting; if the hint is absent or unparseable, use
+    exponential backoff with jitter. Reduce message frequency before resuming, and pace retries.
+
+    Per-IP limits also apply to new connection attempts and concurrent connections. An excess
+    connection can be refused during the HTTP upgrade with status 429; the response need not
+    use the venue's JSON error format. Close an existing connection or back off before retrying.
+    Existing sibling connections remain usable. A concurrent-connection refusal can include
+    the advisory response text `IP_CONN_LIMIT_EXCEEDED max_conns=<n>`.
+
+    Key recovery on the close code and treat reason text as advisory. After a `4029` close,
+    reconnect and reconcile unanswered requests against open orders, order updates, and executions.
+    An armed cancel-all-after countdown keeps running, so refresh it before expiry if protection
+    is still needed. Current rate and connection limits may differ by environment.
+
+    For market data, positions, order updates, and executions, use the separate streaming API
+    (`asyncapi-trading-v2.yaml`).
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -32,6 +71,10 @@ servers:
     host: ws-exec.reya.xyz
     protocol: wss
     description: Production WebSocket order entry server
+  devnet:
+    host: ws-exec-devnet.reya-cronos.network
+    protocol: wss
+    description: Devnet WebSocket order entry server for Perp OB integration
   staging:
     host: ws-exec-staging.reya.xyz
     protocol: wss
@@ -46,13 +89,17 @@ defaultContentType: application/json
 channels:
   operations:
     description: |
-      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `cancelOrder`, `cancelAll`), an optional client-initiated `ping` probe (server replies with `pong`), and a server-side `error` envelope for framing-layer failures.
+      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `modifyOrder`, `cancelOrder`, `cancelAll`, `cancelAllAfter`), an optional client-initiated `ping` probe (server replies with `pong`), and a server-side `error` envelope for framing-layer failures.
     address: null
     messages:
       createOrderRequestMessage:
         $ref: '#/components/messages/CreateOrderRequestMessage'
       createOrderResponseMessage:
         $ref: '#/components/messages/CreateOrderResponseMessage'
+      modifyOrderRequestMessage:
+        $ref: '#/components/messages/ModifyOrderRequestMessage'
+      modifyOrderResponseMessage:
+        $ref: '#/components/messages/ModifyOrderResponseMessage'
       cancelOrderRequestMessage:
         $ref: '#/components/messages/CancelOrderRequestMessage'
       cancelOrderResponseMessage:
@@ -61,6 +108,10 @@ channels:
         $ref: '#/components/messages/CancelAllRequestMessage'
       cancelAllResponseMessage:
         $ref: '#/components/messages/CancelAllResponseMessage'
+      cancelAllAfterRequestMessage:
+        $ref: '#/components/messages/CancelAllAfterRequestMessage'
+      cancelAllAfterResponseMessage:
+        $ref: '#/components/messages/CancelAllAfterResponseMessage'
       pingMessage:
         $ref: '#/components/messages/PingMessage'
       pongMessage:
@@ -84,8 +135,32 @@ operations:
         - $ref: '#/channels/operations/messages/createOrderResponseMessage'
     summary: Place an order
     description: |
-      Client places a spot, perp IOC, or perp GTC/SL/TP order. The `payload` body is identical to the REST `POST /v2/createOrder` body (existing `CreateOrderRequest` schema). Server replies with `CreateOrderResponseMessage` correlated by the same `id`.
+      Create an order using the same CreateOrderRequest payload and signing requirements as
+      REST POST /v2/createOrder. See that operation for execution, SL/TP firing, expiry,
+      cancellation outcomes, and fill correlation.
 
+      The server returns CreateOrderResponseMessage with the same request id. Execution and
+      order updates are delivered on the separate streaming API.
+  sendModifyOrder:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/modifyOrderRequestMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/modifyOrderResponseMessage'
+    summary: Modify a resting order in place
+    description: |
+      Modify a resting order using the complete intended post-modify state and a fresh
+      signature and nonce. The payload is `ModifyOrderRequest`, identical to REST
+      `POST /v2/modifyOrder`; see that operation for targeting, modifiable fields,
+      queue priority, and execution rules.
+
+      The server returns `ModifyOrderResponseMessage` with the same request `id`.
+      Per-fill details arrive on the execution and order-change streams.
   sendCancelOrder:
     action: send
     channel:
@@ -99,8 +174,9 @@ operations:
         - $ref: '#/channels/operations/messages/cancelOrderResponseMessage'
     summary: Cancel an order
     description: |
-      Client cancels a previously placed order. The `payload` body is identical to the REST `POST /v2/cancelOrder` body (existing `CancelOrderRequest` schema). Server replies with `CancelOrderResponseMessage` correlated by the same `id`.
-
+      Cancel an order using the same CancelOrderRequest payload as REST POST /v2/cancelOrder.
+      See that operation for targeting and protective-stop signer requirements. The server
+      returns CancelOrderResponseMessage with the same request id.
   sendCancelAll:
     action: send
     channel:
@@ -112,10 +188,27 @@ operations:
         $ref: '#/channels/operations'
       messages:
         - $ref: '#/channels/operations/messages/cancelAllResponseMessage'
-    summary: Cancel all orders for an account on a market
+    summary: Cancel all orders for an account, optionally scoped to a market
     description: |
-      Client mass-cancels all open orders for an account on a given (spot) market. The `payload` body is identical to the REST `POST /v2/cancelAll` body (existing `MassCancelRequest` schema). Perp mass-cancel is not supported — sending one returns the same not-supported error REST returns today. Server replies with `CancelAllResponseMessage` correlated by the same `id`.
-
+      Cancel an account's orders using the same MassCancelRequest payload and filters as
+      REST POST /v2/cancelAll. The server returns CancelAllResponseMessage with the same
+      request id.
+  sendCancelAllAfter:
+    action: send
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/cancelAllAfterRequestMessage'
+    reply:
+      channel:
+        $ref: '#/channels/operations'
+      messages:
+        - $ref: '#/channels/operations/messages/cancelAllAfterResponseMessage'
+    summary: Arm, refresh, or disarm the cancel-all-after countdown (cancel-on-disconnect)
+    description: |
+      Manage the account's countdown using the same CancelAllAfterRequest payload as REST
+      POST /v2/cancelAllAfter. See that operation for controls, affected orders, refresh rules,
+      and throttling. The server returns CancelAllAfterResponseMessage with the same request id.
   sendPing:
     action: send
     channel:
@@ -129,7 +222,7 @@ operations:
         - $ref: '#/channels/operations/messages/pongMessage'
     summary: Send a ping (optional)
     description: |
-      Optional client-initiated application-level liveness/RTT probe. Server replies with `PongMessage` echoing the optional `id`. Server-side liveness detection uses RFC 6455 protocol-level pings (`sendPings: true`, `idleTimeout: 120`) and does not depend on this operation.
+      Optional application-level liveness or round-trip-time probe. The server replies with `PongMessage`, echoing the optional `id`. Connection liveness also uses RFC 6455 protocol pings, normally handled by the client library; this operation is not required to keep the connection alive.
 
   receiveError:
     action: receive
@@ -139,8 +232,10 @@ operations:
       - $ref: '#/channels/operations/messages/errorMessage'
     summary: Receive a top-level error envelope
     description: |
-      Server emits an `error` envelope when it cannot parse a request at all (malformed JSON, unknown `type`, in-flight `id` collision). Connection stays open. Operation-specific errors instead come back as `{ ok: false, error }` on the corresponding `*ResponseMessage` correlated by `id`.
-
+      The server returns an `error` envelope for malformed JSON, an unknown `type`, a reused
+      in-flight `id`, or another connection-level request error. The connection stays open.
+      Operation-specific rejections, including account rate limits, instead use the corresponding
+      `*ResponseMessage` with `{ ok: false, error }`, correlated by request `id`.
 components:
   correlationIds:
     requestId:
@@ -165,6 +260,24 @@ components:
         $ref: '#/components/correlationIds/requestId'
       payload:
         $ref: '#/components/schemas/CreateOrderResponseMessagePayload'
+
+    ModifyOrderRequestMessage:
+      name: modifyOrderRequest
+      title: Modify Order Request
+      summary: Client request to modify a resting order
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ModifyOrderRequestMessagePayload'
+
+    ModifyOrderResponseMessage:
+      name: modifyOrderResponse
+      title: Modify Order Response
+      summary: Server response to a modify-order request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/ModifyOrderResponseMessagePayload'
 
     CancelOrderRequestMessage:
       name: cancelOrderRequest
@@ -202,6 +315,24 @@ components:
       payload:
         $ref: '#/components/schemas/CancelAllResponseMessagePayload'
 
+    CancelAllAfterRequestMessage:
+      name: cancelAllAfterRequest
+      title: Cancel All After Request
+      summary: Client request to arm, refresh, or disarm the cancel-all-after countdown
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CancelAllAfterRequestMessagePayload'
+
+    CancelAllAfterResponseMessage:
+      name: cancelAllAfterResponse
+      title: Cancel All After Response
+      summary: Server response to a cancel-all-after request
+      correlationId:
+        $ref: '#/components/correlationIds/requestId'
+      payload:
+        $ref: '#/components/schemas/CancelAllAfterResponseMessagePayload'
+
     PingMessage:
       name: ping
       title: Ping Message
@@ -236,6 +367,12 @@ components:
         - createOrder
       description: Message type for createOrder request and response
 
+    ModifyOrderMessageType:
+      type: string
+      enum:
+        - modifyOrder
+      description: Message type for modifyOrder request and response
+
     CancelOrderMessageType:
       type: string
       enum:
@@ -247,6 +384,12 @@ components:
       enum:
         - cancelAll
       description: Message type for cancelAll request and response
+
+    CancelAllAfterMessageType:
+      type: string
+      enum:
+        - cancelAllAfter
+      description: Message type for cancelAllAfter request and response
 
     PingMessageType:
       type: string
@@ -284,6 +427,24 @@ components:
         payload:
           $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
 
+    ModifyOrderRequestMessagePayload:
+      type: object
+      title: ModifyOrderRequestMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/ModifyOrderMessageType'
+        id:
+          type: string
+          description: Client-chosen correlation identifier; must be unique across in-flight requests on the connection.
+          example: "req-7f3c1e"
+        payload:
+          $ref: './trading-schemas.json#/definitions/ModifyOrderRequest'
+
     CancelOrderRequestMessagePayload:
       type: object
       title: CancelOrderRequestMessagePayload
@@ -319,6 +480,24 @@ components:
           example: "req-7f3c1c"
         payload:
           $ref: './trading-schemas.json#/definitions/MassCancelRequest'
+
+    CancelAllAfterRequestMessagePayload:
+      type: object
+      title: CancelAllAfterRequestMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/CancelAllAfterMessageType'
+        id:
+          type: string
+          description: Client-chosen correlation identifier; must be unique across in-flight requests on the connection.
+          example: "req-7f3c1d"
+        payload:
+          $ref: './trading-schemas.json#/definitions/CancelAllAfterRequest'
 
     OkXorErrorEnvelope:
       title: OkXorErrorEnvelope
@@ -357,6 +536,31 @@ components:
           description: True on success (with `payload`), false on failure (with `error`).
         payload:
           $ref: './trading-schemas.json#/definitions/CreateOrderResponse'
+        error:
+          $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
+
+    ModifyOrderResponseMessagePayload:
+      type: object
+      title: ModifyOrderResponseMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - ok
+      properties:
+        type:
+          $ref: '#/components/schemas/ModifyOrderMessageType'
+        id:
+          type: string
+          description: Echoes the request `id`.
+          example: "req-7f3c1e"
+        ok:
+          type: boolean
+          description: True on success (with `payload`), false on failure (with `error`).
+        payload:
+          $ref: './trading-schemas.json#/definitions/ModifyOrderResponse'
         error:
           $ref: './trading-schemas.json#/definitions/RequestError'
       allOf:
@@ -412,6 +616,31 @@ components:
       allOf:
         - $ref: '#/components/schemas/OkXorErrorEnvelope'
 
+    CancelAllAfterResponseMessagePayload:
+      type: object
+      title: CancelAllAfterResponseMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - id
+        - ok
+      properties:
+        type:
+          $ref: '#/components/schemas/CancelAllAfterMessageType'
+        id:
+          type: string
+          description: Echoes the request `id`.
+          example: "req-7f3c1d"
+        ok:
+          type: boolean
+          description: True on success (with `payload`), false on failure (with `error`).
+        payload:
+          $ref: './trading-schemas.json#/definitions/CancelAllAfterResponse'
+        error:
+          $ref: './trading-schemas.json#/definitions/RequestError'
+      allOf:
+        - $ref: '#/components/schemas/OkXorErrorEnvelope'
+
     PingMessagePayload:
       type: object
       title: PingMessagePayload
@@ -442,11 +671,21 @@ components:
 
     WsExecErrorCode:
       type: string
-      description: "Framing-layer error codes emitted in the top-level `error` envelope. Operation-level errors (`RequestErrorCode` from `trading-schemas.json`) ride the per-operation `*ResponseMessage` `{ ok: false, error }` shape instead."
+      description: |
+        Framing-layer error codes emitted in the top-level `error` envelope. Operation-level errors (`RequestErrorCode` from `trading-schemas.json`) ride the per-operation `*ResponseMessage` `{ ok: false, error }` shape instead.
+
+        - `MALFORMED_JSON` — the frame was not valid JSON.
+        - `UNKNOWN_TYPE` — the frame `type` is not a recognised operation.
+        - `DUPLICATE_REQUEST_ID` — a frame reused an in-flight `id`.
+        - `SERVER_SHUTTING_DOWN` — the server is shutting down and rejected the request; reconnect before retrying.
+        - `TOO_MANY_INFLIGHT` — the connection exceeded its per-connection in-flight request cap; retry after awaiting outstanding responses.
+        - `INTERNAL` — an unexpected server-side framing error.
       enum:
         - MALFORMED_JSON
         - UNKNOWN_TYPE
         - DUPLICATE_REQUEST_ID
+        - SERVER_SHUTTING_DOWN
+        - TOO_MANY_INFLIGHT
         - INTERNAL
 
     WsExecError:
