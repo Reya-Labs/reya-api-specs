@@ -2737,6 +2737,18 @@
     "ModifyOrderRequest": {
       "title": "ModifyOrderRequest",
       "description": "Modify a resting order using its complete intended post-modify state and a fresh signature and nonce. Omitted fields do not inherit existing values. Target by `orderId` or a non-zero `clientOrderId`. See `POST /v2/modifyOrder` for modifiable fields, priority, and execution behavior.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/LimitModifyOrderRequest"
+        },
+        {
+          "$ref": "#/definitions/TriggerModifyOrderRequest"
+        }
+      ]
+    },
+    "ModifyOrderRequestBase": {
+      "title": "ModifyOrderRequestBase",
+      "description": "Modify a resting order using its complete intended post-modify state and a fresh signature and nonce. Omitted fields do not inherit existing values. Target by `orderId` or a non-zero `clientOrderId`. See `POST /v2/modifyOrder` for modifiable fields, priority, and execution behavior.",
       "type": "object",
       "required": [
         "exchangeId",
@@ -2744,7 +2756,6 @@
         "accountId",
         "isBuy",
         "limitPx",
-        "orderType",
         "timeInForce",
         "signature",
         "nonce",
@@ -2777,56 +2788,6 @@
                   },
                   "required": [
                     "clientOrderId"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "description": "TP/SL requests must omit both fixed Boolean fields, even when false.",
-            "properties": {
-              "orderType": {
-                "$ref": "#/definitions/TriggerOrderType"
-              }
-            },
-            "required": [
-              "orderType"
-            ],
-            "anyOf": [
-              {
-                "required": [
-                  "reduceOnly"
-                ]
-              },
-              {
-                "required": [
-                  "postOnly"
-                ]
-              }
-            ]
-          },
-          {
-            "description": "LIMIT modifications must restate both Boolean fields.",
-            "properties": {
-              "orderType": {
-                "$ref": "#/definitions/LimitOrderType"
-              }
-            },
-            "required": [
-              "orderType"
-            ],
-            "anyOf": [
-              {
-                "not": {
-                  "required": [
-                    "reduceOnly"
-                  ]
-                }
-              },
-              {
-                "not": {
-                  "required": [
-                    "postOnly"
                   ]
                 }
               }
@@ -2864,11 +2825,6 @@
           "description": "Order side. Immutable — restate the resting order's value. Combined with `qty`, sets the signed `OrderDetails.quantity` (int256). A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
           "example": true
         },
-        "orderType": {
-          "$ref": "#/definitions/OrderType",
-          "description": "On-chain `OrderDetails.orderType`. Immutable — restate the resting order's value; a modify never converts between `LIMIT` and `STOP_LOSS`/`TAKE_PROFIT`. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in place (full restate); `orderType` itself stays immutable and is restated at the resting value.",
-          "example": "LIMIT"
-        },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
           "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 1 = IOC, 2 = GTT). Immutable and REQUIRED — restate the resting order's value; a modify never converts between time-in-force values, on a book order or on an armed trigger. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. To give an armed `STOP_LOSS`/`TAKE_PROFIT` a different fired-child time in force, cancel it and create a new one.",
@@ -2879,11 +2835,6 @@
           "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — an armed `STOP_LOSS`/`TAKE_PROFIT` can be re-priced in place (no cancel+recreate); restate the post-modify value. Omit for a `LIMIT` order. Required on a `STOP_LOSS`/`TAKE_PROFIT` modify (full restate); a trigger modify that omits it is rejected. The post-modify `limitPx` and `triggerPx` are re-checked against the market's trigger band, so moving the trigger without moving the limit can itself put the pair outside the band (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
           "example": "49000.0"
         },
-        "reduceOnly": {
-          "type": "boolean",
-          "description": "Signed OrderDetails.reduceOnly. Required and immutable on LIMIT modifications. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false; omission never inherits stored state.",
-          "example": false
-        },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
           "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0). Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately. On a `STOP_LOSS`/`TAKE_PROFIT` modify it is the fired child's worst acceptable price and is re-checked against the market's trigger band alongside the post-modify `triggerPx` (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
@@ -2893,11 +2844,6 @@
           "$ref": "#/definitions/Qty",
           "description": "The post-modify TOTAL order quantity (not remaining). Required for a `LIMIT` modify; omit for a `STOP_LOSS`/`TAKE_PROFIT` modify — a trigger modify restates the signed full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`; protect the whole position). When present, send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
           "example": "0.1"
-        },
-        "postOnly": {
-          "type": "boolean",
-          "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged.",
-          "example": false
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -2925,6 +2871,66 @@
         }
       },
       "additionalProperties": true
+    },
+    "LimitModifyOrderRequest": {
+      "title": "LimitModifyOrderRequest",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ModifyOrderRequestBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "orderType",
+            "reduceOnly",
+            "postOnly"
+          ],
+          "properties": {
+            "orderType": {
+              "$ref": "#/definitions/LimitOrderType",
+              "description": "On-chain `OrderDetails.orderType`. Immutable — restate the resting order's value; a modify never converts between `LIMIT` and `STOP_LOSS`/`TAKE_PROFIT`. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in place (full restate); `orderType` itself stays immutable and is restated at the resting value."
+            },
+            "reduceOnly": {
+              "type": "boolean",
+              "description": "Signed OrderDetails.reduceOnly. Required and immutable on LIMIT modifications. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false; omission never inherits stored state.",
+              "example": false
+            },
+            "postOnly": {
+              "type": "boolean",
+              "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged.",
+              "example": false
+            }
+          }
+        }
+      ]
+    },
+    "TriggerModifyOrderRequest": {
+      "title": "TriggerModifyOrderRequest",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ModifyOrderRequestBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "orderType"
+          ],
+          "properties": {
+            "orderType": {
+              "$ref": "#/definitions/TriggerOrderType",
+              "description": "On-chain `OrderDetails.orderType`. Immutable — restate the resting order's value; a modify never converts between `LIMIT` and `STOP_LOSS`/`TAKE_PROFIT`. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in place (full restate); `orderType` itself stays immutable and is restated at the resting value."
+            },
+            "reduceOnly": {
+              "not": {},
+              "description": "Must be omitted for TP/SL, including false. The signed value is reconstructed as false."
+            },
+            "postOnly": {
+              "not": {},
+              "description": "Must be omitted for TP/SL, including false. The signed value is reconstructed as false."
+            }
+          }
+        }
+      ]
     },
     "ModifyOrderResponse": {
       "title": "ModifyOrderResponse",
