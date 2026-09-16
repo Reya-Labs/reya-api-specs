@@ -292,7 +292,7 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Stork index price for the market's underlying, sourced from CEX feeds. Absent when no fresh index tick is available.",
+          "description": "Stork spot index price for the market's underlying (<BASE>USD), converted to the market's quote currency using USDCUSD. Absent when no fresh spot tick or cross-rate is available; never falls back to the CEX-mark feed.",
           "example": "2666.12048917322"
         },
         "throttledMidPrice": {
