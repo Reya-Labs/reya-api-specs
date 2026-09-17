@@ -453,6 +453,11 @@
           "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
+        "avgFillPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges and openOrders after the first fill; omitted when cumQty is zero. Not exposed on orderHistory.",
+          "example": "3450.25"
+        },
         "firstFillId": {
           "type": "string",
           "description": "Identifier of the first fill this update represents. Together with fillCount it identifies the fills as a contiguous ID range [firstFillId, firstFillId + fillCount - 1]. For a taker update, the first fill of its matching round; for a maker update, its single fill. Present only on fill updates; absent for non-fill updates and resting-order snapshots.",
@@ -2702,6 +2707,11 @@
           "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
         },
+        "avgFillPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges and openOrders after the first fill; omitted when cumQty is zero. Not exposed on orderHistory.",
+          "example": "3450.25"
+        },
         "orderId": {
           "type": "string",
           "description": "Reya-assigned order ID, generated for all order types including IOC. A no-cross IOC still receives an ID and is returned with status CANCELLED (it never rests).",
@@ -2953,6 +2963,11 @@
           "$ref": "#/definitions/Qty",
           "description": "Total executed quantity across the order's lifetime, including fills from before the modification.",
           "example": "0.5"
+        },
+        "avgFillPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges and openOrders after the first fill; omitted when cumQty is zero. Not exposed on orderHistory.",
+          "example": "3450.25"
         },
         "orderId": {
           "type": "string",
