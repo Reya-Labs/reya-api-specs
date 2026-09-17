@@ -455,7 +455,7 @@
         },
         "avgFillPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges and openOrders after the first fill; omitted when cumQty is zero. Not exposed on orderHistory.",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
         },
         "firstFillId": {
@@ -2709,7 +2709,7 @@
         },
         "avgFillPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges and openOrders after the first fill; omitted when cumQty is zero. Not exposed on orderHistory.",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
         },
         "orderId": {
@@ -2966,7 +2966,7 @@
         },
         "avgFillPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges and openOrders after the first fill; omitted when cumQty is zero. Not exposed on orderHistory.",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
         },
         "orderId": {
