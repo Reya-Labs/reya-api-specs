@@ -1,12 +1,23 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Order Entry WebSocket API v2
-  version: 3.5.4
+  version: 3.6.0
   description: |
     Order-entry WebSocket API for placing, modifying, and cancelling orders and managing
     cancel-on-disconnect. Operations use the same request bodies and signing model as REST
     `POST /v2/createOrder`, `/modifyOrder`, `/cancelOrder`, `/cancelAll`, and `/cancelAllAfter`.
     Responses are correlated with requests by `id`.
+
+    **Transport outcomes.** All five operations use the shared `RequestError` schema.
+    `UNAVAILABLE_MATCHING_ENGINE_ERROR` means not accepted: re-sign with a fresh nonce,
+    retaining the same `clientOrderId` when supplied, and back off during an outage.
+    `ORDER_OUTCOME_UNKNOWN_ERROR` means the operation may have been applied: reconcile
+    order state and executions before resubmitting; never replace an unresolved attempt
+    with a fresh nonce. Both codes echo the request `nonce` and optional `clientOrderId`
+    inside `error`; the envelope `id` remains separate transport correlation. Keep the
+    complete original signed request. An empty lookup or `INVALID_NONCE_ERROR` is not
+    proof of this attempt's outcome. Open orders alone cannot prove cancel-all-after timer
+    state. See the REST HTTP 400 reference for the shared recovery rules.
 
     **Signing.** Each order-operation payload carries its own EIP-712 `signature`, `nonce`, and
     `deadline`. Create, modify, and cancel-all-after also require `signerWallet`; single and bulk

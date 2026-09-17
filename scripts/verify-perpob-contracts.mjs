@@ -377,11 +377,11 @@ const badRequest = yamlBlock(openApi, '    BadRequest:');
 const requestErrorCodeDoc = badRequest.replace(/\s+/g, ' ');
 for (const phrase of [
   'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
-  '`UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was not accepted',
+  '`UNAVAILABLE_MATCHING_ENGINE_ERROR`: the request was not accepted',
   'Retry it unchanged after a short delay',
-  'retry unchanged after a short delay for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR`, and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`',
+  're-sign with a fresh nonce for `UNAVAILABLE_MATCHING_ENGINE_ERROR`; reconcile first for `ORDER_OUTCOME_UNKNOWN_ERROR`',
   'It carries no retry hint; use backoff with jitter',
-  'These differ from `CAPACITY_LIMITED_ERROR`, which calls for backoff with jitter',
+  'never replace an unresolved attempt with a fresh nonce',
   'retry `RATE_LIMITED_ERROR` after at least `retryAfterMs`',
   'retry `CAPACITY_LIMITED_ERROR` using backoff with jitter',
   'Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are not resolved by automatic retries',
@@ -499,3 +499,26 @@ assert.ok(
 );
 
 console.log('Perp OB REST and AsyncAPI contract assertions passed.');
+
+// PRO-643: all five REST/WS operations share the same transport-outcome contract.
+for (const [code, action] of [
+  ['UNAVAILABLE_MATCHING_ENGINE_ERROR', 'fresh nonce'],
+  ['ORDER_OUTCOME_UNKNOWN_ERROR', 'reconcile'],
+]) {
+  assert.ok(tradingSchemas.definitions.RequestErrorCode.enum.includes(code));
+  const policy = tradingSchemas.definitions.RequestErrorCode.description;
+  const start = policy.indexOf(`${code} means`);
+  assert.ok(start >= 0);
+  assert.ok(policy.slice(start).split('.')[0].includes(action));
+  assert.ok(openApi.includes('`' + code + '`'));
+  assert.ok(execAsyncApi.includes('`' + code + '`'));
+}
+for (const field of ['nonce', 'clientOrderId']) {
+  assert.equal(tradingSchemas.definitions.RequestError.properties[field].type, 'string');
+  assert.ok(!tradingSchemas.definitions.RequestError.required.includes(field));
+}
+for (const operation of ['CreateOrder', 'ModifyOrder', 'CancelOrder', 'CancelAll', 'CancelAllAfter']) {
+  const response = yamlBlock(execAsyncApi, `    ${operation}ResponseMessagePayload:`);
+  assert.ok(response.includes("$ref: './trading-schemas.json#/definitions/RequestError'"));
+}
+console.log('Transport-outcome error contract assertions passed.');

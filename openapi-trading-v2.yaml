@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.5.4
+  version: 3.6.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -1360,10 +1360,24 @@ components:
           immediately cannot currently pass the required pre-trade checks. Retry after a
           short delay. Existing resting orders remain in place; non-crossing orders and
           cancellations remain available.
-        - `UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the
-          request could not be evaluated and was not accepted. Retry it unchanged after a
-          short delay. These differ from `CAPACITY_LIMITED_ERROR`, which calls for backoff
-          with jitter.
+        - `UNAVAILABLE_MATCHING_ENGINE_ERROR`: the request was not accepted. Signature or
+          permission checks were unavailable before dispatch, or the transport did not send
+          the request (including a full outbound queue). Re-sign with a fresh nonce and
+          resubmit, retaining the same `clientOrderId` when supplied. Back off while the
+          service remains unavailable. An unchanged nonce may already be below the signer's
+          nonce floor because a later request was accepted.
+        - `ORDER_OUTCOME_UNKNOWN_ERROR`: the transport failed after the request may have
+          reached the matching engine. The operation may have been applied. Reconcile open
+          orders and executions before resubmitting; never replace an unresolved attempt
+          with a fresh nonce. These errors echo the request `nonce` and `clientOrderId`
+          when supplied. Retain the complete signed request, including operation, account,
+          and market/filter scope; echoed identifiers are correlation, not a receipt.
+          Absence from open orders is not proof of failure: the order may have filled, and
+          read data can lag. Executions correlate by order/fill IDs, not request nonces.
+          Insufficient or ambiguous evidence remains unresolved. For `cancelAllAfter`,
+          open orders do not establish whether a timer was armed, refreshed, or disarmed.
+        - `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was
+          not accepted. Retry it unchanged after a short delay.
 
         Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
         not resolved by automatic retries. Contact support if an expected operation is
@@ -1371,7 +1385,9 @@ components:
 
         Retry policy: retry unchanged after a short delay for
         `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`,
-        `UNAVAILABLE_MATCHING_ENGINE_ERROR`, and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`; retry
+        and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`; re-sign with a fresh nonce for
+        `UNAVAILABLE_MATCHING_ENGINE_ERROR`; reconcile first for
+        `ORDER_OUTCOME_UNKNOWN_ERROR`; retry
         `RATE_LIMITED_ERROR` after at least `retryAfterMs`; retry `CAPACITY_LIMITED_ERROR`
         using backoff with jitter. Correct validation failures and re-sign where required.
         Reconcile order state before retrying an unanswered request, because a transport
@@ -1380,9 +1396,22 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/RequestError'
-          example:
-            error: INPUT_VALIDATION_ERROR
-            message: Invalid request parameters
+          examples:
+            validation:
+              value:
+                error: INPUT_VALIDATION_ERROR
+                message: Invalid request parameters
+            unknownCreate:
+              value:
+                error: ORDER_OUTCOME_UNKNOWN_ERROR
+                message: The operation may have been applied. Reconcile before resubmitting.
+                nonce: '1234567890'
+                clientOrderId: '123456789'
+            unknownCancelAll:
+              value:
+                error: ORDER_OUTCOME_UNKNOWN_ERROR
+                message: The operation may have been applied. Reconcile before resubmitting.
+                nonce: '1234567891'
 
     InternalServerError:
       description: Internal server error

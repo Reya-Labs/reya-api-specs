@@ -75,5 +75,21 @@ class OrderRequestsTest(unittest.TestCase):
                 self.assertFalse(validator.is_valid({**payload, "orderType": "UNKNOWN"}))
 
 
+class TransportErrorsTest(unittest.TestCase):
+    def test_correlated_errors_and_unrelated_errors(self):
+        validator = Draft7Validator({**SCHEMA, "$ref": "#/definitions/RequestError"})
+        for code in ("UNAVAILABLE_MATCHING_ENGINE_ERROR", "ORDER_OUTCOME_UNKNOWN_ERROR"):
+            for with_client_id in (False, True):
+                with self.subTest(code=code, with_client_id=with_client_id):
+                    error = {"error": code, "message": "Human text can change", "nonce": "18446744073709551615"}
+                    if with_client_id:
+                        error["clientOrderId"] = "18446744073709551614"
+                    validator.validate(error)
+                    self.assertFalse(validator.is_valid({**error, "nonce": 18446744073709551615}))
+                    self.assertFalse(validator.is_valid({**error, "clientOrderId": 18446744073709551614}))
+        validator.validate({"error": "INPUT_VALIDATION_ERROR", "message": "Invalid request"})
+        self.assertFalse(validator.is_valid({"error": "NOT_A_CODE", "message": "Invalid"}))
+
+
 if __name__ == "__main__":
     unittest.main()
