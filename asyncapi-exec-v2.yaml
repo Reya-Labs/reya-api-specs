@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Order Entry WebSocket API v2
-  version: 3.5.3
+  version: 3.5.4
   description: |
     Order-entry WebSocket API for placing, modifying, and cancelling orders and managing
     cancel-on-disconnect. Operations use the same request bodies and signing model as REST
