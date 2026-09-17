@@ -426,7 +426,7 @@
         },
         "avgFillPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Quantity-weighted average execution price across all fills of this matching-engine order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from the exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Omitted when cumQty is zero or the historical executed notional is unavailable (including legacy orders already partially filled before support was introduced).",
+          "description": "Quantity-weighted average execution price across all fills of this matching-engine order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from the exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Present after the first fill of a matching-engine order; omitted when cumQty is zero.",
           "example": "3450.25"
         },
         "firstFillId": {
@@ -1365,7 +1365,7 @@
         },
         "avgFillPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Quantity-weighted average execution price across all fills of this matching-engine order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from the exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Omitted when cumQty is zero or the historical executed notional is unavailable (including legacy orders already partially filled before support was introduced).",
+          "description": "Quantity-weighted average execution price across all fills of this matching-engine order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from the exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Present after the first fill of a matching-engine order; omitted when cumQty is zero.",
           "example": "3450.25"
         },
         "orderId": {
