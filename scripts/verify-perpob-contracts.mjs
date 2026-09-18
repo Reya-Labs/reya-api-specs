@@ -508,7 +508,7 @@ for (const [code, action] of [
   // Recovery guidance is owned by the REST HTTP 400 reference, not the enum summary.
   const start = badRequest.indexOf('        - `' + code + '`:');
   assert.ok(start >= 0, `HTTP 400 reference must document ${code}`);
-  const policy = badRequest.slice(start).split('\n        - ')[0].toLowerCase();
+  const policy = badRequest.slice(start).split(/\n\s*\n|\n        - /)[0].toLowerCase();
   assert.ok(policy.includes(action), `${code} must retain its ${action} recovery policy`);
   assert.ok(openApi.includes('`' + code + '`'));
 }
