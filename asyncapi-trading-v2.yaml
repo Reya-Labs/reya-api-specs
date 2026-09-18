@@ -232,6 +232,13 @@ channels:
       delivered (none are conflated or dropped) and clients must process the array
       in order.
 
+      Ordinary IOC orders emit one terminal update: `FILLED` when fully executed,
+      otherwise `CANCELLED` with `cancelReason` and any `execQty` / `cumQty`.
+      When fills occur, `firstFillId` and `fillCount` carry the same fill range as
+      the create response. IOC orders never rest, so they emit no separate `OPEN`
+      update and are absent from open-order snapshots. Armed STOP_LOSS / TAKE_PROFIT
+      triggers with IOC time-in-force still publish their full armed and fired lifecycle.
+
       For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
       in the streaming API overview.
       For cancellation codes, see Cancellation reasons in the REST API Order Entry section.
