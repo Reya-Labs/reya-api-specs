@@ -306,7 +306,7 @@ for (const code of [
   'CAPACITY_LIMITED_ERROR',
   'NOT_WHITELISTED_ERROR',
   'ACCOUNT_SUSPENDED_ERROR',
-  'UNAVAILABLE_ACCOUNT_OWNER_ERROR',
+  'SERVICE_UNAVAILABLE_ERROR',
 ]) {
   assert.ok(
     requestErrorCodes.includes(code),
@@ -377,11 +377,10 @@ const badRequest = yamlBlock(openApi, '    BadRequest:');
 const requestErrorCodeDoc = badRequest.replace(/\s+/g, ' ');
 for (const phrase of [
   'HTTP 429 is reserved for infrastructure-level (per-IP) limits in front of the API and is never a venue verdict',
-  '`UNAVAILABLE_MATCHING_ENGINE_ERROR`, `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was not accepted',
-  'Retry it unchanged after a short delay',
-  'retry unchanged after a short delay for `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`, `UNAVAILABLE_MATCHING_ENGINE_ERROR`, and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`',
+  '`SERVICE_UNAVAILABLE_ERROR`: the request was not accepted',
+  're-sign with a fresh nonce for `SERVICE_UNAVAILABLE_ERROR`; reconcile first for `ORDER_OUTCOME_UNKNOWN_ERROR`',
   'It carries no retry hint; use backoff with jitter',
-  'These differ from `CAPACITY_LIMITED_ERROR`, which calls for backoff with jitter',
+  'never replace an unresolved attempt with a fresh nonce',
   'retry `RATE_LIMITED_ERROR` after at least `retryAfterMs`',
   'retry `CAPACITY_LIMITED_ERROR` using backoff with jitter',
   'Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are not resolved by automatic retries',
@@ -406,7 +405,7 @@ for (const code of [
   'CAPACITY_LIMITED_ERROR',
   'NOT_WHITELISTED_ERROR',
   'ACCOUNT_SUSPENDED_ERROR',
-  'UNAVAILABLE_ACCOUNT_OWNER_ERROR',
+  'SERVICE_UNAVAILABLE_ERROR',
   'retryAfterMs',
 ]) {
   assert.ok(
@@ -499,3 +498,36 @@ assert.ok(
 );
 
 console.log('Perp OB REST and AsyncAPI contract assertions passed.');
+
+// PRO-643: all five REST/WS operations share the same transport-outcome contract.
+for (const [code, action] of [
+  ['SERVICE_UNAVAILABLE_ERROR', 'fresh nonce'],
+  ['ORDER_OUTCOME_UNKNOWN_ERROR', 'reconcile'],
+]) {
+  assert.ok(tradingSchemas.definitions.RequestErrorCode.enum.includes(code));
+  // Recovery guidance is owned by the REST HTTP 400 reference, not the enum summary.
+  const start = badRequest.indexOf('        - `' + code + '`:');
+  assert.ok(start >= 0, `HTTP 400 reference must document ${code}`);
+  const policy = badRequest.slice(start).split(/\n\s*\n|\n        - /)[0].toLowerCase();
+  assert.ok(policy.includes(action), `${code} must retain its ${action} recovery policy`);
+  assert.ok(openApi.includes('`' + code + '`'));
+}
+for (const field of ['nonce', 'clientOrderId']) {
+  assert.ok(!(field in tradingSchemas.definitions.RequestError.properties));
+  assert.ok(!tradingSchemas.definitions.RequestError.required.includes(field));
+}
+for (const operation of ['CreateOrder', 'ModifyOrder', 'CancelOrder', 'CancelAll', 'CancelAllAfter']) {
+  const response = yamlBlock(execAsyncApi, `    ${operation}ResponseMessagePayload:`);
+  assert.ok(response.includes("$ref: './trading-schemas.json#/definitions/RequestError'"));
+}
+console.log('Transport-outcome error contract assertions passed.');
+
+for (const code of ['NO_PRICES_FOUND_FOR_SYMBOL_ERROR', 'UNAVAILABLE_MATCHING_ENGINE_ERROR', 'UNAVAILABLE_ACCOUNT_OWNER_ERROR']) {
+  assert.ok(!requestErrorCodes.includes(code), `Obsolete error code must not be published: ${code}`);
+  assert.ok(!openApi.includes(code), `REST reference must not advertise obsolete code: ${code}`);
+}
+
+assert.ok(
+  !/^\s+(nonce|clientOrderId):/m.test(badRequest),
+  'HTTP 400 examples must not echo request identifiers',
+);

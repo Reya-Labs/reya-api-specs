@@ -60,14 +60,14 @@
       "enum": [
         "SYMBOL_NOT_FOUND_ERROR",
         "NO_ACCOUNTS_FOUND_ERROR",
-        "NO_PRICES_FOUND_FOR_SYMBOL_ERROR",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
         "CANCEL_ORDER_OTHER_ERROR",
         "ORDER_DEADLINE_PASSED_ERROR",
         "ORDER_DEADLINE_TOO_HIGH_ERROR",
         "INVALID_NONCE_ERROR",
-        "UNAVAILABLE_MATCHING_ENGINE_ERROR",
+        "SERVICE_UNAVAILABLE_ERROR",
+        "ORDER_OUTCOME_UNKNOWN_ERROR",
         "UNAUTHORIZED_SIGNATURE_ERROR",
         "NUMERIC_OVERFLOW_ERROR",
         "CANCEL_ALL_AFTER_OTHER_ERROR",
@@ -97,8 +97,7 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR",
-        "UNAVAILABLE_ACCOUNT_OWNER_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
