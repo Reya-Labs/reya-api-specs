@@ -99,7 +99,7 @@
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR"
       ],
-      "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. SERVICE_UNAVAILABLE_ERROR means not accepted: re-sign with a fresh nonce and retain the same clientOrderId when supplied. ORDER_OUTCOME_UNKNOWN_ERROR means the operation may have been applied: reconcile order state and executions before resubmitting; never replace an unresolved attempt with a fresh nonce. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
+      "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
