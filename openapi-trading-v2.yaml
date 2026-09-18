@@ -1360,7 +1360,7 @@ components:
           immediately cannot currently pass the required pre-trade checks. Retry after a
           short delay. Existing resting orders remain in place; non-crossing orders and
           cancellations remain available.
-        - `UNAVAILABLE_MATCHING_ENGINE_ERROR`: the request was not accepted. Signature or
+        - `SERVICE_UNAVAILABLE_ERROR`: the request was not accepted. Account-owner, signature or
           permission checks were unavailable before dispatch, or the transport did not send
           the request (including a full outbound queue). Re-sign with a fresh nonce and
           resubmit, retaining the same `clientOrderId` when supplied. Back off while the
@@ -1369,24 +1369,21 @@ components:
         - `ORDER_OUTCOME_UNKNOWN_ERROR`: the transport failed after the request may have
           reached the matching engine. The operation may have been applied. Reconcile open
           orders and executions before resubmitting; never replace an unresolved attempt
-          with a fresh nonce. These errors echo the request `nonce` and `clientOrderId`
-          when supplied. Retain the complete signed request, including operation, account,
-          and market/filter scope; echoed identifiers are correlation, not a receipt.
+          with a fresh nonce. Retain the complete signed request, including operation, account,
+          market/filter scope, nonce, and order identifiers. Responses do not provide an
+          acceptance receipt or an outcome-query mechanism.
           Absence from open orders is not proof of failure: the order may have filled, and
           read data can lag. Executions correlate by order/fill IDs, not request nonces.
           Insufficient or ambiguous evidence remains unresolved. For `cancelAllAfter`,
           open orders do not establish whether a timer was armed, refreshed, or disarmed.
-        - `UNAVAILABLE_ACCOUNT_OWNER_ERROR`: the request could not be evaluated and was
-          not accepted. Retry it unchanged after a short delay.
 
         Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
         not resolved by automatic retries. Contact support if an expected operation is
         refused.
 
         Retry policy: retry unchanged after a short delay for
-        `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`,
-        and `UNAVAILABLE_ACCOUNT_OWNER_ERROR`; re-sign with a fresh nonce for
-        `UNAVAILABLE_MATCHING_ENGINE_ERROR`; reconcile first for
+        `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`; re-sign with a fresh nonce for
+        `SERVICE_UNAVAILABLE_ERROR`; reconcile first for
         `ORDER_OUTCOME_UNKNOWN_ERROR`; retry
         `RATE_LIMITED_ERROR` after at least `retryAfterMs`; retry `CAPACITY_LIMITED_ERROR`
         using backoff with jitter. Correct validation failures and re-sign where required.

@@ -60,14 +60,13 @@
       "enum": [
         "SYMBOL_NOT_FOUND_ERROR",
         "NO_ACCOUNTS_FOUND_ERROR",
-        "NO_PRICES_FOUND_FOR_SYMBOL_ERROR",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
         "CANCEL_ORDER_OTHER_ERROR",
         "ORDER_DEADLINE_PASSED_ERROR",
         "ORDER_DEADLINE_TOO_HIGH_ERROR",
         "INVALID_NONCE_ERROR",
-        "UNAVAILABLE_MATCHING_ENGINE_ERROR",
+        "SERVICE_UNAVAILABLE_ERROR",
         "ORDER_OUTCOME_UNKNOWN_ERROR",
         "UNAUTHORIZED_SIGNATURE_ERROR",
         "NUMERIC_OVERFLOW_ERROR",
@@ -98,10 +97,9 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR",
-        "UNAVAILABLE_ACCOUNT_OWNER_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR"
       ],
-      "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. UNAVAILABLE_MATCHING_ENGINE_ERROR means not accepted: re-sign with a fresh nonce and retain the same clientOrderId when supplied. ORDER_OUTCOME_UNKNOWN_ERROR means the operation may have been applied: reconcile order state and executions before resubmitting; never replace an unresolved attempt with a fresh nonce. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
+      "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. SERVICE_UNAVAILABLE_ERROR means not accepted: re-sign with a fresh nonce and retain the same clientOrderId when supplied. ORDER_OUTCOME_UNKNOWN_ERROR means the operation may have been applied: reconcile order state and executions before resubmitting; never replace an unresolved attempt with a fresh nonce. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
@@ -214,16 +212,6 @@
           "minimum": 1,
           "description": "Minimum wait in milliseconds before retrying the rejected operation. Included for `RATE_LIMITED_ERROR`; omitted for errors without a retry hint, including resting-order caps and `CAPACITY_LIMITED_ERROR`. The same field appears in the REST HTTP 400 body and the order-entry WebSocket's `{ ok: false, error }` response. When present, it is a positive integer. Wait at least this long; it does not reserve capacity, and concurrent requests can consume the account's available budget.",
           "example": 1500
-        },
-        "nonce": {
-          "type": "string",
-          "description": "Submitted request nonce, echoed for UNAVAILABLE_MATCHING_ENGINE_ERROR and ORDER_OUTCOME_UNKNOWN_ERROR after request validation. Correlation only; this is not proof of acceptance or an idempotency receipt.",
-          "example": "1234567890"
-        },
-        "clientOrderId": {
-          "type": "string",
-          "description": "Submitted clientOrderId, echoed when provided for UNAVAILABLE_MATCHING_ENGINE_ERROR and ORDER_OUTCOME_UNKNOWN_ERROR. Omitted when the request has no clientOrderId, including cancelAll and cancelAllAfter. Retain the complete original request for reconciliation.",
-          "example": "123456789"
         }
       },
       "additionalProperties": true
