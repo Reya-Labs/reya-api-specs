@@ -505,10 +505,11 @@ for (const [code, action] of [
   ['ORDER_OUTCOME_UNKNOWN_ERROR', 'reconcile'],
 ]) {
   assert.ok(tradingSchemas.definitions.RequestErrorCode.enum.includes(code));
-  const policy = tradingSchemas.definitions.RequestErrorCode.description;
-  const start = policy.indexOf(`${code} means`);
-  assert.ok(start >= 0);
-  assert.ok(policy.slice(start).split('.')[0].includes(action));
+  // Recovery guidance is owned by the REST HTTP 400 reference, not the enum summary.
+  const start = badRequest.indexOf('        - `' + code + '`:');
+  assert.ok(start >= 0, `HTTP 400 reference must document ${code}`);
+  const policy = badRequest.slice(start).split('\n        - ')[0].toLowerCase();
+  assert.ok(policy.includes(action), `${code} must retain its ${action} recovery policy`);
   assert.ok(openApi.includes('`' + code + '`'));
 }
 for (const field of ['nonce', 'clientOrderId']) {
