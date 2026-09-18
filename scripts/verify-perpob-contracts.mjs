@@ -523,4 +523,10 @@ console.log('Transport-outcome error contract assertions passed.');
 
 for (const code of ['NO_PRICES_FOUND_FOR_SYMBOL_ERROR', 'UNAVAILABLE_MATCHING_ENGINE_ERROR', 'UNAVAILABLE_ACCOUNT_OWNER_ERROR']) {
   assert.ok(!requestErrorCodes.includes(code), `Obsolete error code must not be published: ${code}`);
+  assert.ok(!openApi.includes(code), `REST reference must not advertise obsolete code: ${code}`);
 }
+
+assert.ok(
+  !/^\s+(nonce|clientOrderId):/m.test(badRequest),
+  'HTTP 400 examples must not echo request identifiers',
+);

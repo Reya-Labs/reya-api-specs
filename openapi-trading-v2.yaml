@@ -1261,9 +1261,8 @@ components:
         Validation and authorization:
         - `INPUT_VALIDATION_ERROR`: correct the request's fields or order-class combination
           before resubmitting. Immutable fields on a modify must match the existing order.
-        - `SYMBOL_NOT_FOUND_ERROR`, `NO_ACCOUNTS_FOUND_ERROR`,
-          `NO_PRICES_FOUND_FOR_SYMBOL_ERROR`: the requested market, account data, or price
-          data is unavailable; check the request and current market/account state.
+        - `SYMBOL_NOT_FOUND_ERROR`, `NO_ACCOUNTS_FOUND_ERROR`: the requested market or
+          account data is unavailable; check the request and current market/account state.
         - `NUMERIC_OVERFLOW_ERROR`, `PRICE_QTY_BOUNDS_ERROR`: a numeric value is out of
           range, or price/quantity is invalid for the market. Check price increments and
           quantity limits.
@@ -1398,17 +1397,14 @@ components:
               value:
                 error: INPUT_VALIDATION_ERROR
                 message: Invalid request parameters
-            unknownCreate:
+            serviceUnavailable:
+              value:
+                error: SERVICE_UNAVAILABLE_ERROR
+                message: The request was not accepted. Back off and retry with a fresh nonce.
+            unknownOutcome:
               value:
                 error: ORDER_OUTCOME_UNKNOWN_ERROR
                 message: The operation may have been applied. Reconcile before resubmitting.
-                nonce: '1234567890'
-                clientOrderId: '123456789'
-            unknownCancelAll:
-              value:
-                error: ORDER_OUTCOME_UNKNOWN_ERROR
-                message: The operation may have been applied. Reconcile before resubmitting.
-                nonce: '1234567891'
 
     InternalServerError:
       description: Internal server error
