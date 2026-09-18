@@ -1392,19 +1392,9 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/RequestError'
-          examples:
-            validation:
-              value:
-                error: INPUT_VALIDATION_ERROR
-                message: Invalid request parameters
-            serviceUnavailable:
-              value:
-                error: SERVICE_UNAVAILABLE_ERROR
-                message: The request was not accepted. Back off and retry with a fresh nonce.
-            unknownOutcome:
-              value:
-                error: ORDER_OUTCOME_UNKNOWN_ERROR
-                message: The operation may have been applied. Reconcile before resubmitting.
+          example:
+            error: INPUT_VALIDATION_ERROR
+            message: Invalid request parameters
 
     InternalServerError:
       description: Internal server error
