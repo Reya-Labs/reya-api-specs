@@ -772,11 +772,8 @@ paths:
 
         A created order receives an `orderId`, even if an IOC fills nothing and is immediately
         cancelled. `execQty` reports the fills from this request; `cumQty` reports lifetime fills.
-        `firstFillId` and `fillCount`, when present, identify the contiguous fill range. On a
-        taker, including an IOC, the same range appears in its `orderChanges` update.
-        An ordinary IOC emits one terminal update: `FILLED` when fully executed, otherwise
-        `CANCELLED` with a cancellation reason and any executed quantity. It does not emit
-        a separate `OPEN` update or appear in open-order snapshots.
+        `firstFillId` and `fillCount`, when present, identify the contiguous fill range.
+        All orders appear on `orderChanges`, with the same fill range when fills occur.
         See the Order Entry section's Cancellation reasons for cancelled outcomes.
         These fill-correlation rules also apply to `modifyOrder` responses.
       operationId: createOrder
