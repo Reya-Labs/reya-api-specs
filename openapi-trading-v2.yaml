@@ -279,7 +279,14 @@ paths:
   /market/{symbol}/perpExecutions:
     get:
       summary: Get perp executions for market
-      description: Returns up to 100 perp executions for a given market.
+      description: |
+        Returns up to 100 perp executions, newest first, with deterministic ordering
+        for executions sharing a timestamp. `limit` defaults to 100 and is capped
+        at 100. Omit `cursor` for the first page; pass `meta.nextCursor` unchanged
+        for the next page, keeping the same wallet or market and filters. Stop
+        when `nextCursor` is absent. Use cursors to advance pages: timestamp
+        boundaries alone can repeat or skip executions sharing a timestamp.
+        Existing `meta.startTime` and `meta.endTime` describe the returned page.
       operationId: getMarketPerpExecutions
       tags:
         - Market Data
@@ -288,6 +295,8 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of perp executions
@@ -448,7 +457,14 @@ paths:
   /wallet/{address}/perpExecutions:
     get:
       summary: Get wallet perp executions
-      description: Returns up to 100 perp executions for a given wallet.
+      description: |
+        Returns up to 100 perp executions, newest first, with deterministic ordering
+        for executions sharing a timestamp. `limit` defaults to 100 and is capped
+        at 100. Omit `cursor` for the first page; pass `meta.nextCursor` unchanged
+        for the next page, keeping the same wallet or market and filters. Stop
+        when `nextCursor` is absent. Use cursors to advance pages: timestamp
+        boundaries alone can repeat or skip executions sharing a timestamp.
+        Existing `meta.startTime` and `meta.endTime` describe the returned page.
       operationId: getWalletPerpExecutions
       tags:
         - Wallet Data
@@ -457,6 +473,8 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of perpetual executions
@@ -645,7 +663,7 @@ paths:
         - Wallet Data
       parameters:
         - $ref: '#/components/parameters/AddressParam'
-        - $ref: '#/components/parameters/TransfersLimitParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
         - $ref: '#/components/parameters/CursorParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
@@ -1058,7 +1076,7 @@ components:
           - MARKET_CLOSE
         example: LIQUIDATION
 
-    TransfersLimitParam:
+    HistoryLimitParam:
       name: limit
       in: query
       required: false
