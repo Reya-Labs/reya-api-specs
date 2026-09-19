@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.0
+  version: 3.6.1
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -279,7 +279,10 @@ paths:
   /market/{symbol}/perpExecutions:
     get:
       summary: Get perp executions for market
-      description: Returns up to 100 perp executions for a given market.
+      description: |
+        Returns perp executions for the market, newest first, with deterministic
+        ordering for executions sharing a timestamp. Use the `cursor` parameter
+        to advance pages without repeating or skipping executions at timestamp boundaries.
       operationId: getMarketPerpExecutions
       tags:
         - Market Data
@@ -288,6 +291,8 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of perp executions
@@ -448,7 +453,10 @@ paths:
   /wallet/{address}/perpExecutions:
     get:
       summary: Get wallet perp executions
-      description: Returns up to 100 perp executions for a given wallet.
+      description: |
+        Returns perp executions for the wallet, newest first, with deterministic
+        ordering for executions sharing a timestamp. Use the `cursor` parameter
+        to advance pages without repeating or skipping executions at timestamp boundaries.
       operationId: getWalletPerpExecutions
       tags:
         - Wallet Data
@@ -457,6 +465,8 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of perpetual executions
@@ -620,14 +630,8 @@ paths:
 
         **Pagination**
 
-        - Results are ordered newest first by `sequenceNumber`. `limit` defaults to 100 and is
-          capped at 100 entries per page.
-        - Omit `cursor` for the first page. Pass the returned `meta.nextCursor` unchanged for
-          the next page, keeping the same filters. Stop when `nextCursor` is absent.
-        - Cursor traversal visits each matching entry once, including when entries share a
-          block timestamp. Use cursors rather than timestamps to advance between pages.
-        - `startTime` and `endTime` filter the block timestamp in milliseconds. `type` filters
-          by a comma-separated list of `TransferType` values; omit it to include all types.
+        Results are ordered newest first by `sequenceNumber`. Use the `cursor` parameter
+        to traverse entries sharing a block timestamp without repeating or skipping them.
 
         **Reconciliation**
 
@@ -645,7 +649,7 @@ paths:
         - Wallet Data
       parameters:
         - $ref: '#/components/parameters/AddressParam'
-        - $ref: '#/components/parameters/TransfersLimitParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
         - $ref: '#/components/parameters/CursorParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
@@ -1058,7 +1062,7 @@ components:
           - MARKET_CLOSE
         example: LIQUIDATION
 
-    TransfersLimitParam:
+    HistoryLimitParam:
       name: limit
       in: query
       required: false
@@ -1075,7 +1079,9 @@ components:
       required: false
       description: |
         Opaque page cursor from the previous response's `meta.nextCursor`. Omit for the
-        first page; otherwise pass it unchanged. Do not construct or parse cursor values.
+        first page; otherwise pass it unchanged. Keep the same endpoint, wallet or market,
+        and filters between requests. Stop when `meta.nextCursor` is absent.
+        Do not construct or parse cursor values.
       schema:
         type: string
         example: djEuNTQ2MzY3NzA2LjA

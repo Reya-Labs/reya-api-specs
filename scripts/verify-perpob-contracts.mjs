@@ -31,6 +31,18 @@ assert.ok(
   'PaginationMeta examples must show newest-first ordering',
 );
 
+assert.equal(paginationMeta.nextCursor.type, 'string');
+const cursorParam = yamlBlock(openApi, '    CursorParam:');
+assert.ok(cursorParam.includes('meta.nextCursor'));
+assert.ok(cursorParam.includes('Keep the same endpoint, wallet or market,'));
+assert.ok(cursorParam.includes('Stop when `meta.nextCursor` is absent.'));
+for (const endpoint of ['/market/{symbol}/perpExecutions', '/wallet/{address}/perpExecutions', '/wallet/{address}/transfers']) {
+  const block = yamlBlock(openApi, `  ${endpoint}:`);
+  assert.ok(block.includes("#/components/parameters/CursorParam"));
+  assert.ok(block.includes("#/components/parameters/HistoryLimitParam"));
+  assert.ok(block.includes('`cursor` parameter'));
+}
+
 const depth = tradingSchemas.definitions.Depth;
 assert.deepEqual(
   depth.required,
