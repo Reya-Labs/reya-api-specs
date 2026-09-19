@@ -280,13 +280,9 @@ paths:
     get:
       summary: Get perp executions for market
       description: |
-        Returns up to 100 perp executions, newest first, with deterministic ordering
-        for executions sharing a timestamp. `limit` defaults to 100 and is capped
-        at 100. Omit `cursor` for the first page; pass `meta.nextCursor` unchanged
-        for the next page, keeping the same wallet or market and filters. Stop
-        when `nextCursor` is absent. Use cursors to advance pages: timestamp
-        boundaries alone can repeat or skip executions sharing a timestamp.
-        Existing `meta.startTime` and `meta.endTime` describe the returned page.
+        Returns perp executions for the market, newest first, with deterministic
+        ordering for executions sharing a timestamp. Use the `cursor` parameter
+        to advance pages without repeating or skipping executions at timestamp boundaries.
       operationId: getMarketPerpExecutions
       tags:
         - Market Data
@@ -458,13 +454,9 @@ paths:
     get:
       summary: Get wallet perp executions
       description: |
-        Returns up to 100 perp executions, newest first, with deterministic ordering
-        for executions sharing a timestamp. `limit` defaults to 100 and is capped
-        at 100. Omit `cursor` for the first page; pass `meta.nextCursor` unchanged
-        for the next page, keeping the same wallet or market and filters. Stop
-        when `nextCursor` is absent. Use cursors to advance pages: timestamp
-        boundaries alone can repeat or skip executions sharing a timestamp.
-        Existing `meta.startTime` and `meta.endTime` describe the returned page.
+        Returns perp executions for the wallet, newest first, with deterministic
+        ordering for executions sharing a timestamp. Use the `cursor` parameter
+        to advance pages without repeating or skipping executions at timestamp boundaries.
       operationId: getWalletPerpExecutions
       tags:
         - Wallet Data
@@ -638,14 +630,8 @@ paths:
 
         **Pagination**
 
-        - Results are ordered newest first by `sequenceNumber`. `limit` defaults to 100 and is
-          capped at 100 entries per page.
-        - Omit `cursor` for the first page. Pass the returned `meta.nextCursor` unchanged for
-          the next page, keeping the same filters. Stop when `nextCursor` is absent.
-        - Cursor traversal visits each matching entry once, including when entries share a
-          block timestamp. Use cursors rather than timestamps to advance between pages.
-        - `startTime` and `endTime` filter the block timestamp in milliseconds. `type` filters
-          by a comma-separated list of `TransferType` values; omit it to include all types.
+        Results are ordered newest first by `sequenceNumber`. Use the `cursor` parameter
+        to traverse entries sharing a block timestamp without repeating or skipping them.
 
         **Reconciliation**
 
@@ -1093,7 +1079,9 @@ components:
       required: false
       description: |
         Opaque page cursor from the previous response's `meta.nextCursor`. Omit for the
-        first page; otherwise pass it unchanged. Do not construct or parse cursor values.
+        first page; otherwise pass it unchanged. Keep the same endpoint, wallet or market,
+        and filters between requests. Stop when `meta.nextCursor` is absent.
+        Do not construct or parse cursor values.
       schema:
         type: string
         example: djEuNTQ2MzY3NzA2LjA

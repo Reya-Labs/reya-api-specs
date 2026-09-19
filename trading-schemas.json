@@ -918,7 +918,7 @@
         },
         "nextCursor": {
           "type": "string",
-          "description": "Opaque cursor for the next page. Pass it unchanged as cursor; omitted when no further page is available. See the transfers endpoint's Pagination section for traversal rules.",
+          "description": "Opaque cursor for the next page; omitted when no further matching entries are available. See the cursor query parameter for traversal rules.",
           "example": "djEuNTQ2MzY3NzA2LjA"
         }
       },
@@ -2553,7 +2553,7 @@
         },
         "nextCursor": {
           "type": "string",
-          "description": "Opaque continuation cursor for perpExecutions. Pass unchanged with the same scope and filters; absent when no further matching executions exist."
+          "description": "Opaque continuation cursor for perpExecutions; omitted when no further matching executions are available. See the cursor query parameter for traversal rules."
         }
       },
       "additionalProperties": true
