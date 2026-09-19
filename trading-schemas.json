@@ -2543,13 +2543,17 @@
         },
         "endTime": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Timestamp of the last result in response order, in milliseconds. Descending endpoints return newest-first, so this is the oldest returned timestamp and can be used as the next page's endTime boundary.",
+          "description": "Timestamp of the last result in response order, in milliseconds. Descending endpoints return newest-first, so this is the oldest returned timestamp. For perpExecutions, use nextCursor to advance pages without repeating or skipping timestamp ties.",
           "example": 1756733579000
         },
         "startTime": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Timestamp of the first result in response order, in milliseconds. Descending endpoints return newest-first, so this is the newest returned timestamp.",
           "example": 1756733679000
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Opaque continuation cursor for perpExecutions. Pass unchanged with the same scope and filters; absent when no further matching executions exist."
         }
       },
       "additionalProperties": true
