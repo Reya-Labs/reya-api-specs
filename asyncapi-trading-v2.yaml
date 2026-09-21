@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.6.0
+  version: 3.6.1
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -217,7 +217,7 @@ channels:
   walletOrderChanges:
     address: /v2/wallet/{address}/orderChanges
     description: |
-      Real-time order change updates for a wallet.
+      State changes for all orders belonging to a wallet.
 
       Two server-to-client message types arrive on this logical channel:
       `orderChangesSubscribed` is the initial `subscribed` confirmation and

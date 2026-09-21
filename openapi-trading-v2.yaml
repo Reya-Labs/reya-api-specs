@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.0
+  version: 3.6.1
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -772,9 +772,8 @@ paths:
 
         A created order receives an `orderId`, even if an IOC fills nothing and is immediately
         cancelled. `execQty` reports the fills from this request; `cumQty` reports lifetime fills.
-        `firstFillId` and `fillCount`, when present, identify the contiguous fill range. On a
-        non-IOC taker, the same range appears in its `orderChanges` update. IOC takers do not
-        appear on `orderChanges`, so retain the response's range to correlate their executions.
+        `firstFillId` and `fillCount`, when present, identify the contiguous fill range.
+        All orders appear on `orderChanges`, with the same fill range when fills occur.
         See the Order Entry section's Cancellation reasons for cancelled outcomes.
         These fill-correlation rules also apply to `modifyOrder` responses.
       operationId: createOrder
