@@ -311,6 +311,11 @@ paths:
         `limit` query parameter to request between 1 and 1,000 levels per side — the `limit` best
         (highest) bids and the `limit` best (lowest) asks. Values above 1,000 are clamped to 1,000;
         other out-of-contract values fall back to the default of 100.
+
+        Returns HTTP 503 with `SERVICE_UNAVAILABLE_ERROR` while this server's depth mirror
+        is bootstrapping or cannot decode the market-data feed. A cached book is not served
+        during that condition. Retry the same read after backing off; no signing nonce is
+        involved. Other API routes remain available, and depth reads resume after recovery.
       operationId: getMarketDepth
       tags:
         - Market Data
@@ -326,6 +331,15 @@ paths:
                 $ref: '#/components/schemas/DepthSnapshot'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '503':
+          description: The local market-depth mirror is temporarily unavailable. Retry after backing off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestError'
+              example:
+                error: SERVICE_UNAVAILABLE_ERROR
+                message: Market depth is temporarily unavailable; retry after backing off
         '500':
           $ref: '#/components/responses/InternalServerError'
 
