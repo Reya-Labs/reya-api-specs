@@ -1,93 +1,108 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://api.reya.xyz/schemas/trading-schemas.json",
   "definitions": {
+    "TriggerOrderType": {
+      "type": "string",
+      "enum": ["STOP_LOSS", "TAKE_PROFIT"]
+    },
+    "LimitOrderType": {
+      "type": "string",
+      "enum": ["LIMIT"]
+    },
     "Symbol": {
       "title": "Symbol",
-      "$id": "#Symbol",
-      "x-parser-schema-id": "Symbol",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "WETHRUSD"],
+      "example": "BTCRUSDPERP",
       "description": "Trading symbol (e.g., BTCRUSDPERP, WETHRUSD)"
     },
     "Asset": {
       "title": "Asset",
-      "$id": "#Asset",
-      "x-parser-schema-id": "Asset",
       "type": "string",
       "pattern": "^[A-Za-z0-9]+$",
-      "examples": ["BTCRUSDPERP", "WETHRUSD"]
+      "example": "RUSD"
     },
     "Address": {
       "title": "Address",
-      "$id": "#Address",
-      "x-parser-schema-id": "Address",
       "type": "string",
       "pattern": "^0x[a-fA-F0-9]{40}$",
-      "examples": ["0x6c51275fd01d5dbd2da194e92f920f8598306df2"]
+      "example": "0x6c51275fd01d5dbd2da194e92f920f8598306df2"
     },
     "UnsignedDecimal": {
       "title": "UnsignedDecimal",
-      "$id": "#UnsignedDecimal",
-      "x-parser-schema-id": "UnsignedDecimal",
       "type": "string",
       "pattern": "^\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
-      "examples": ["1.0", "0.001", "154.741", "1.2345e10", "6.789e-5"]
+      "example": "1.0"
     },
     "SignedDecimal": {
       "title": "SignedDecimal",
-      "$id": "#Decimal",
-      "x-parser-schema-id": "SignedDecimal",
       "type": "string",
       "pattern": "^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
-      "examples": ["43000.00", "2666.48162040777", "0.01", "-1250.75", "-1.12628295e-9", "3.14159e+8"]
+      "example": "43000.00"
     },
     "PriceValue": {
       "title": "PriceValue",
-      "$id": "#PriceValue",
-      "x-parser-schema-id": "PriceValue",
       "$ref": "#/definitions/SignedDecimal"
     },
     "Qty": {
       "title": "Qty",
-      "$id": "#Qty",
-      "x-parser-schema-id": "Qty",
       "$ref": "#/definitions/UnsignedDecimal"
     },
     "UnsignedInteger": {
       "title": "UnsignedInteger",
-      "$id": "#UnsignedInteger",
-      "x-parser-schema-id": "UnsignedInteger",
       "type": "integer",
       "minimum": 0,
-      "examples": [1747927089946, 1756733379000]
+      "example": 1747927089946
     },
     "RequestErrorCode": {
       "title": "RequestErrorCode",
-      "$id": "#RequestErrorCode",
-      "x-parser-schema-id": "RequestErrorCode",
       "type": "string",
       "enum": [
-        "SYMBOL_NOT_FOUND",
-        "NO_ACCOUNTS_FOUND",
-        "NO_PRICES_FOUND_FOR_SYMBOL",
+        "SYMBOL_NOT_FOUND_ERROR",
+        "NO_ACCOUNTS_FOUND_ERROR",
         "INPUT_VALIDATION_ERROR",
         "CREATE_ORDER_OTHER_ERROR",
         "CANCEL_ORDER_OTHER_ERROR",
         "ORDER_DEADLINE_PASSED_ERROR",
         "ORDER_DEADLINE_TOO_HIGH_ERROR",
         "INVALID_NONCE_ERROR",
-        "UNAVAILABLE_MATCHING_ENGINE_ERROR",
+        "SERVICE_UNAVAILABLE_ERROR",
+        "ORDER_OUTCOME_UNKNOWN_ERROR",
         "UNAUTHORIZED_SIGNATURE_ERROR",
-        "NUMERIC_OVERFLOW_ERROR"
+        "NUMERIC_OVERFLOW_ERROR",
+        "CANCEL_ALL_AFTER_OTHER_ERROR",
+        "ORDER_NOT_FOUND_ERROR",
+        "POST_ONLY_WOULD_CROSS_ERROR",
+        "MODIFY_QTY_BELOW_FILLED_ERROR",
+        "EMPTY_MODIFY_ERROR",
+        "MODIFY_ORDER_OTHER_ERROR",
+        "RATE_LIMITED_ERROR",
+        "INSUFFICIENT_BALANCE_ERROR",
+        "PRICE_QTY_BOUNDS_ERROR",
+        "SERVICE_DISABLED_ERROR",
+        "UNAUTHORIZED_ACCOUNT_ERROR",
+        "TRADING_HALTED_ERROR",
+        "DUPLICATE_CLIENT_ORDER_ID_ERROR",
+        "ACCOUNT_BELOW_LIQUIDATION_MARGIN_ERROR",
+        "ACCOUNT_BELOW_INITIAL_MARGIN_ERROR",
+        "OPEN_INTEREST_CAP_ERROR",
+        "OPEN_INTEREST_BUDGET_ERROR",
+        "REDUCE_ONLY_CONDITION_NOT_MET_ERROR",
+        "CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR",
+        "TRIGGER_IOC_MUST_NOT_EXPIRE_ERROR",
+        "TRIGGER_LIMIT_OUTSIDE_BAND_ERROR",
+        "TRIGGER_ALREADY_EXISTS_ERROR",
+        "ORDER_EXPIRES_TOO_SOON_ERROR",
+        "OPEN_ORDER_COUNT_EXCEEDED_ERROR",
+        "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
+        "CAPACITY_LIMITED_ERROR",
+        "NOT_WHITELISTED_ERROR",
+        "ACCOUNT_SUSPENDED_ERROR"
       ],
-      "description": "Standardized error codes for API responses"
+      "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
-      "$id": "#ServerErrorCode",
-      "x-parser-schema-id": "ServerErrorCode",
       "type": "string",
       "enum": [
         "INTERNAL_SERVER_ERROR"
@@ -96,74 +111,88 @@
     },
     "Side": {
       "title": "Side",
-      "$id": "#Side",
-      "x-parser-schema-id": "Side",
       "type": "string",
       "enum": ["B", "A"],
       "description": "Order side (B = Buy/Bid, A = Ask/Sell)"
     },
     "TimeInForce": {
       "title": "TimeInForce",
-      "$id": "#TimeInForce",
-      "x-parser-schema-id": "TimeInForce",
       "type": "string",
-      "enum": ["IOC", "GTC"],
-      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel)",
+      "enum": ["IOC", "GTC", "GTT"],
+      "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel, GTT = Good Till Time)",
       "example": "GTC"
     },
     "OrderType": {
       "title": "OrderType",
-      "$id": "#OrderType",
-      "x-parser-schema-id": "OrderType",
       "type": "string",
-      "enum": ["LIMIT", "TP", "SL"],
-      "description": "Order type, (LIMIT = Limit, TP = Take Profit, SL = Stop Loss)",
-      "example": "TP"
+      "enum": ["LIMIT", "STOP_LOSS", "TAKE_PROFIT"],
+      "description": "Order type aligned with the on-chain `OrderDetails.orderType` enum: LIMIT = limit order, STOP_LOSS = stop-loss trigger order, TAKE_PROFIT = take-profit trigger order.",
+      "example": "TAKE_PROFIT"
     },
     "ExecutionType": {
       "title": "ExecutionType",
-      "$id": "#ExecutionType",
-      "x-parser-schema-id": "ExecutionType",
       "type": "string",
-      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL"],
-      "description": "Type of execution"
+      "enum": ["ORDER_MATCH", "LIQUIDATION", "ADL", "MARKET_CLOSE"],
+      "description": "Type of execution. MARKET_CLOSE is the terminal execution used to close residual positions when a market is force-closed."
     },
     "AccountType": {
       "title": "AccountType",
-      "$id": "#AccountType",
-      "x-parser-schema-id": "AccountType",
       "type": "string",
       "enum": ["MAINPERP", "SUBPERP", "SPOT"],
       "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
     },
     "OrderStatus": {
       "title": "OrderStatus",
-      "$id": "#OrderStatus",
-      "x-parser-schema-id": "OrderStatus",
       "type": "string",
-      "enum": ["OPEN", "FILLED", "CANCELLED", "REJECTED"],
-      "description": "Order status"
+      "enum": ["OPEN", "FILLED", "CANCELLED"],
+      "description": "OPEN includes partially filled resting orders, armed protective stops, and their resting children. FILLED and CANCELLED are terminal states. Use Order.triggered to distinguish armed stops from fired children. Requests rejected before order creation return errors, not order-status rows."
+    },
+    "CancelReason": {
+      "title": "CancelReason",
+      "type": "string",
+      "enum": [
+        "NO_LIQUIDITY",
+        "IOC_REMAINDER",
+        "SELF_TRADE_PREVENTION",
+        "PROTECTIVE_SELF_TRADE_SWEEP",
+        "GTT_EXPIRED",
+        "USER_CANCEL",
+        "MASS_CANCEL",
+        "CANCEL_ALL_AFTER",
+        "FEED_RESET",
+        "RISK_CANCELLED",
+        "RISK_REJECTED",
+        "OCO_SIBLING_FIRED",
+        "POSITION_CLOSED"
+      ],
+      "description": "Machine-readable cancellation reason. Present only on CANCELLED orders and may be omitted when unavailable. See Cancellation reasons in the REST API Order Entry section for per-code meanings and handling."
     },
     "TierType": {
       "title": "TierType",
-      "$id": "#TierType",
-      "x-parser-schema-id": "TierType",
       "type": "string",
       "enum": ["REGULAR", "VIP"],
       "description": "Fee tier type (REGULAR = Standard tier, VIP = VIP tier)"
     },
     "DepthType": {
       "title": "DepthType",
-      "$id": "#DepthType",
-      "x-parser-schema-id": "DepthType",
       "type": "string",
       "enum": ["SNAPSHOT", "UPDATE"],
-      "description": "Depth message type (SNAPSHOT = full book, UPDATE = single level change)"
+      "description": "SNAPSHOT replaces the current depth view; UPDATE applies changed price levels to that view. See the streaming API marketDepth channel for view limits, absolute quantities, boundary changes, and update handling. REST snapshot limits are documented on GET /v2/market/{symbol}/depth."
+    },
+    "DepthSnapshotType": {
+      "title": "DepthSnapshotType",
+      "type": "string",
+      "enum": ["SNAPSHOT"],
+      "description": "Literal discriminator for a bounded depth snapshot."
+    },
+    "DepthUpdateType": {
+      "title": "DepthUpdateType",
+      "type": "string",
+      "enum": ["UPDATE"],
+      "description": "Literal discriminator for a bounded-view depth update."
     },
     "RequestError": {
       "title": "RequestError",
-      "$id": "#RequestError",
-      "x-parser-schema-id": "RequestError",
       "type": "object",
       "required": [
         "error",
@@ -177,14 +206,18 @@
           "type": "string",
           "description": "Human-readable error message",
           "example": "Invalid symbol format"
+        },
+        "retryAfterMs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum wait in milliseconds before retrying the rejected operation. Included for `RATE_LIMITED_ERROR`; omitted for errors without a retry hint, including resting-order caps and `CAPACITY_LIMITED_ERROR`. The same field appears in the REST HTTP 400 body and the order-entry WebSocket's `{ ok: false, error }` response. When present, it is a positive integer. Wait at least this long; it does not reserve capacity, and concurrent requests can consume the account's available budget.",
+          "example": 1500
         }
       },
       "additionalProperties": true
     },
     "ServerError": {
       "title": "ServerError",
-      "$id": "#ServerError",
-      "x-parser-schema-id": "ServerError",
       "type": "object",
       "required": [
         "error",
@@ -204,19 +237,14 @@
     },
     "MarketSummary": {
       "title": "MarketSummary",
-      "$id": "#MarketSummary",
-      "x-parser-schema-id": "MarketSummary",
       "type": "object",
       "required": [
         "symbol",
         "updatedAt",
-        "longOiQty",
-        "shortOiQty",
         "oiQty",
         "fundingRate",
         "longFundingValue",
         "shortFundingValue",
-        "fundingRateVelocity",
         "volume24h"
       ],
       "properties": {
@@ -227,16 +255,6 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Time when the market summary was last calculated (milliseconds)",
           "example": 1747927089946
-        },
-        "longOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Long open interest in lots",
-          "example": "154.741"
-        },
-        "shortOiQty": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Short open interest in lots",
-          "example": "154.706"
         },
         "oiQty": {
           "$ref": "#/definitions/UnsignedDecimal",
@@ -258,11 +276,6 @@
           "description": "Current reference value of funding accrued by one unit of exposure; there is one funding value per market and per direction, with short v long funding values differing possibly due to Auto-Deleveraging (ADL)",
           "example": "412142.26"
         },
-        "fundingRateVelocity": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Funding rate velocity",
-          "example": "-0.00000006243"
-        },
         "volume24h": {
           "$ref": "#/definitions/UnsignedDecimal",
           "example": "917833.49891"
@@ -271,14 +284,19 @@
           "$ref": "#/definitions/SignedDecimal",
           "example": "92.6272285500004"
         },
-        "throttledOraclePrice": {
+        "markPrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last oracle price, at the moment of the last market summary update",
+          "description": "Mark price at the last market summary update: the median of available impact-price, index-plus-premium, and CEX-mark values. Used for PnL, margin, and liquidation calculations.",
           "example": "2666.48162040777"
         },
-        "throttledPoolPrice": {
+        "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Last pool price, at the moment of the last market summary update",
+          "description": "Stork index price for the market's underlying, sourced from CEX feeds. Absent when no fresh index tick is available.",
+          "example": "2666.12048917322"
+        },
+        "throttledMidPrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Last mid price, at the moment of the last market summary update. Absent on an empty or one-sided book.",
           "example": "2666.48166680625"
         },
         "pricesUpdatedAt": {
@@ -291,8 +309,6 @@
     },
     "SpotMarketSummary": {
       "title": "SpotMarketSummary",
-      "$id": "#SpotMarketSummary",
-      "x-parser-schema-id": "SpotMarketSummary",
       "type": "object",
       "required": [
         "symbol",
@@ -320,16 +336,19 @@
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Current oracle price",
+          "description": "Current oracle price: the Stork price for the market's base token, quoted in USDC (also called rUSD in reya network)",
           "example": "2666.48162040777"
+        },
+        "throttledMidPrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Last spot orderbook mid price, at the moment of the last market summary update. Omitted when the book is empty or one-sided.",
+          "example": "2666.48166680625"
         }
       },
       "additionalProperties": true
     },
     "Position": {
       "title": "Position",
-      "$id": "#Position",
-      "x-parser-schema-id": "Position",
       "type": "object",
       "required": [
         "exchangeId",
@@ -379,9 +398,8 @@
     },
     "Order": {
       "title": "Order",
-      "$id": "#Order",
-      "x-parser-schema-id": "Order",
       "type": "object",
+      "description": "Order state returned by openOrders, orderChanges, and orderHistory. Event streams and history can contain multiple updates for the same order. Field descriptions specify snapshot/event availability; see OrderStatus for lifecycle states.",
       "required": [
         "exchangeId",
         "symbol",
@@ -408,7 +426,17 @@
         },
         "orderId": {
           "type": "string",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
+        },
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Monotonic order-event sequence. Present on orderHistory REST rows and orderChanges WS event rows; omitted on openOrders and other resting-order snapshots. Use it to deduplicate inclusive orderHistory page-boundary overlap and to splice orderHistory with the orderChanges live stream.",
+          "example": 152954
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Client-provided order ID, as a decimal string (`uint64`). Present when the order has a non-zero client id; omitted otherwise.",
+          "example": "123456789"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
@@ -421,12 +449,17 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
+        },
+        "avgFillPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
+          "example": "3450.25"
         },
         "firstFillId": {
           "type": "string",
-          "description": "Matching-engine fill nonce of the first fill this update represents. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. For a taker update, the first fill of its matching round; for a maker update, its single fill. Present only on fill updates; absent for non-fill updates and resting-order snapshots.",
+          "description": "Identifier of the first fill this update represents. Together with fillCount it identifies the fills as a contiguous ID range [firstFillId, firstFillId + fillCount - 1]. For a taker update, the first fill of its matching round; for a maker update, its single fill. Present only on fill updates; absent for non-fill updates and resting-order snapshots.",
           "example": "7205759403792794624"
         },
         "fillCount": {
@@ -449,14 +482,29 @@
           "description": "Price at which TP/SL orders will be triggered, should not be set for other order types.",
           "example": "50000.0"
         },
+        "triggered": {
+          "type": "boolean",
+          "description": "For protective stops, false means armed and true means fired; never true for LIMIT orders. Fired children are cancel-only. Omitted on orderHistory, where absence means unknown: use openOrders or walletOrderChanges to distinguish phases. On those two surfaces, omission on older deployments can be treated as false. See POST /v2/createOrder for firing and child-order behavior.",
+          "example": false
+        },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "Order time in force, exclusively used for LIMIT orders",
+          "description": "Order time in force. For a `LIMIT` order it shapes execution directly. For a `STOP_LOSS` / `TAKE_PROFIT` it is the time in force the child order takes on when the trigger fires: `IOC` fills what the book offers and cancels the remainder, `GTC` and `GTT` rest the remainder in the book.",
           "example": "GTC"
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Signed GTT expiry (`OrderDetails.expiresAfter`); omitted for GTC and IOC. For a protective stop, the same expiry covers both the armed stop and its fired child; firing does not start a new lifetime. The stop or its resting child can be cancelled before this timestamp to allow settlement, with `cancelReason: GTT_EXPIRED`.",
+          "example": 1676923200
         },
         "reduceOnly": {
           "type": "boolean",
-          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders. `STOP_LOSS` / `TAKE_PROFIT` orders and the children they fire into are reduce-only by construction — they close the position and can never open one — yet still report `false` here, because this field mirrors the signed on-chain `OrderDetails.reduceOnly`. Do not read `false` on a stop as permission to open a position.",
+          "example": false
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`.",
           "example": false
         },
         "status": {
@@ -469,16 +517,67 @@
         },
         "lastUpdateAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Last update timestamp (milliseconds)",
+          "description": "Last update timestamp in milliseconds. For orderChanges WebSocket events and orderHistory REST rows this is the order event timestamp used by orderHistory startTime/endTime filters.",
           "example": 1747927089946
+        },
+        "cancelReason": {
+          "$ref": "#/definitions/CancelReason",
+          "description": "Machine-readable reason the order was cancelled. Present only when `status` is `CANCELLED`; absent otherwise."
+        },
+        "cancelReasonMessage": {
+          "type": "string",
+          "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
+          "example": "Order cancelled because it would have matched your own resting order"
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderChangesSnapshot": {
+      "title": "OrderChangesSnapshot",
+      "type": "object",
+      "description": "Initial orderChanges subscription payload: current open orders and the sequence cursor that separates this snapshot from subsequent updates. See the walletOrderChanges channel for stream handling.",
+      "required": [
+        "data",
+        "snapshotSequenceNumber"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "description": "Current open-orders snapshot. Snapshot orders do not include `sequenceNumber`; the snapshot boundary is represented by `snapshotSequenceNumber`.",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "snapshotSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Order-event sequence at which the snapshot was taken. Subsequent orderChanges WS messages on this subscription have `Order.sequenceNumber` greater than this cursor.",
+          "example": 152954
+        }
+      },
+      "additionalProperties": true
+    },
+    "OrderHistoryList": {
+      "title": "OrderHistoryList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Order"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
     },
     "AccountBalance": {
       "title": "AccountBalance",
-      "$id": "#AccountBalance",
-      "x-parser-schema-id": "AccountBalance",
       "type": "object",
       "required": [
         "accountId",
@@ -510,8 +609,6 @@
     },
     "PerpExecutionList": {
       "title": "PerpExecutionList",
-      "$id": "#PerpExecutionList",
-      "x-parser-schema-id": "PerpExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -532,16 +629,15 @@
     },
     "PerpExecution": {
       "title": "PerpExecution",
-      "$id": "#PerpExecution",
-      "x-parser-schema-id": "PerpExecution",
       "type": "object",
+      "description": "A settled perp execution. Maker-side fields are optional. They are always omitted for ADL and MARKET_CLOSE executions, which are single-sided and have no maker, and can also be absent on legacy executions.",
       "required": [
         "exchangeId",
         "symbol",
-        "accountId",
+        "takerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -555,30 +651,77 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty). Absent for ADL and MARKET_CLOSE executions, which have no maker, and when no counterparty is available on a legacy execution.",
+          "example": 67890
+        },
+        "takerOrderId": {
+          "type": "string",
+          "description": "Order ID for the taker. Absent for legacy V2 executions and omitted when not meaningful.",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker. Absent for legacy V2, ADL, and MARKET_CLOSE executions and omitted when not meaningful.",
+          "example": "63552420037263360"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
           "example": "1.0"
         },
         "side": {
-          "$ref": "#/definitions/Side"
+          "$ref": "#/definitions/Side",
+          "description": "Execution side from the taker perspective for ORDER_MATCH executions."
         },
         "price": {
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Total execution fee in rUSD",
+          "description": "Gross taker fee debit in rUSD (signed; positive means the taker paid a fee). When a fee breakdown is present, this equals `protocolFeeCredit + referrerFeeCredit + takerRebateCredit + poolFeeCredit`.",
           "example": "0.50"
         },
-        "openingFee": {
+        "protocolFeeCredit": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the total fee in rUSD. Absent for position-extending executions.",
+          "description": "Protocol component of `takerFee`, in rUSD. Present when the execution includes a fee breakdown; omitted on older executions.",
+          "example": "0.30"
+        },
+        "referrerFeeCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Referral component of `takerFee`, in rUSD. Zero when the taker has no referrer. Present when the execution includes a fee breakdown; omitted on older executions.",
+          "example": "0.05"
+        },
+        "takerRebateCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Rebate component of `takerFee`, in rUSD. It is part of the gross taker debit and is not necessarily an immediate credit back to the taker. Present when the execution includes a fee breakdown; omitted on older executions.",
+          "example": "0.10"
+        },
+        "poolFeeCredit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Passive-pool component of `takerFee`, in rUSD. Present when the execution includes a fee breakdown; omitted on older executions.",
+          "example": "0.05"
+        },
+        "makerFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Signed net maker fee in rUSD (negative means rebate). Available only on older executions with a recorded maker fee or rebate. Omitted on executions with the current taker-fee breakdown and on ADL and MARKET_CLOSE executions.",
+          "example": "-0.10"
+        },
+        "takerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.",
           "example": "0.25"
+        },
+        "makerOpeningFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening portion of `makerFee`, in rUSD. Omitted when `makerFee` is absent and on position-extending executions.",
+          "example": "-0.05"
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -593,28 +736,46 @@
           "description": "Execution sequence number, increases by 1 for every perp execution in reya chain",
           "example": 152954
         },
-        "realizedPnl": {
+        "fillId": {
+          "type": "string",
+          "description": "Stable fill identifier. Use it to correlate the execution with the fill range reported by order responses and order updates.",
+          "example": "42"
+        },
+        "takerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized PnL from this execution in rUSD (priceVariationPnl + fundingPnl). Absent for position-extending executions.",
+          "description": "Realized taker PnL from this execution in rUSD (takerPriceVariationPnl + takerFundingPnl). Absent for position-extending executions.",
           "example": "12.50"
         },
-        "priceVariationPnl": {
+        "makerRealizedPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from price movement in rUSD. Absent for position-extending executions.",
+          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "example": "-12.50"
+        },
+        "takerPriceVariationPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from price movement in rUSD. Absent for position-extending executions.",
           "example": "15.00"
         },
-        "fundingPnl": {
+        "makerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "PnL component from funding payments in rUSD. Absent for position-extending executions.",
+          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "example": "-15.00"
+        },
+        "takerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Taker PnL component from funding payments in rUSD. Absent for position-extending executions.",
           "example": "-2.50"
+        },
+        "makerFundingPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "example": "2.50"
         }
       },
       "additionalProperties": true
     },
     "SpotExecutionList": {
       "title": "SpotExecutionList",
-      "$id": "#SpotExecutionList",
-      "x-parser-schema-id": "SpotExecutionList",
       "type": "object",
       "required": [
         "data",
@@ -633,18 +794,166 @@
       },
       "additionalProperties": true
     },
+    "TransferType": {
+      "title": "TransferType",
+      "type": "string",
+      "enum": [
+        "DEPOSIT",
+        "WITHDRAWAL",
+        "TRANSFER",
+        "POOL_STAKE",
+        "POOL_UNSTAKE",
+        "PERP_TAKER_FEE",
+        "PERP_REFERRER_REBATE",
+        "PERP_TAKER_REBATE",
+        "PERP_POOL_REBATE",
+        "PERP_FEE",
+        "SPOT_EXECUTION",
+        "AUTO_EXCHANGE",
+        "AUTO_EXCHANGE_INSURANCE_FEE",
+        "LIQUIDATION_INSURANCE_FEE",
+        "LIQUIDATION_BACKSTOP_FEE",
+        "LIQUIDATION_LIQUIDATOR_REWARD",
+        "LIQUIDATION_KEEPER_REWARD",
+        "LIQUIDATION_BID_FEE",
+        "INSURANCE_FUND_COVERAGE",
+        "POOL_MERGE",
+        "OTHER"
+      ],
+      "description": "Purpose of a transfer entry; direction is given by the sign of amount. See GET /v2/wallet/{address}/transfers, Transfer types, for the meaning of each value."
+    },
+    "Transfer": {
+      "title": "Transfer",
+      "type": "object",
+      "description": "A settled collateral movement from the perspective of accountId. See GET /v2/wallet/{address}/transfers for coverage, transfer types, pagination, and reconciliation. Field descriptions define signs, units, and optional execution links.",
+      "required": [
+        "sequenceNumber",
+        "accountId",
+        "asset",
+        "amount",
+        "netDepositsAfter",
+        "type",
+        "timestamp",
+        "transactionHash"
+      ],
+      "properties": {
+        "sequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unique entry ID, increasing in settlement order and never reused. Use it to order and deduplicate entries; do not infer transfer details from its numeric value.",
+          "example": 273183852
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The account this entry belongs to.",
+          "example": 12345
+        },
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "RUSD"
+        },
+        "amount": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Amount in asset, signed from this account's perspective: negative for outgoing collateral and positive for incoming collateral.",
+          "example": "-0.50"
+        },
+        "netDepositsAfter": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Net deposits of accountId in asset immediately after this entry, on the same basis as AccountBalance.balanceDEPRECATED. Excludes realized PnL and is not realBalance. See the transfers endpoint's Reconciliation section.",
+          "example": "1024.25"
+        },
+        "type": {
+          "$ref": "#/definitions/TransferType"
+        },
+        "counterpartyAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The other account involved in the transfer. Omitted for deposits, withdrawals, pool stakes, and pool unstakes.",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market of the related execution: the perp market for fee and rebate entries, or the spot market for spot trades and auto-exchanges. Omitted for unrelated movements and may be absent on historical perp fee entries.",
+          "example": "BTCRUSDPERP"
+        },
+        "spotExecutionSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "`SpotExecution.sequenceNumber` of the spot trade or auto-exchange that caused the entry. Spot entries only.",
+          "example": 9911
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Fill identifier linking this entry to PerpExecution.fillId or SpotExecution.fillId. Omitted for deposits, liquidations, auto-exchanges, and dust settlements; historical perp fee entries may also omit it.",
+          "example": "42"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Block timestamp of the transfer (milliseconds)",
+          "example": 1747927089946
+        },
+        "transactionHash": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "description": "Hash of the transaction that emitted the transfer",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
+    "CursorPaginationMeta": {
+      "title": "CursorPaginationMeta",
+      "type": "object",
+      "required": [
+        "limit",
+        "count"
+      ],
+      "properties": {
+        "limit": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items requested, after the server cap",
+          "example": 100
+        },
+        "count": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of items returned",
+          "example": 50
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Opaque cursor for the next page. Pass it unchanged as cursor; omitted when no further page is available. See the transfers endpoint's Pagination section for traversal rules.",
+          "example": "djEuNTQ2MzY3NzA2LjA"
+        }
+      },
+      "additionalProperties": true
+    },
+    "TransferList": {
+      "title": "TransferList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Transfer"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/CursorPaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
     "SpotExecution": {
       "title": "SpotExecution",
-      "$id": "#SpotExecution",
-      "x-parser-schema-id": "SpotExecution",
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "makerAccountId",
         "qty",
         "side",
-        "fee",
+        "takerFee",
         "price",
         "type",
         "timestamp",
@@ -658,8 +967,9 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "makerAccountId": {
@@ -667,7 +977,7 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
           "description": "Order ID for the taker",
           "example": "63552420354981888"
@@ -688,8 +998,9 @@
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
-        "fee": {
+        "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Signed taker fee impact in rUSD. Positive means the taker paid a fee.",
           "example": "0.0"
         },
         "type": {
@@ -704,14 +1015,17 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Execution sequence number, increases by 1 for every spot execution in reya chain",
           "example": 152954
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Stable fill identifier. Use it to correlate the execution with the fill range reported by order responses and order updates.",
+          "example": "42"
         }
       },
       "additionalProperties": true
     },
-    "SpotExecutionBustList": {
-      "title": "SpotExecutionBustList",
-      "$id": "#SpotExecutionBustList",
-      "x-parser-schema-id": "SpotExecutionBustList",
+    "ExecutionBustList": {
+      "title": "ExecutionBustList",
       "type": "object",
       "required": [
         "data",
@@ -721,7 +1035,7 @@
         "data": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SpotExecutionBust"
+            "$ref": "#/definitions/ExecutionBust"
           }
         },
         "meta": {
@@ -730,17 +1044,1052 @@
       },
       "additionalProperties": true
     },
-    "SpotExecutionBust": {
-      "title": "SpotExecutionBust",
-      "$id": "#SpotExecutionBust",
-      "x-parser-schema-id": "SpotExecutionBust",
+    "ExecutionBustReason": {
+      "title": "ExecutionBustReason",
+      "description": "Machine-readable decoded execution-bust reason. This is a discriminated union keyed by `reasonName`. Known contract errors have strict typed shapes; decoded-but-unmodeled ABI errors use the `ExecutionBustReasonUnmapped` fallback with string-valued `args`.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ExecutionBustReasonNameOnly"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountNotFound"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonExchangeNotFound"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarketNotFound"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnauthorized"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnauthorizedSigner"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnauthorizedMatchingEnginePublisher"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonSignerNonceAlreadyUsed"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarkPriceStale"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonPriceDeviationTooLarge"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonStalePriceDetected"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountBelowIM"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonReduceOnlyConditionFailed"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonOrderExpired"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMaxQuantityExceeded"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarketTypeMismatch"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonMarketIdMismatch"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonBaseDeltaWrongSpacing"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonPriceWrongSpacing"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonInvalidFillPrice"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonFillExceedsOrderBaseDelta"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonFeatureUnavailable"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonCollateralIsNotQuote"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonCollateralCapExceeded"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonCollateralPoolCollision"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonOpenInterestExceeded"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountType"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonNegativeAccountRealBalance"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonAccountInsolvent"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonSameAccountId"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonDecodedLegacy"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnknown"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonUnmapped"
+        }
+      ]
+    },
+    "ExecutionBustReasonNameOnly": {
+      "title": "ExecutionBustReasonNameOnly",
+      "type": "object",
+      "required": [
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "InvalidSignature",
+            "SignatureInvalid",
+            "SignatureExpired",
+            "SmallOrderSize",
+            "DustyOrderSize",
+            "InvalidFilledExposures",
+            "StorkPayloadOlderThanLatest",
+            "ZeroSlTpOrderSize"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountNotFound": {
+      "title": "ExecutionBustReasonAccountNotFound",
+      "type": "object",
+      "required": [
+        "accountId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "AccountNotFound"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that does not exist.",
+          "example": 12345
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonExchangeNotFound": {
+      "title": "ExecutionBustReasonExchangeNotFound",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "ExchangeNotFound"
+          ]
+        },
+        "exchangeId": {
+          "type": "integer",
+          "description": "Exchange identifier that does not exist.",
+          "example": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarketNotFound": {
+      "title": "ExecutionBustReasonMarketNotFound",
+      "type": "object",
+      "required": [
+        "marketId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarketNotFound"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier that does not exist.",
+          "example": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnauthorized": {
+      "title": "ExecutionBustReasonUnauthorized",
+      "type": "object",
+      "required": [
+        "address",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "Unauthorized"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "description": "Address that is not authorized.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnauthorizedSigner": {
+      "title": "ExecutionBustReasonUnauthorizedSigner",
+      "type": "object",
+      "required": [
+        "signer",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "UnauthorizedSigner"
+          ]
+        },
+        "signer": {
+          "type": "string",
+          "description": "Signer address that is not authorized to trade for the account.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnauthorizedMatchingEnginePublisher": {
+      "title": "ExecutionBustReasonUnauthorizedMatchingEnginePublisher",
+      "type": "object",
+      "required": [
+        "publisher",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "UnauthorizedMatchingEnginePublisher"
+          ]
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Address associated with the publisher authorization failure.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonSignerNonceAlreadyUsed": {
+      "title": "ExecutionBustReasonSignerNonceAlreadyUsed",
+      "type": "object",
+      "required": [
+        "signer",
+        "nonce",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "SignerNonceAlreadyUsed"
+          ]
+        },
+        "signer": {
+          "type": "string",
+          "description": "Signer address that already used the nonce.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Signer nonce that was already consumed. Kept as a string because contract nonces are uint256.",
+          "example": "42"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarkPriceStale": {
+      "title": "ExecutionBustReasonMarkPriceStale",
+      "type": "object",
+      "required": [
+        "marketId",
+        "priceTimestamp",
+        "blockTimestamp",
+        "maxStaleDuration",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarkPriceStale"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier whose mark price is stale.",
+          "example": 4
+        },
+        "priceTimestamp": {
+          "type": "integer",
+          "description": "Timestamp carried by the price update.",
+          "example": 1700000000
+        },
+        "blockTimestamp": {
+          "type": "integer",
+          "description": "Block timestamp observed by the contracts.",
+          "example": 1700000121
+        },
+        "maxStaleDuration": {
+          "type": "integer",
+          "description": "Maximum allowed price staleness in seconds.",
+          "example": 60
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonPriceDeviationTooLarge": {
+      "title": "ExecutionBustReasonPriceDeviationTooLarge",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ExecutionBustReasonPassivePerpPriceDeviationTooLarge"
+        },
+        {
+          "$ref": "#/definitions/ExecutionBustReasonSpotPriceDeviationTooLarge"
+        }
+      ],
+      "description": "PriceDeviationTooLarge has two contract shapes: passive-perp includes marketId/price/referencePrice/maxDeviation, while spot/core includes fillPrice/oraclePrice/oracleDeviation."
+    },
+    "ExecutionBustReasonPassivePerpPriceDeviationTooLarge": {
+      "title": "ExecutionBustReasonPassivePerpPriceDeviationTooLarge",
+      "type": "object",
+      "required": [
+        "marketId",
+        "price",
+        "referencePrice",
+        "maxDeviation",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "PriceDeviationTooLarge"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier whose fill price deviated too far.",
+          "example": 8
+        },
+        "price": {
+          "type": "string",
+          "description": "Fill price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "referencePrice": {
+          "type": "string",
+          "description": "Reference price decoded from an 18-decimal fixed-point contract value.",
+          "example": "100"
+        },
+        "maxDeviation": {
+          "type": "string",
+          "description": "Maximum allowed price deviation decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.05"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonSpotPriceDeviationTooLarge": {
+      "title": "ExecutionBustReasonSpotPriceDeviationTooLarge",
+      "type": "object",
+      "required": [
+        "fillPrice",
+        "oraclePrice",
+        "oracleDeviation",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "PriceDeviationTooLarge"
+          ]
+        },
+        "fillPrice": {
+          "type": "string",
+          "description": "Fill price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "oraclePrice": {
+          "type": "string",
+          "description": "Oracle price decoded from an 18-decimal fixed-point contract value.",
+          "example": "100"
+        },
+        "oracleDeviation": {
+          "type": "string",
+          "description": "Oracle deviation threshold decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.05"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonStalePriceDetected": {
+      "title": "ExecutionBustReasonStalePriceDetected",
+      "type": "object",
+      "required": [
+        "nodeId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "StalePriceDetected"
+          ]
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Oracle node identifier that returned a stale price.",
+          "example": "0xabc"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountBelowIM": {
+      "title": "ExecutionBustReasonAccountBelowIM",
+      "type": "object",
+      "required": [
+        "accountId",
+        "delta",
+        "shortfall",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "AccountBelowIM"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that is below initial margin.",
+          "example": 1234
+        },
+        "delta": {
+          "type": "string",
+          "description": "Signed initial-margin delta decoded from an 18-decimal fixed-point contract value.",
+          "example": "-321"
+        },
+        "shortfall": {
+          "type": "string",
+          "description": "Absolute initial-margin shortfall decoded from an 18-decimal fixed-point contract value.",
+          "example": "321"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonReduceOnlyConditionFailed": {
+      "title": "ExecutionBustReasonReduceOnlyConditionFailed",
+      "type": "object",
+      "required": [
+        "marketId",
+        "accountId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "ReduceOnlyConditionFailed"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier for the reduce-only check.",
+          "example": 5
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier for the reduce-only check.",
+          "example": 1234
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonOrderExpired": {
+      "title": "ExecutionBustReasonOrderExpired",
+      "type": "object",
+      "required": [
+        "expiredAt",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "OrderExpired"
+          ]
+        },
+        "expiredAt": {
+          "type": "integer",
+          "description": "Order expiration timestamp.",
+          "example": 1700000000
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMaxQuantityExceeded": {
+      "title": "ExecutionBustReasonMaxQuantityExceeded",
+      "type": "object",
+      "required": [
+        "updatedQuantity",
+        "maxQuantity",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MaxQuantityExceeded"
+          ]
+        },
+        "updatedQuantity": {
+          "type": "string",
+          "description": "Updated nonce quantity.",
+          "example": "10"
+        },
+        "maxQuantity": {
+          "type": "string",
+          "description": "Maximum allowed nonce quantity.",
+          "example": "5"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarketTypeMismatch": {
+      "title": "ExecutionBustReasonMarketTypeMismatch",
+      "type": "object",
+      "required": [
+        "accountMarketType",
+        "counterpartyMarketType",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarketTypeMismatch"
+          ]
+        },
+        "accountMarketType": {
+          "type": "integer",
+          "description": "Account-side market type.",
+          "example": 1
+        },
+        "counterpartyMarketType": {
+          "type": "integer",
+          "description": "Counterparty-side market type.",
+          "example": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonMarketIdMismatch": {
+      "title": "ExecutionBustReasonMarketIdMismatch",
+      "type": "object",
+      "required": [
+        "accountMarketId",
+        "counterpartyMarketId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "MarketIdMismatch"
+          ]
+        },
+        "accountMarketId": {
+          "type": "integer",
+          "description": "Account-side market identifier.",
+          "example": 4
+        },
+        "counterpartyMarketId": {
+          "type": "integer",
+          "description": "Counterparty-side market identifier.",
+          "example": 5
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonBaseDeltaWrongSpacing": {
+      "title": "ExecutionBustReasonBaseDeltaWrongSpacing",
+      "type": "object",
+      "required": [
+        "baseDelta",
+        "baseSpacing",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "BaseDeltaWrongSpacing"
+          ]
+        },
+        "baseDelta": {
+          "type": "string",
+          "description": "Base delta decoded from an 18-decimal fixed-point contract value.",
+          "example": "1.5"
+        },
+        "baseSpacing": {
+          "type": "string",
+          "description": "Base spacing decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonPriceWrongSpacing": {
+      "title": "ExecutionBustReasonPriceWrongSpacing",
+      "type": "object",
+      "required": [
+        "price",
+        "priceSpacing",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "PriceWrongSpacing"
+          ]
+        },
+        "price": {
+          "type": "string",
+          "description": "Price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "priceSpacing": {
+          "type": "string",
+          "description": "Price spacing decoded from an 18-decimal fixed-point contract value.",
+          "example": "0.01"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonInvalidFillPrice": {
+      "title": "ExecutionBustReasonInvalidFillPrice",
+      "type": "object",
+      "required": [
+        "fillPrice",
+        "orderPrice",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "InvalidFillPrice"
+          ]
+        },
+        "fillPrice": {
+          "type": "string",
+          "description": "Fill price decoded from an 18-decimal fixed-point contract value.",
+          "example": "101"
+        },
+        "orderPrice": {
+          "type": "string",
+          "description": "Order limit price decoded from an 18-decimal fixed-point contract value.",
+          "example": "100"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonFillExceedsOrderBaseDelta": {
+      "title": "ExecutionBustReasonFillExceedsOrderBaseDelta",
+      "type": "object",
+      "required": [
+        "fillAmount",
+        "orderBaseDelta",
+        "orderRole",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "FillExceedsOrderBaseDelta"
+          ]
+        },
+        "fillAmount": {
+          "type": "string",
+          "description": "Fill amount decoded from an 18-decimal fixed-point contract value.",
+          "example": "1"
+        },
+        "orderBaseDelta": {
+          "type": "string",
+          "description": "Order base delta decoded from an 18-decimal fixed-point contract value.",
+          "example": "1"
+        },
+        "orderRole": {
+          "type": "string",
+          "enum": [
+            "account",
+            "counterparty"
+          ],
+          "description": "Whether the failed order was the account or counterparty order.",
+          "example": "account"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonFeatureUnavailable": {
+      "title": "ExecutionBustReasonFeatureUnavailable",
+      "type": "object",
+      "required": [
+        "feature",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "FeatureUnavailable"
+          ]
+        },
+        "feature": {
+          "type": "string",
+          "description": "Feature identifier that is disabled.",
+          "example": "1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonCollateralIsNotQuote": {
+      "title": "ExecutionBustReasonCollateralIsNotQuote",
+      "type": "object",
+      "required": [
+        "collateralPoolId",
+        "collateral",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "CollateralIsNotQuote"
+          ]
+        },
+        "collateralPoolId": {
+          "type": "integer",
+          "description": "Collateral pool identifier.",
+          "example": 7
+        },
+        "collateral": {
+          "type": "string",
+          "description": "Collateral address that is not the quote collateral.",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonCollateralCapExceeded": {
+      "title": "ExecutionBustReasonCollateralCapExceeded",
+      "type": "object",
+      "required": [
+        "collateralPoolId",
+        "collateral",
+        "collateralCap",
+        "collateralBalance",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "CollateralCapExceeded"
+          ]
+        },
+        "collateralPoolId": {
+          "type": "integer",
+          "description": "Collateral pool identifier.",
+          "example": 7
+        },
+        "collateral": {
+          "type": "string",
+          "description": "Collateral address whose pool cap was exceeded.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "collateralCap": {
+          "type": "string",
+          "description": "Collateral cap.",
+          "example": "1000"
+        },
+        "collateralBalance": {
+          "type": "string",
+          "description": "Collateral balance.",
+          "example": "1100"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonCollateralPoolCollision": {
+      "title": "ExecutionBustReasonCollateralPoolCollision",
+      "type": "object",
+      "required": [
+        "collateralPoolId",
+        "counterpartyCollateralPoolId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "CollateralPoolCollision"
+          ]
+        },
+        "collateralPoolId": {
+          "type": "integer",
+          "description": "Account collateral pool identifier.",
+          "example": 7
+        },
+        "counterpartyCollateralPoolId": {
+          "type": "integer",
+          "description": "Counterparty collateral pool identifier.",
+          "example": 8
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonOpenInterestExceeded": {
+      "title": "ExecutionBustReasonOpenInterestExceeded",
+      "type": "object",
+      "required": [
+        "marketId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "OpenInterestExceeded"
+          ]
+        },
+        "marketId": {
+          "type": "integer",
+          "description": "Market identifier whose open-interest cap was exceeded.",
+          "example": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountType": {
+      "title": "ExecutionBustReasonAccountType",
+      "type": "object",
+      "required": [
+        "accountId",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "SpotAccount",
+            "NotSpotAccount"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier whose account type failed the check.",
+          "example": 1234
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonNegativeAccountRealBalance": {
+      "title": "ExecutionBustReasonNegativeAccountRealBalance",
+      "type": "object",
+      "required": [
+        "accountId",
+        "realBalance",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "NegativeAccountRealBalance"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier with negative real balance.",
+          "example": 1234
+        },
+        "realBalance": {
+          "type": "string",
+          "description": "Real balance decoded from an 18-decimal fixed-point contract value.",
+          "example": "-1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonAccountInsolvent": {
+      "title": "ExecutionBustReasonAccountInsolvent",
+      "type": "object",
+      "required": [
+        "accountId",
+        "marginBalance",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "AccountInsolvent"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that is insolvent.",
+          "example": 1234
+        },
+        "marginBalance": {
+          "type": "string",
+          "description": "Margin balance decoded from an 18-decimal fixed-point contract value.",
+          "example": "-1"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonSameAccountId": {
+      "title": "ExecutionBustReasonSameAccountId",
+      "type": "object",
+      "required": [
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "SameAccountId"
+          ]
+        },
+        "accountId": {
+          "type": "integer",
+          "description": "Account identifier that matched itself, when emitted by the contract.",
+          "example": 1234
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonDecodedLegacy": {
+      "title": "ExecutionBustReasonDecodedLegacy",
+      "type": "object",
+      "required": [
+        "message",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "DecodedReason"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Already-decoded legacy string preserved as a message.",
+          "example": "Account below required margin"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnknown": {
+      "title": "ExecutionBustReasonUnknown",
+      "type": "object",
+      "required": [
+        "message",
+        "reasonName"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "enum": [
+            "UnknownReason"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Support-facing fallback for undecodable or empty revert bytes.",
+          "example": "Unknown reason, reach out for support"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBustReasonUnmapped": {
+      "title": "ExecutionBustReasonUnmapped",
+      "type": "object",
+      "required": [
+        "reasonName",
+        "args"
+      ],
+      "properties": {
+        "reasonName": {
+          "type": "string",
+          "description": "Decoded custom-error name not explicitly modeled by this schema.",
+          "example": "HigherExecutionPrice"
+        },
+        "args": {
+          "type": "object",
+          "description": "Named ABI inputs, or arg0/arg1 fallback names, encoded as strings to avoid precision loss.",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "example": {
+            "executionPrice": "101000000000000000000",
+            "priceLimit": "100000000000000000000"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionBust": {
+      "title": "ExecutionBust",
       "type": "object",
       "required": [
         "symbol",
-        "accountId",
+        "takerAccountId",
         "exchangeId",
         "makerAccountId",
-        "orderId",
+        "takerOrderId",
         "makerOrderId",
         "qty",
         "side",
@@ -751,10 +2100,12 @@
       ],
       "properties": {
         "symbol": {
-          "$ref": "#/definitions/Symbol"
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
         },
-        "accountId": {
+        "takerAccountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
           "example": 12345
         },
         "exchangeId": {
@@ -766,9 +2117,9 @@
           "description": "Maker account ID (counterparty)",
           "example": 67890
         },
-        "orderId": {
+        "takerOrderId": {
           "type": "string",
-          "description": "Order ID for the taker",
+          "description": "Taker order ID",
           "example": "63552420354981888"
         },
         "makerOrderId": {
@@ -789,9 +2140,8 @@
           "example": "43000.00"
         },
         "reason": {
-          "type": "string",
-          "description": "Hex-encoded revert reason bytes",
-          "example": "08c379a0..."
+          "$ref": "#/definitions/ExecutionBustReason",
+          "description": "Structured settlement failure reason. Use `reasonName` and the accompanying fields to interpret why the execution was reverted."
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -800,35 +2150,33 @@
         },
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Execution sequence number, increases by 1 for every spot execution bust in reya chain",
+          "description": "Execution sequence number, increases by 1 for every execution bust in reya chain",
           "example": 152954
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Stable fill identifier. Use it to correlate the execution bust with its execution and order update.",
+          "example": "42"
         }
       },
       "additionalProperties": true
     },
-    "Price": {
-      "title": "Price",
-      "$id": "#Price",
-      "x-parser-schema-id": "Price",
+    "AssetOraclePrice": {
+      "title": "AssetOraclePrice",
       "type": "object",
       "required": [
-        "symbol",
+        "asset",
         "updatedAt",
         "oraclePrice"
       ],
       "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
+        "asset": {
+          "$ref": "#/definitions/Asset"
         },
         "oraclePrice": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Price given by the Stork feeds, used both as the peg price for prices on Reya, as well as Mark Prices. The Stork price feed is usually the perp prices across three major CEXs",
-          "example": "43000.00"
-        },
-        "poolPrice": {
-          "$ref": "#/definitions/PriceValue",
-          "description": "The price currently quoted by the AMM for zero volume, from which trades are priced (equivalent to mid price in an order book); a trade of any size will be move this price up or down depending on the direction.",
-          "example": "42999.50"
+          "description": "Asset oracle price supplied by Stork.",
+          "example": "1.0000"
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -841,8 +2189,6 @@
 
     "MarketDefinition": {
       "title": "MarketDefinition",
-      "$id": "#MarketDefinition",
-      "x-parser-schema-id": "MarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -903,8 +2249,6 @@
     },
     "SpotMarketDefinition": {
       "title": "SpotMarketDefinition",
-      "$id": "#SpotMarketDefinition",
-      "x-parser-schema-id": "SpotMarketDefinition",
       "type": "object",
       "required": [
         "symbol",
@@ -954,8 +2298,6 @@
     },
     "Account": {
       "title": "Account",
-      "$id": "#Account",
-      "x-parser-schema-id": "Account",
       "type": "object",
       "required": [
         "accountId",
@@ -979,8 +2321,6 @@
     },
     "AssetDefinition": {
       "title": "AssetDefinition",
-      "$id": "#AssetDefinition",
-      "x-parser-schema-id": "AssetDefinition",
       "type": "object",
       "required": [
         "asset",
@@ -1029,8 +2369,6 @@
     },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
-      "$id": "#CandleHistoryData",
-      "x-parser-schema-id": "CandleHistoryData",
       "type": "object",
       "required": [
         "t",
@@ -1085,14 +2423,12 @@
     },
     "FeeTierParameters": {
       "title": "FeeTierParameters",
-      "$id": "#FeeTierParameters",
-      "x-parser-schema-id": "FeeTierParameters",
       "type": "object",
       "required": [
         "tierId",
         "takerFee",
         "makerFee",
-        "volume14d",
+        "volume30d",
         "tierType"
       ],
       "properties": {
@@ -1110,9 +2446,9 @@
           "description": "Maker fee rate (fee will be qty * makerFee)",
           "example": "0.0002"
         },
-        "volume14d": {
+        "volume30d": {
           "$ref": "#/definitions/UnsignedDecimal",
-          "description": "14-day volume level required this fee tier to be applied to a wallet",
+          "description": "30-day volume level required for this fee tier to be applied to a wallet",
           "example": "10000.0"
         },
         "tierType": {
@@ -1123,8 +2459,6 @@
     },
     "GlobalFeeParameters": {
       "title": "GlobalFeeParameters",
-      "$id": "#GlobalFeeParameters",
-      "x-parser-schema-id": "GlobalFeeParameters",
       "type": "object",
       "required": [
         "ogDiscount",
@@ -1156,37 +2490,8 @@
       },
       "additionalProperties": true
     },
-    "LiquidityParameters": {
-      "title": "LiquidityParameters",
-      "$id": "#LiquidityParameters",
-      "x-parser-schema-id": "LiquidityParameters",
-      "type": "object",
-      "required": [
-        "symbol",
-        "depth",
-        "velocityMultiplier"
-      ],
-      "properties": {
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "depth": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Parameter determining the liquidity distribution along the AMM pricing curve, in particular expanding or contracting the max exposure parameter that would otherwise be determined by the capital available.",
-          "example": "1000.0"
-        },
-        "velocityMultiplier": {
-          "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Parameter determining the sensitivity of the dynamic funding rate to the size of the imbalances; higher multiplier means that the funding rate will diverge faster, all else being equal.",
-          "example": "1.5"
-        }
-      },
-      "additionalProperties": true
-    },
     "WalletConfiguration": {
       "title": "WalletConfiguration",
-      "$id": "#WalletConfiguration",
-      "x-parser-schema-id": "WalletConfiguration",
       "type": "object",
       "required": [
         "feeTierId",
@@ -1220,8 +2525,6 @@
     },
     "PaginationMeta": {
       "title": "PaginationMeta",
-      "$id": "#PaginationMeta",
-      "x-parser-schema-id": "PaginationMeta",
       "type": "object",
       "required": [
         "limit",
@@ -1240,109 +2543,154 @@
         },
         "endTime": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Timestamp of last result, in milliseconds",
-          "example": 1756733679000
+          "description": "Timestamp of the last result in response order, in milliseconds. Descending endpoints return newest-first, so this is the oldest returned timestamp and can be used as the next page's endTime boundary.",
+          "example": 1756733579000
         },
         "startTime": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Timestamp of first result, in milliseconds",
-          "example": 1756733579000
+          "description": "Timestamp of the first result in response order, in milliseconds. Descending endpoints return newest-first, so this is the newest returned timestamp.",
+          "example": 1756733679000
         }
       },
       "additionalProperties": true
     },
     "CreateOrderRequest": {
       "title": "CreateOrderRequest",
-      "$id": "#CreateOrderRequest",
-      "x-parser-schema-id": "CreateOrderRequest",
+      "description": "Create an order with an EIP-712 signature, nonce, and deadline. Field descriptions define signed values and order-class requirements. See POST /v2/createOrder for execution and protective-stop behavior.",
       "type": "object",
       "required": [
         "exchangeId",
+        "symbol",
         "accountId",
         "isBuy",
         "limitPx",
         "orderType",
+        "timeInForce",
         "signature",
         "nonce",
-        "signerWallet"
+        "signerWallet",
+        "deadline"
       ],
       "properties": {
         "exchangeId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.exchangeId`.",
           "example": 1
         },
         "symbol": {
-          "$ref": "#/definitions/Symbol"
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. The server resolves this to the on-chain `OrderDetails.marketId`, which uses a unified namespace: perp market ids are raw core ids, spot market ids are `coreMarketId + 1e10`."
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.accountId`.",
           "example": 12345
         },
         "isBuy": {
           "type": "boolean",
-          "description": "Whether this is a buy order",
+          "description": "Whether this is a buy order. Combined with `qty`, determines the signed `OrderDetails.quantity` (int256): positive for buy/long, negative for sell/short.",
           "example": true
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
+          "description": "Worst acceptable execution price. Must be positive (> 0). Maps to signed `OrderDetails.limitPrice` (uint256). For a STOP_LOSS/TAKE_PROFIT, this is the child's worst execution price, not an offset added to `triggerPx`. Keep it within the permitted range around the trigger price. `TRIGGER_LIMIT_OUTSIDE_BAND_ERROR` indicates an out-of-range price or that stops are unavailable for the market.",
           "example": "50000.0"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
+          "description": "Unsigned quantity, required for LIMIT orders; its sign in OrderDetails.quantity follows isBuy. Omit for STOP_LOSS/TAKE_PROFIT and sign the full-position sentinel ±int256.max (raw, not E18), with sign from isBuy. A protective stop takes its executable size from the position when it fires.",
           "example": "0.1"
         },
         "orderType": {
           "$ref": "#/definitions/OrderType",
+          "description": "On-chain `OrderDetails.orderType`: LIMIT, STOP_LOSS, or TAKE_PROFIT.",
           "example": "LIMIT"
         },
         "timeInForce": {
           "$ref": "#/definitions/TimeInForce",
-          "description": "Order time in force, exclusively used for LIMIT orders",
+          "description": "Required signed OrderDetails.timeInForce (0 = GTC, 1 = IOC, 2 = GTT). For a protective stop, selects its fired child's time in force. Only GTT carries expiresAfter; GTC and IOC omit it. See POST /v2/createOrder for execution, expiry, and invalid-combination handling.",
           "example": "GTC"
         },
         "triggerPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Trigger price, only for TP/SL orders",
+          "description": "Trigger price, required for STOP_LOSS/TAKE_PROFIT and omitted for LIMIT. Maps to on-chain `OrderDetails.triggerPrice`. The trigger fires when the market's mark price crosses this level; it is also the reference the `limitPx` band is measured from (see `limitPx`).",
           "example": "50000.0"
         },
         "reduceOnly": {
           "type": "boolean",
-          "description": "Whether this is a reduce-only order, exclusively used for LIMIT IOC orders.",
+          "description": "Reduce-only intent. Required only for perp IOC orders. Omit this field for every other order class: perp GTC/GTT, STOP_LOSS/TAKE_PROFIT, and all spot orders. Sending the field, including `false`, for those order classes is rejected with `INPUT_VALIDATION_ERROR`. Omitted values map to `false` in the signed on-chain `OrderDetails.reduceOnly` field.",
+          "example": false
+        },
+        "postOnly": {
+          "type": "boolean",
+          "description": "Post-only (maker-only) intent for LIMIT GTC/GTT orders; rejected on IOC. Omit for STOP_LOSS/TAKE_PROFIT, including false: triggers sign OrderDetails.postOnly=false. A post-only LIMIT that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR.",
           "example": false
         },
         "signature": {
           "type": "string",
-          "description": "See signatures and nonces section for more details on how to generate.",
+          "description": "EIP-712 signature over the `Order(uint256 verifyingChainId, uint256 deadline, OrderDetails order)` envelope. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "Order nonce, see signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. Maps to on-chain `OrderDetails.nonce`.",
           "example": "1234567890"
         },
         "signerWallet": {
-          "$ref": "#/definitions/Address"
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Maps to on-chain `OrderDetails.signer`."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Required EIP-712 signature-validity deadline, signed into the `Order` envelope. Requests received after this timestamp are rejected. It controls request acceptance only: once accepted, an order remains valid after `deadline` passes. An armed protective stop can still fire afterwards. Use `expiresAfter` to set GTT order lifetime.",
+          "example": 1676923200
         },
         "expiresAfter": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for PERP IOC orders and all SPOT orders). In seconds since epoch. The order will only be filled before this timestamp.",
+          "description": "GTT expiry in Unix seconds, signed as OrderDetails.expiresAfter. Required for GTT, in the future and strictly greater than deadline; omitted for GTC/IOC. A protective stop and its child share this expiry. See POST /v2/createOrder for early cancellation, settlement, and expiry errors.",
           "example": 1676923200
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. Optional field that allows clients to assign their own unique identifier to orders.",
+          "type": "string",
+          "description": "Client-provided correlation ID, signed as OrderDetails.clientOrderId (uint64). Omit when unused; otherwise send a non-zero decimal string to preserve precision.",
           "example": "123456789"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "description": "TP/SL requests must omit both fixed Boolean fields, even when false.",
+            "properties": {
+              "orderType": {
+                "$ref": "#/definitions/TriggerOrderType"
+              }
+            },
+            "required": [
+              "orderType"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "reduceOnly"
+                ]
+              },
+              {
+                "required": [
+                  "postOnly"
+                ]
+              }
+            ]
+          }
+        ]
+      }
     },
     "CreateOrderResponse": {
       "title": "CreateOrderResponse",
-      "$id": "#CreateOrderResponse",
-      "x-parser-schema-id": "CreateOrderResponse",
       "type": "object",
       "required": [
-        "status"
+        "status",
+        "orderId"
       ],
       "properties": {
         "status": {
@@ -1355,27 +2703,298 @@
         },
         "cumQty": {
           "$ref": "#/definitions/Qty",
-          "description": "Total Executed quantity accross all fills where the order is involved.",
+          "description": "Total Executed quantity across all fills where the order is involved.",
           "example": "0.5"
+        },
+        "avgFillPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
+          "example": "3450.25"
         },
         "orderId": {
           "type": "string",
-          "description": "Created order ID (currently generated for all order types except IOC)",
-          "example": "123456789-123123123"
+          "description": "Reya-assigned order ID, generated for all order types including IOC. A no-cross IOC still receives an ID and is returned with status CANCELLED (it never rests).",
+          "example": "490346525705109504"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID echoed back from the request",
+          "type": "string",
+          "description": "Client-provided order ID echoed back from the request, as a decimal string (`uint64`).",
           "example": "123456789"
+        },
+        "cancelReason": {
+          "$ref": "#/definitions/CancelReason",
+          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`, and a self-crossing IOC with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+        },
+        "cancelReasonMessage": {
+          "type": "string",
+          "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
+          "example": "Order cancelled: no fillable liquidity available at the limit"
         },
         "firstFillId": {
           "type": "string",
-          "description": "Matching-engine fill nonce of the first fill this order produced on entry. Together with fillCount it identifies the fills as a contiguous nonce range [firstFillId, firstFillId + fillCount - 1]. Absent if the order did not fill on entry. For a non-IOC (resting) taker, the same first nonce also appears on the order's taker update in the orderChanges channel; an IOC taker is not published to orderChanges, so this response is the only place its fill range is delivered.",
+          "description": "First fill ID produced by this request. With fillCount, identifies [firstFillId, firstFillId + fillCount - 1]. Omitted if no fill occurred. See POST /v2/createOrder, Responses and fill correlation, for joining responses to streamed executions.",
           "example": "7205759403792794624"
         },
         "fillCount": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Number of fills this order produced on entry — the length of the contiguous nonce range starting at firstFillId. Absent if the order did not fill on entry (so it is >= 1 whenever present).",
+          "description": "Number of fills produced by this request, starting at firstFillId. Omitted if no fill occurred; positive whenever present.",
+          "example": 2
+        }
+      },
+      "additionalProperties": true
+    },
+    "ModifyOrderRequest": {
+      "title": "ModifyOrderRequest",
+      "description": "Modify a resting order using its complete intended post-modify state and a fresh signature and nonce. Omitted fields do not inherit existing values. Target by `orderId` or a non-zero `clientOrderId`. See `POST /v2/modifyOrder` for modifiable fields, priority, and execution behavior.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/LimitModifyOrderRequest"
+        },
+        {
+          "$ref": "#/definitions/TriggerModifyOrderRequest"
+        }
+      ]
+    },
+    "ModifyOrderRequestBase": {
+      "title": "ModifyOrderRequestBase",
+      "description": "Modify a resting order using its complete intended post-modify state and a fresh signature and nonce. Omitted fields do not inherit existing values. Target by `orderId` or a non-zero `clientOrderId`. See `POST /v2/modifyOrder` for modifiable fields, priority, and execution behavior.",
+      "type": "object",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "accountId",
+        "isBuy",
+        "limitPx",
+        "timeInForce",
+        "signature",
+        "nonce",
+        "signerWallet",
+        "deadline"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "description": "At least one target identifier is required. If `orderId` is absent, `clientOrderId` must be non-zero.",
+            "allOf": [
+              {
+                "not": {
+                  "properties": {
+                    "orderId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "orderId"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "properties": {
+                    "clientOrderId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "clientOrderId"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Reya-assigned order ID of the order to modify. If present, this is the canonical lookup key; `clientOrderId`, when also present, restates the resting order's immutable client id.",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Restated client-provided order ID, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. If `orderId` is present, this field restates the resting order's immutable client id for signing; omit it when the resting order has no client id. Do not send a placeholder value. The modification cannot assign a new `clientOrderId`.",
+          "example": "123456789"
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol for the order."
+        },
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID that owns the order. Immutable; must match the resting order.",
+          "example": 12345
+        },
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "On-chain `OrderDetails.exchangeId`. Immutable — restate the resting order's value (a mismatch is rejected with `INPUT_VALIDATION_ERROR`).",
+          "example": 1
+        },
+        "isBuy": {
+          "type": "boolean",
+          "description": "Order side. Immutable — restate the resting order's value. Combined with `qty`, sets the signed `OrderDetails.quantity` (int256). A mismatch is rejected with `INPUT_VALIDATION_ERROR`.",
+          "example": true
+        },
+        "timeInForce": {
+          "$ref": "#/definitions/TimeInForce",
+          "description": "On-chain `OrderDetails.timeInForce` (0 = GTC, 1 = IOC, 2 = GTT). Immutable and REQUIRED — restate the resting order's value; a modify never converts between time-in-force values, on a book order or on an armed trigger. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. To give an armed `STOP_LOSS`/`TAKE_PROFIT` a different fired-child time in force, cancel it and create a new one.",
+          "example": "GTC"
+        },
+        "triggerPx": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "On-chain `OrderDetails.triggerPrice`. Modifiable — an armed `STOP_LOSS`/`TAKE_PROFIT` can be re-priced in place (no cancel+recreate); restate the post-modify value. Omit for a `LIMIT` order. Required on a `STOP_LOSS`/`TAKE_PROFIT` modify (full restate); a trigger modify that omits it is rejected. The post-modify `limitPx` and `triggerPx` are re-checked against the market's trigger band, so moving the trigger without moving the limit can itself put the pair outside the band (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
+          "example": "49000.0"
+        },
+        "limitPx": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0). Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately. On a `STOP_LOSS`/`TAKE_PROFIT` modify it is the fired child's worst acceptable price and is re-checked against the market's trigger band alongside the post-modify `triggerPx` (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
+          "example": "50000.0"
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "The post-modify TOTAL order quantity (not remaining). Required for a `LIMIT` modify; omit for a `STOP_LOSS`/`TAKE_PROFIT` modify — a trigger modify restates the signed full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`; protect the whole position). When present, send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
+          "example": "0.1"
+        },
+        "expiresAfter": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Post-modify order expiry (`OrderDetails.expiresAfter`). Omit for GTC and IOC orders; omission never inherits the resting value. GTT modifications must send a future value greater than `deadline`. On an armed `GTT` `STOP_LOSS`/`TAKE_PROFIT` it is a restated immutable: restate the trigger's original shared deadline. A trigger's expiry cannot be extended by modification — cancel it and create a new one.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "description": "Fresh EIP-712 signature over the full post-modify order state — the same `Order` envelope as `createOrder`, with the modified values substituted into `OrderDetails`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "example": "1234567890"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Not modifiable; must match the resting order's signer."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Required EIP-712 signature-validity deadline, signed into the `Order` envelope. It controls acceptance of this modification, not the order's lifetime. Re-signing an armed trigger with a fresh `deadline` does not extend its lifetime, and a deadline that later passes does not disarm it. Use the shared `expiresAfter` to determine a GTT stop's expiry.",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true
+    },
+    "LimitModifyOrderRequest": {
+      "title": "LimitModifyOrderRequest",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ModifyOrderRequestBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "orderType",
+            "reduceOnly",
+            "postOnly"
+          ],
+          "properties": {
+            "orderType": {
+              "$ref": "#/definitions/LimitOrderType",
+              "description": "On-chain `OrderDetails.orderType`. Immutable — restate the resting order's value; a modify never converts between `LIMIT` and `STOP_LOSS`/`TAKE_PROFIT`. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in place (full restate); `orderType` itself stays immutable and is restated at the resting value."
+            },
+            "reduceOnly": {
+              "type": "boolean",
+              "description": "Signed OrderDetails.reduceOnly. Required and immutable on LIMIT modifications. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false; omission never inherits stored state.",
+              "example": false
+            },
+            "postOnly": {
+              "type": "boolean",
+              "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged.",
+              "example": false
+            }
+          }
+        }
+      ]
+    },
+    "TriggerModifyOrderRequest": {
+      "title": "TriggerModifyOrderRequest",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ModifyOrderRequestBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "orderType"
+          ],
+          "properties": {
+            "orderType": {
+              "$ref": "#/definitions/TriggerOrderType",
+              "description": "On-chain `OrderDetails.orderType`. Immutable — restate the resting order's value; a modify never converts between `LIMIT` and `STOP_LOSS`/`TAKE_PROFIT`. A mismatch is rejected with `INPUT_VALIDATION_ERROR`. A `STOP_LOSS`/`TAKE_PROFIT` order is modifiable in place (full restate); `orderType` itself stays immutable and is restated at the resting value."
+            },
+            "reduceOnly": {
+              "not": {},
+              "description": "Must be omitted for TP/SL, including false. The signed value is reconstructed as false."
+            },
+            "postOnly": {
+              "not": {},
+              "description": "Must be omitted for TP/SL, including false. The signed value is reconstructed as false."
+            }
+          }
+        }
+      ]
+    },
+    "ModifyOrderResponse": {
+      "title": "ModifyOrderResponse",
+      "description": "Result of a modification, with the same orderId as before. Fields report immediate execution and resulting order state. See POST /v2/modifyOrder for outcomes and POST /v2/createOrder for shared fill-correlation rules.",
+      "type": "object",
+      "required": [
+        "status",
+        "orderId"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/OrderStatus"
+        },
+        "execQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Quantity filled immediately by this modification. Present only when the modification crossed and executed.",
+          "example": "0.5"
+        },
+        "cumQty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Total executed quantity across the order's lifetime, including fills from before the modification.",
+          "example": "0.5"
+        },
+        "avgFillPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
+          "example": "3450.25"
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Order ID — unchanged by the modification (the same ID the order had before).",
+          "example": "490346525705109504"
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "Client-provided order ID preserved from order creation, as a decimal string (`uint64`).",
+          "example": "123456789"
+        },
+        "cancelReason": {
+          "$ref": "#/definitions/CancelReason",
+          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED` — for a self-crossing non-post-only modify this is `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+        },
+        "cancelReasonMessage": {
+          "type": "string",
+          "description": "Human-readable explanation of `cancelReason`. Present only when `cancelReason` is present.",
+          "example": "Order cancelled because it would have matched your own resting order"
+        },
+        "firstFillId": {
+          "type": "string",
+          "description": "First fill ID produced by this request. With fillCount, identifies [firstFillId, firstFillId + fillCount - 1]. Omitted if no fill occurred. See POST /v2/createOrder, Responses and fill correlation, for joining responses to streamed executions.",
+          "example": "7205759403792794624"
+        },
+        "fillCount": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of fills produced by this request, starting at firstFillId. Omitted if no fill occurred; positive whenever present.",
           "example": 2
         }
       },
@@ -1383,45 +3002,77 @@
     },
     "CancelOrderRequest": {
       "title": "CancelOrderRequest",
-      "$id": "#CancelOrderRequest",
-      "x-parser-schema-id": "CancelOrderRequest",
+      "description": "Cancel a live order by orderId, or a non-zero clientOrderId when orderId is absent. Supports spot, perp, and protective stops. See POST /v2/cancelOrder for signer requirements.",
       "type": "object",
       "required": [
-        "signature"
+        "symbol",
+        "signature",
+        "accountId",
+        "nonce",
+        "deadline"
       ],
+      "not": {
+        "description": "At least one target identifier is required. If `orderId` is absent, `clientOrderId` must be non-zero.",
+        "allOf": [
+          {
+            "not": {
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "clientOrderId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientOrderId"
+              ]
+            }
+          }
+        ]
+      },
       "properties": {
         "orderId": {
           "type": "string",
-          "description": "Internal matching engine order ID to cancel. At least one of `orderId` or `clientOrderId` must be provided; if both are supplied the server treats `orderId` as the canonical identifier and `clientOrderId` is ignored. For spot markets, this is the order ID returned in the CreateOrderResponse.",
+          "description": "Reya-assigned order ID to cancel, as returned by `CreateOrderResponse`. Provide `orderId`, or a non-zero `clientOrderId` when `orderId` is absent. If both are supplied, `orderId` takes precedence and `clientOrderId` is ignored.",
           "example": "490346525705109504"
         },
         "clientOrderId": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Client-provided order ID for tracking and correlation. At least one of `orderId` or `clientOrderId` must be provided; `clientOrderId` is consulted only when `orderId` is absent. This is the same clientOrderId provided in CreateOrderRequest.",
+          "type": "string",
+          "description": "Client-provided order ID for tracking and correlation, as a decimal string (`uint64`). Used as the lookup key only when `orderId` is absent, and then it must be non-zero. This is the same clientOrderId provided in CreateOrderRequest.",
           "example": "123456789"
         },
         "accountId": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Account ID that owns the order. Required for spot markets.",
+          "description": "Account ID that owns the order.",
           "example": 12345
         },
         "symbol": {
           "$ref": "#/definitions/Symbol",
-          "description": "Market symbol for the order.Required for spot market orders. If not provided, assumes perp market for backwards compatibility."
+          "description": "Market symbol for the order."
         },
         "signature": {
           "type": "string",
-          "description": "See signatures section for more details on how to generate.",
+          "description": "EIP-712 signature over the `OrderCancel(uint64 verifyingChainId, uint64 deadline, OrderCancelDetails cancel)` envelope. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x5678..."
         },
         "nonce": {
           "type": "string",
-          "description": "See signatures and nonces section for more details. Compulsory for spot orders.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
-        "expiresAfter": {
+        "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp (exclusively for SPOT orders). In seconds since epoch.",
+          "description": "Unix seconds. Signature-validity deadline signed into the OrderCancel envelope. Requests received after this timestamp are rejected.",
           "example": 1676923200
         }
       },
@@ -1429,8 +3080,6 @@
     },
     "CancelOrderResponse": {
       "title": "CancelOrderResponse",
-      "$id": "#CancelOrderResponse",
-      "x-parser-schema-id": "CancelOrderResponse",
       "type": "object",
       "required": [
         "status",
@@ -1443,11 +3092,11 @@
         "orderId": {
           "type": "string",
           "description": "Cancelled order ID",
-          "example": "123456789-123123123"
+          "example": "490346525705109504"
         },
         "clientOrderId": {
-          "type": "integer",
-          "description": "Client-provided order ID echoed back from the request",
+          "type": "string",
+          "description": "Client-provided order ID echoed back from the request, as a decimal string (`uint64`).",
           "example": "123456789"
         }
       },
@@ -1455,14 +3104,12 @@
     },
     "MassCancelRequest": {
       "title": "MassCancelRequest",
-      "$id": "#MassCancelRequest",
-      "x-parser-schema-id": "MassCancelRequest",
       "type": "object",
       "required": [
         "signature",
         "nonce",
         "accountId",
-        "expiresAfter"
+        "deadline"
       ],
       "properties": {
         "accountId": {
@@ -1476,17 +3123,17 @@
         },
         "signature": {
           "type": "string",
-          "description": "See signatures and nonces section for more details on how to generate.",
+          "description": "EIP-712 signature over the `MassCancel(uint64 verifyingChainId, uint64 deadline, MassCancelDetails massCancel)` envelope. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
           "example": "0x1234..."
         },
         "nonce": {
           "type": "string",
-          "description": "See signatures and nonces section for more details.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
-        "expiresAfter": {
+        "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Expiration timestamp. In seconds since epoch.",
+          "description": "Unix seconds. Signature-validity deadline signed into the MassCancel envelope. Requests received after this timestamp are rejected.",
           "example": 1676923200
         }
       },
@@ -1495,8 +3142,6 @@
     },
     "MassCancelResponse": {
       "title": "MassCancelResponse",
-      "$id": "#MassCancelResponse",
-      "x-parser-schema-id": "MassCancelResponse",
       "type": "object",
       "required": [
         "cancelledCount"
@@ -1505,15 +3150,84 @@
         "cancelledCount": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Number of orders that were cancelled",
-          "example": true
+          "example": 5
+        }
+      },
+      "additionalProperties": true
+    },
+    "CancelAllAfterRequest": {
+      "title": "CancelAllAfterRequest",
+      "description": "Arm, refresh, or disarm the account's cancel-all-after countdown using a signed request. See POST /v2/cancelAllAfter for affected orders, refresh rules, disconnect behavior, and throttling.",
+      "type": "object",
+      "required": [
+        "accountId",
+        "timeoutMs",
+        "signature",
+        "nonce",
+        "signerWallet",
+        "deadline"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID whose open orders are covered by the countdown.",
+          "example": 12345
+        },
+        "timeoutMs": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Countdown duration in milliseconds: 0 disarms; 5000–60000 arms or refreshes. Other values return INPUT_VALIDATION_ERROR. Signed into CancelAllAfterDetails. See POST /v2/cancelAllAfter for countdown and throttling behavior.",
+          "example": 30000
+        },
+        "signature": {
+          "type": "string",
+          "description": "EIP-712 signature over the `CancelAllAfter(uint64 verifyingChainId, uint64 deadline, CancelAllAfterDetails cancelAllAfter)` envelope, where `CancelAllAfterDetails(uint64 accountId, uint64 timeoutMs, uint64 nonce)`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces) for the exact typehash string and signing algorithm.",
+          "example": "0x1234..."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "example": "1234567890"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the EIP-712 signature. Required on `cancelAllAfter` and must match the signature. Omit `signerWallet` from `cancelOrder` and `cancelAll` requests."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Signature-validity deadline signed into the CancelAllAfter envelope. It controls request acceptance, not countdown expiry; see timeoutMs and the response's triggerAt.",
+          "example": 1676923200
+        }
+      },
+      "additionalProperties": true
+    },
+    "CancelAllAfterResponse": {
+      "title": "CancelAllAfterResponse",
+      "type": "object",
+      "required": [
+        "accountId",
+        "timeoutMs"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID the countdown applies to, echoed from the request.",
+          "example": 12345
+        },
+        "timeoutMs": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Effective countdown duration in milliseconds; `0` means the switch is now disarmed.",
+          "example": 30000
+        },
+        "triggerAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Advisory Unix timestamp in milliseconds at which the countdown will fire unless refreshed or disarmed. The countdown starts when the request is accepted, using the requested `timeoutMs`. Use this timestamp for display and schedule refreshes well before expiry. Omitted when `timeoutMs` is `0`.",
+          "example": 1747927119946
         }
       },
       "additionalProperties": true
     },
     "Level": {
       "title": "Level",
-      "$id": "#Level",
-      "x-parser-schema-id": "Level",
       "type": "object",
       "required": [
         "px",
@@ -1533,10 +3247,29 @@
       },
       "additionalProperties": true
     },
+    "DepthBase": {
+      "title": "DepthBase",
+      "type": "object",
+      "required": [
+        "symbol",
+        "updatedAt"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Timestamp in milliseconds associated with the latest depth state. Comparable across markets. It is not a feed-liveness signal: a quiet market may retain an old timestamp.",
+          "example": 1747927809946
+        }
+      },
+      "additionalProperties": true
+    },
     "Depth": {
       "title": "Depth",
-      "$id": "#Depth",
-      "x-parser-schema-id": "Depth",
+      "description": "Deprecated compatibility shape for depth payloads. New REST integrations should use DepthSnapshot; new WebSocket integrations should use the exact DepthSnapshot and DepthUpdate exports. Wire endpoints reference those variants with REST snapshots capped at 1,000 levels per side, WebSocket snapshots capped at 100 levels per side, and updates describing changes to the bounded view.",
+      "deprecated": true,
       "type": "object",
       "required": [
         "symbol",
@@ -1568,11 +3301,97 @@
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Snapshot generation timestamp (milliseconds)",
+          "description": "Timestamp in milliseconds associated with the latest depth state. Comparable across markets. It is not a feed-liveness signal: a quiet market may retain an old timestamp.",
           "example": 1747927809946
         }
       },
       "additionalProperties": true
+    },
+    "DepthSnapshot": {
+      "title": "DepthSnapshot",
+      "description": "A bounded depth snapshot. Each side contains at most the 1,000 best price levels.",
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "$ref": "#/definitions/DepthBase"
+        },
+        {
+          "type": "object",
+          "required": ["type", "bids", "asks"],
+          "properties": {
+            "type": {
+              "$ref": "#/definitions/DepthSnapshotType"
+            },
+            "bids": {
+              "type": "array",
+              "description": "At most the 1,000 highest bid levels, aggregated by price and sorted descending",
+              "maxItems": 1000,
+              "items": {
+                "$ref": "#/definitions/Level"
+              }
+            },
+            "asks": {
+              "type": "array",
+              "description": "At most the 1,000 lowest ask levels, aggregated by price and sorted ascending",
+              "maxItems": 1000,
+              "items": {
+                "$ref": "#/definitions/Level"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "DepthUpdate": {
+      "title": "DepthUpdate",
+      "description": "An exact diff from the previous bounded depth view to the next. Either side may be empty, but at least one side contains a changed level. Update arrays are not capped at the WebSocket view size of 100 because one boundary transition can remove old visible levels and add replacement levels in the same frame.",
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "$ref": "#/definitions/DepthBase"
+        },
+        {
+          "type": "object",
+          "required": ["type", "bids", "asks"],
+          "properties": {
+            "type": {
+              "$ref": "#/definitions/DepthUpdateType"
+            },
+            "bids": {
+              "type": "array",
+              "description": "Changed bid levels in the bounded view, sorted descending by price",
+              "items": {
+                "$ref": "#/definitions/Level"
+              }
+            },
+            "asks": {
+              "type": "array",
+              "description": "Changed ask levels in the bounded view, sorted ascending by price",
+              "items": {
+                "$ref": "#/definitions/Level"
+              }
+            }
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "bids": {
+                  "minItems": 1
+                }
+              }
+            },
+            {
+              "properties": {
+                "asks": {
+                  "minItems": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }
