@@ -2244,14 +2244,6 @@
           "description": "Maximum one-sided open interest in units for a given market.",
           "example": "10000"
         },
-        "status": {
-          "type": "string",
-          "enum": [
-            "PREOPEN",
-            "TRADING"
-          ],
-          "description": "Initial launch operating status. PREOPEN blocks ordinary create/modify before first trading; it is not a live-market halt. REDUCE_ONLY, HALTED and CLOSED are future work. Unpublished markets are omitted from canonical public market data."
-        },
         "uiVisible": {
           "type": "boolean",
           "description": "Whether first-party market discovery should display this market. False does not restrict API trading, permissions or account/history access."
