@@ -2243,6 +2243,10 @@
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Maximum one-sided open interest in units for a given market.",
           "example": "10000"
+        },
+        "uiVisible": {
+          "type": "boolean",
+          "description": "Whether first-party market discovery should display this market. False does not restrict API trading, permissions or account/history access."
         }
       },
       "additionalProperties": true

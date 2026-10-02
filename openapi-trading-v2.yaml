@@ -1,7 +1,9 @@
+# Market operating status stays internal while PREOPEN is unpublished.
+# Expose it when published REDUCE_ONLY/HALTED/CLOSED states give clients an action.
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.2
+  version: 3.6.3
   contact:
     name: Reya Network
     url: https://reya.xyz
