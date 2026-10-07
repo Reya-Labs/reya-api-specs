@@ -11,6 +11,10 @@ info:
     (`/v2/wallet/{address}/orderChanges`) provide ordered updates after an initial snapshot.
     A client that cannot keep up is disconnected with code `1013` (slow consumer).
     Code `1012` means the connection must be restarted, for example to obtain a fresh snapshot.
+    Wallet `perpExecutions`, `spotExecutions`, `executionBusts` and `transfers` subscriptions
+    share that per-connection limit, so falling behind on them also ends in `1013`. A `1012`
+    may close a connection subscribed to any wallet channel when the server must resynchronize
+    that wallet's data.
     For either code, reconnect and resubscribe. Treat the reason text as advisory.
 
     Resubscribing returns a fresh snapshot of the channel's documented view. Updates from the
