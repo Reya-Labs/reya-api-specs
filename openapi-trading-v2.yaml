@@ -1380,6 +1380,11 @@ components:
           resubmit, retaining the same `clientOrderId` when supplied. Back off while the
           service remains unavailable. An unchanged nonce may already be below the signer's
           nonce floor because a later request was accepted.
+          During a temporary outage of account-permission data, `cancelOrder` and
+          `cancelAll` signed by the account owner keep working. Cancels signed by a
+          delegate (for example an API trading key) may be refused with this error after
+          a few minutes; to cancel immediately, re-sign with the owner wallet. For
+          automated trading, `cancelAllAfter` remains the recommended protection.
         - `ORDER_OUTCOME_UNKNOWN_ERROR`: the transport failed after the request may have
           reached the matching engine. The operation may have been applied. Reconcile open
           orders and executions before resubmitting; never replace an unresolved attempt
