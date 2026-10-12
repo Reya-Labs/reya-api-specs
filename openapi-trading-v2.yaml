@@ -1,7 +1,9 @@
+# Market operating status stays internal while PREOPEN is unpublished.
+# Expose it when published REDUCE_ONLY/HALTED/CLOSED states give clients an action.
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.1
+  version: 3.6.4
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -316,6 +318,11 @@ paths:
         `limit` query parameter to request between 1 and 1,000 levels per side — the `limit` best
         (highest) bids and the `limit` best (lowest) asks. Values above 1,000 are clamped to 1,000;
         other out-of-contract values fall back to the default of 100.
+
+        Returns HTTP 503 with `SERVICE_UNAVAILABLE_ERROR` while this server's depth mirror
+        is bootstrapping or cannot decode the market-data feed. A cached book is not served
+        during that condition. Retry the same read after backing off; no signing nonce is
+        involved. Other API routes remain available, and depth reads resume after recovery.
       operationId: getMarketDepth
       tags:
         - Market Data
@@ -331,6 +338,15 @@ paths:
                 $ref: '#/components/schemas/DepthSnapshot'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '503':
+          description: The local market-depth mirror is temporarily unavailable. Retry after backing off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestError'
+              example:
+                error: SERVICE_UNAVAILABLE_ERROR
+                message: Market depth is temporarily unavailable; retry after backing off
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -776,9 +792,8 @@ paths:
 
         A created order receives an `orderId`, even if an IOC fills nothing and is immediately
         cancelled. `execQty` reports the fills from this request; `cumQty` reports lifetime fills.
-        `firstFillId` and `fillCount`, when present, identify the contiguous fill range. On a
-        non-IOC taker, the same range appears in its `orderChanges` update. IOC takers do not
-        appear on `orderChanges`, so retain the response's range to correlate their executions.
+        `firstFillId` and `fillCount`, when present, identify the contiguous fill range.
+        All orders appear on `orderChanges`, with the same fill range when fills occur.
         See the Order Entry section's Cancellation reasons for cancelled outcomes.
         These fill-correlation rules also apply to `modifyOrder` responses.
       operationId: createOrder
