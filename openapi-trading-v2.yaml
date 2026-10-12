@@ -282,9 +282,10 @@ paths:
     get:
       summary: Get perp executions for market
       description: |
-        Returns perp executions for the market, newest first, with deterministic
-        ordering for executions sharing a timestamp. Use the `cursor` parameter
-        to advance pages without repeating or skipping executions at timestamp boundaries.
+        Returns perp executions for the market, newest first by `sequenceNumber`.
+        Executions recorded before sequence numbers were introduced are not returned.
+        Use the `cursor` parameter to advance pages without repeating or skipping
+        executions at timestamp boundaries.
       operationId: getMarketPerpExecutions
       tags:
         - Market Data
@@ -470,9 +471,10 @@ paths:
     get:
       summary: Get wallet perp executions
       description: |
-        Returns perp executions for the wallet, newest first, with deterministic
-        ordering for executions sharing a timestamp. Use the `cursor` parameter
-        to advance pages without repeating or skipping executions at timestamp boundaries.
+        Returns perp executions for the wallet, newest first by `sequenceNumber`.
+        Executions recorded before sequence numbers were introduced are not returned.
+        Use the `cursor` parameter to advance pages without repeating or skipping
+        executions at timestamp boundaries.
       operationId: getWalletPerpExecutions
       tags:
         - Wallet Data
