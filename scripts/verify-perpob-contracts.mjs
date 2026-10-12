@@ -22,7 +22,16 @@ function yamlBlock(source, heading) {
 
 const paginationMeta = tradingSchemas.definitions.PaginationMeta.properties;
 assert.equal(paginationMeta.nextCursor.type, 'string');
-for (const endpoint of ['/market/{symbol}/perpExecutions', '/wallet/{address}/perpExecutions', '/wallet/{address}/transfers']) {
+for (const endpoint of [
+  '/market/{symbol}/perpExecutions',
+  '/wallet/{address}/perpExecutions',
+  '/market/{symbol}/spotExecutions',
+  '/wallet/{address}/spotExecutions',
+  '/market/{symbol}/executionBusts',
+  '/wallet/{address}/executionBusts',
+  '/wallet/{address}/orderHistory',
+  '/wallet/{address}/transfers',
+]) {
   const block = yamlBlock(openApi, `  ${endpoint}:`);
   assert.ok(block.includes("#/components/parameters/CursorParam"));
   assert.ok(block.includes("#/components/parameters/HistoryLimitParam"));
