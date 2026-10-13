@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.3
+  version: 3.6.5
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -281,7 +281,11 @@ paths:
   /market/{symbol}/perpExecutions:
     get:
       summary: Get perp executions for market
-      description: Returns up to 100 perp executions for a given market.
+      description: |
+        Returns perp executions for the market, newest first by `sequenceNumber`.
+        Executions recorded before sequence numbers were introduced are not returned.
+        Use the `cursor` parameter to advance pages without repeating or skipping
+        executions at timestamp boundaries.
       operationId: getMarketPerpExecutions
       tags:
         - Market Data
@@ -290,6 +294,8 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of perp executions
@@ -348,7 +354,11 @@ paths:
   /market/{symbol}/spotExecutions:
     get:
       summary: Get spot executions for market
-      description: Returns up to 100 spot executions for a given market.
+      description: |
+        Returns spot executions for the market, newest first by `sequenceNumber`.
+        Executions recorded before sequence numbers were introduced are not returned.
+        Use the `cursor` parameter to advance pages without repeating or skipping
+        executions at timestamp boundaries.
       operationId: getMarketSpotExecutions
       tags:
         - Market Data
@@ -356,6 +366,8 @@ paths:
         - $ref: '#/components/parameters/SymbolParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of spot executions
@@ -372,7 +384,7 @@ paths:
     get:
       summary: Get execution busts for market
       description: |
-        Returns up to 100 execution busts (failed fills) for a given market, covering both spot and perp markets.
+        Returns execution busts (failed fills) for the market, newest first by `sequenceNumber`. Use the `cursor` parameter to advance pages.
         Clients can distinguish spot vs perp entries from the `symbol` suffix (`*RUSDPERP` for perp, `*RUSD` for spot).
       operationId: getMarketExecutionBusts
       tags:
@@ -381,6 +393,8 @@ paths:
         - $ref: '#/components/parameters/SymbolParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of execution busts
@@ -441,7 +455,11 @@ paths:
   /wallet/{address}/executionBusts:
     get:
       summary: Get wallet execution busts
-      description: Returns up to 100 execution busts (failed fills) for a given wallet, covering both spot and perp markets. Use the `symbol` suffix to distinguish spot from perp busts.
+      description: |
+        Returns execution busts (failed fills) for the wallet, covering both spot and perp markets,
+        newest first by `sequenceNumber`; spot and perp busts share one sequence.
+        Use the `symbol` suffix to distinguish spot from perp busts. Use the `cursor` parameter
+        to advance pages.
       operationId: getWalletExecutionBusts
       tags:
         - Wallet Data
@@ -449,6 +467,8 @@ paths:
         - $ref: '#/components/parameters/AddressParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of execution busts
@@ -464,7 +484,11 @@ paths:
   /wallet/{address}/perpExecutions:
     get:
       summary: Get wallet perp executions
-      description: Returns up to 100 perp executions for a given wallet.
+      description: |
+        Returns perp executions for the wallet, newest first by `sequenceNumber`.
+        Executions recorded before sequence numbers were introduced are not returned.
+        Use the `cursor` parameter to advance pages without repeating or skipping
+        executions at timestamp boundaries.
       operationId: getWalletPerpExecutions
       tags:
         - Wallet Data
@@ -473,6 +497,8 @@ paths:
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
         - $ref: '#/components/parameters/ExecutionTypeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of perpetual executions
@@ -488,7 +514,11 @@ paths:
   /wallet/{address}/spotExecutions:
     get:
       summary: Get wallet spot executions
-      description: Returns up to 100 spot executions for a given wallet.
+      description: |
+        Returns spot executions for the wallet, newest first by `sequenceNumber`.
+        Executions recorded before sequence numbers were introduced are not returned.
+        Use the `cursor` parameter to advance pages without repeating or skipping
+        executions at timestamp boundaries.
       operationId: getWalletSpotExecutions
       tags:
         - Wallet Data
@@ -496,6 +526,8 @@ paths:
         - $ref: '#/components/parameters/AddressParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: List of spot executions
@@ -512,19 +544,17 @@ paths:
     get:
       summary: Get wallet order history
       description: |
-        Returns up to 100 historical order state updates for a wallet, newest first.
+        Returns historical order state updates for a wallet, newest first by `lastUpdateAt`.
         Each row is one `Order` update for one of the wallet's accounts, across spot and perp markets.
 
-        History is limited and may be unavailable for high-volume accounts. This endpoint is for
-        account-history views; it is not a complete audit log. Market makers should maintain their
-        own order history from the `orderChanges` WebSocket stream and reconcile against current
-        open orders after a disconnect.
+        Only the latest 2,000 updates of each account are kept, so older history is unavailable for
+        active accounts. This endpoint is for account-history views; it is not a complete audit log.
+        Market makers should maintain their own order history from the `orderChanges` WebSocket
+        stream and reconcile against current open orders after a disconnect.
 
         `startTime` and `endTime` are millisecond Unix timestamps matched against `lastUpdateAt`.
-        Results are newest-first: `meta.startTime` is the newest returned timestamp and `meta.endTime`
-        is the oldest. `endTime` is inclusive, so passing the previous `meta.endTime` may repeat
-        boundary rows; deduplicate using `Order.sequenceNumber`. Clients that do not need to preserve
-        same-millisecond boundary ties may page backward with `endTime = meta.endTime - 1`.
+        Use the `cursor` parameter to advance pages without repeating or skipping updates that
+        share a millisecond. Updates removed by the per-account limit while paging are not returned.
       operationId: getWalletOrderHistory
       tags:
         - Wallet Data
@@ -532,6 +562,8 @@ paths:
         - $ref: '#/components/parameters/AddressParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: Paginated list of order state updates
@@ -636,14 +668,8 @@ paths:
 
         **Pagination**
 
-        - Results are ordered newest first by `sequenceNumber`. `limit` defaults to 100 and is
-          capped at 100 entries per page.
-        - Omit `cursor` for the first page. Pass the returned `meta.nextCursor` unchanged for
-          the next page, keeping the same filters. Stop when `nextCursor` is absent.
-        - Cursor traversal visits each matching entry once, including when entries share a
-          block timestamp. Use cursors rather than timestamps to advance between pages.
-        - `startTime` and `endTime` filter the block timestamp in milliseconds. `type` filters
-          by a comma-separated list of `TransferType` values; omit it to include all types.
+        Results are ordered newest first by `sequenceNumber`. Use the `cursor` parameter
+        to traverse entries sharing a block timestamp without repeating or skipping them.
 
         **Reconciliation**
 
@@ -661,7 +687,7 @@ paths:
         - Wallet Data
       parameters:
         - $ref: '#/components/parameters/AddressParam'
-        - $ref: '#/components/parameters/TransfersLimitParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
         - $ref: '#/components/parameters/CursorParam'
         - $ref: '#/components/parameters/StartTimeParam'
         - $ref: '#/components/parameters/EndTimeParam'
@@ -1073,7 +1099,7 @@ components:
           - MARKET_CLOSE
         example: LIQUIDATION
 
-    TransfersLimitParam:
+    HistoryLimitParam:
       name: limit
       in: query
       required: false
@@ -1090,7 +1116,9 @@ components:
       required: false
       description: |
         Opaque page cursor from the previous response's `meta.nextCursor`. Omit for the
-        first page; otherwise pass it unchanged. Do not construct or parse cursor values.
+        first page; otherwise pass it unchanged. Keep the same endpoint, wallet or market,
+        and filters between requests. Stop when `meta.nextCursor` is absent.
+        Do not construct or parse cursor values.
       schema:
         type: string
         example: djEuNTQ2MzY3NzA2LjA
