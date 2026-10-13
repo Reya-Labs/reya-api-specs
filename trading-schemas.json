@@ -141,6 +141,15 @@
       "enum": ["MAINPERP", "SUBPERP", "SPOT"],
       "description": "SPOT = account that can only trade spot, MAINPERP = main perp account, SUBPERP = sub perp account"
     },
+    "MarketStatus": {
+      "title": "MarketStatus",
+      "type": "string",
+      "enum": [
+        "PREOPEN",
+        "TRADING"
+      ],
+      "description": "Perp market operating status. `TRADING`: open for order entry. `PREOPEN`: listed ahead of launch; orders are rejected until the market changes to `TRADING`. The server may add values (for example `REDUCE_ONLY` or `HALTED`) without a client release, so treat any value other than `TRADING` as not open for new orders."
+    },
     "OrderStatus": {
       "title": "OrderStatus",
       "type": "string",
@@ -252,9 +261,8 @@
           "$ref": "#/definitions/Symbol"
         },
         "status": {
-          "type": "string",
-          "description": "Market operating status, matching the market definition. A `PREOPEN` summary carries the reference data the exchange already computes before launch (mark and index prices, funding rate and funding values); open interest and volume stay zero, and there is no mid price until the book has orders. Treat any value other than `TRADING` as not open for new orders. Present from API 3.7.0.",
-          "example": "TRADING"
+          "$ref": "#/definitions/MarketStatus",
+          "description": "Market operating status, matching the market definition. A `PREOPEN` summary carries the reference data the exchange already computes before launch (mark and index prices, funding rate and funding values); open interest and volume stay zero, and there is no mid price until the book has orders. Present from API 3.7.0."
         },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -2254,9 +2262,8 @@
           "description": "Whether first-party market discovery should display this market. False does not restrict API trading, permissions or account/history access."
         },
         "status": {
-          "type": "string",
-          "description": "Market operating status. `TRADING`: open for order entry. `PREOPEN`: listed ahead of launch; orders are rejected and the depth book is empty until the market changes to `TRADING`, while its market summary already carries reference prices and funding. More values may be added later (for example `REDUCE_ONLY` or `HALTED`), so treat any value other than `TRADING` as not open for new orders. Present on every perp market definition from API 3.7.0.",
-          "example": "TRADING"
+          "$ref": "#/definitions/MarketStatus",
+          "description": "Market operating status. A `PREOPEN` market is listed ahead of launch: orders are rejected and the depth book is empty until it changes to `TRADING`, while its market summary already carries reference prices and funding. Present on every perp market definition from API 3.7.0."
         }
       },
       "additionalProperties": true
