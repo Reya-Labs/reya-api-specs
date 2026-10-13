@@ -20,6 +20,23 @@ function yamlBlock(source, heading) {
   return lines.slice(start, end).join('\n');
 }
 
+const paginationMeta = tradingSchemas.definitions.PaginationMeta.properties;
+assert.equal(paginationMeta.nextCursor.type, 'string');
+for (const endpoint of [
+  '/market/{symbol}/perpExecutions',
+  '/wallet/{address}/perpExecutions',
+  '/market/{symbol}/spotExecutions',
+  '/wallet/{address}/spotExecutions',
+  '/market/{symbol}/executionBusts',
+  '/wallet/{address}/executionBusts',
+  '/wallet/{address}/orderHistory',
+  '/wallet/{address}/transfers',
+]) {
+  const block = yamlBlock(openApi, `  ${endpoint}:`);
+  assert.ok(block.includes("#/components/parameters/CursorParam"));
+  assert.ok(block.includes("#/components/parameters/HistoryLimitParam"));
+}
+
 const depth = tradingSchemas.definitions.Depth;
 assert.deepEqual(
   depth.required,
