@@ -98,7 +98,7 @@ channels:
 
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
-    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all `TRADING` perp market summaries
+    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all listed perp market summaries, including `PREOPEN` markets once their summary is computed; check each row's `status`
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
@@ -109,7 +109,7 @@ channels:
       Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary.
 
       A `PREOPEN` market can be subscribed to before launch; updates continue on the same
-      subscription once it opens for trading.
+      subscription once it opens for trading. Its funding rate is indicative until then.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)
