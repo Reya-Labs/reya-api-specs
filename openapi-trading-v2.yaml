@@ -1,9 +1,7 @@
-# Market operating status stays internal while PREOPEN is unpublished.
-# Expose it when published REDUCE_ONLY/HALTED/CLOSED states give clients an action.
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.3
+  version: 3.7.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -77,7 +75,13 @@ paths:
   /perpMarketDefinitions:
     get:
       summary: Get perp market definitions
-      description: Canonical perp market definitions endpoint for perpOB. Replaces the removed AMM-era `/marketDefinitions` route.
+      description: |
+        Canonical perp market definitions endpoint for perpOB. Replaces the removed AMM-era `/marketDefinitions` route.
+
+        Lists every announced perp market, including markets that are not open yet. Check each
+        definition's `status` before quoting or subscribing: `PREOPEN` markets are listed ahead of
+        launch so integrations can load them in advance, but orders are rejected until the status
+        changes to `TRADING`. Treat any status other than `TRADING` as not open for new orders.
       operationId: getPerpMarketDefinitions
       tags:
         - Reference Data
@@ -239,7 +243,11 @@ paths:
   /perpMarket/{symbol}/summary:
     get:
       summary: Get perp market summary
-      description: Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+      description: |
+        Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+
+        A `PREOPEN` market has no summary yet and returns 400 `SYMBOL_NOT_FOUND` with a message
+        saying the market is not open. Summaries start once its definition's `status` is `TRADING`.
       operationId: getPerpMarketSummary
       tags:
         - Market Data
@@ -307,7 +315,8 @@ paths:
       summary: Get market depth snapshot
       description: |
         Returns an L2 order book snapshot with aggregated price levels for the specified market.
-        Supports both spot and perp markets.
+        Supports both spot and perp markets. A `PREOPEN` perp market returns an empty book until
+        it opens for trading.
 
         By default the top 100 aggregated price levels per side are returned. Pass the optional
         `limit` query parameter to request between 1 and 1,000 levels per side — the `limit` best

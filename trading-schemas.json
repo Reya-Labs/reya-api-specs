@@ -2247,6 +2247,11 @@
         "uiVisible": {
           "type": "boolean",
           "description": "Whether first-party market discovery should display this market. False does not restrict API trading, permissions or account/history access."
+        },
+        "status": {
+          "type": "string",
+          "description": "Market operating status. `TRADING`: open for order entry. `PREOPEN`: listed ahead of launch; orders are rejected, the depth book is empty and no market summary is published until the market changes to `TRADING`. More values may be added later (for example `REDUCE_ONLY` or `HALTED`), so treat any value other than `TRADING` as not open for new orders. Present on every perp market definition from API 3.7.0.",
+          "example": "TRADING"
         }
       },
       "additionalProperties": true
