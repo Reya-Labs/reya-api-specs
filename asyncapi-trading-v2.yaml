@@ -108,8 +108,8 @@ channels:
     description: |
       Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary.
 
-      Subscribing to a `PREOPEN` market returns an error saying the market is not open; subscribe
-      again once its definition's `status` is `TRADING`.
+      A `PREOPEN` market can be subscribed to before launch: the snapshot and updates carry
+      `status: PREOPEN`, and updates continue on the same subscription once it opens for trading.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)

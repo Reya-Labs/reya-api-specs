@@ -246,8 +246,10 @@ paths:
       description: |
         Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
 
-        A `PREOPEN` market has no summary yet and returns 400 `SYMBOL_NOT_FOUND` with a message
-        saying the market is not open. Summaries start once its definition's `status` is `TRADING`.
+        Every listed market has a summary, including a `PREOPEN` one, whose `status` says it is not
+        open yet. Its open interest and volume are zero and it has no mid price until the book has
+        orders. If a newly listed market's summary is not computed yet, this returns 400
+        `SYMBOL_NOT_FOUND` with a message saying so. `/perpMarkets/summary` lists `TRADING` markets only.
       operationId: getPerpMarketSummary
       tags:
         - Market Data

@@ -251,6 +251,11 @@
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
+        "status": {
+          "type": "string",
+          "description": "Market operating status, matching the market definition. A `PREOPEN` summary carries the reference data the exchange already computes before launch (mark and index prices, funding rate and funding values); open interest and volume stay zero, and there is no mid price until the book has orders. Treat any value other than `TRADING` as not open for new orders. Present from API 3.7.0.",
+          "example": "TRADING"
+        },
         "updatedAt": {
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Time when the market summary was last calculated (milliseconds)",
@@ -2250,7 +2255,7 @@
         },
         "status": {
           "type": "string",
-          "description": "Market operating status. `TRADING`: open for order entry. `PREOPEN`: listed ahead of launch; orders are rejected, the depth book is empty and no market summary is published until the market changes to `TRADING`. More values may be added later (for example `REDUCE_ONLY` or `HALTED`), so treat any value other than `TRADING` as not open for new orders. Present on every perp market definition from API 3.7.0.",
+          "description": "Market operating status. `TRADING`: open for order entry. `PREOPEN`: listed ahead of launch; orders are rejected and the depth book is empty until the market changes to `TRADING`, while its market summary already carries reference prices and funding. More values may be added later (for example `REDUCE_ONLY` or `HALTED`), so treat any value other than `TRADING` as not open for new orders. Present on every perp market definition from API 3.7.0.",
           "example": "TRADING"
         }
       },
