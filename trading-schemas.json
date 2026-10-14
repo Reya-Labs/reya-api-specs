@@ -2262,6 +2262,14 @@
         },
         "status": {
           "$ref": "#/definitions/MarketStatus"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Categories for market discovery: `CRYPTO_MAJORS`, `CRYPTO_ALTS`, `EQUITIES`, `INDICES` or `COMMODITIES`. A market has one or more. The server may add values without a client release, so ignore values you do not recognize. Display metadata only: categories do not affect trading.",
+          "items": {
+            "type": "string"
+          },
+          "example": ["EQUITIES"]
         }
       },
       "additionalProperties": true
