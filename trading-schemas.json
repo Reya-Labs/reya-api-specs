@@ -150,6 +150,19 @@
       ],
       "description": "Perp market operating status. `TRADING`: open for order entry. `PREOPEN`: listed ahead of launch; orders are rejected until the market changes to `TRADING`. The server may add values (for example `REDUCE_ONLY` or `HALTED`) without a client release, so treat any value other than `TRADING` as not open for new orders."
     },
+    "MarketCategory": {
+      "title": "MarketCategory",
+      "type": "string",
+      "enum": [
+        "CRYPTO_MAJORS",
+        "CRYPTO_ALTS",
+        "EQUITIES",
+        "INDICES",
+        "COMMODITIES",
+        "NEW"
+      ],
+      "description": "Perp market discovery category. `CRYPTO_MAJORS`, `CRYPTO_ALTS`, `EQUITIES`, `INDICES` and `COMMODITIES` classify the underlying asset; `NEW` marks a recently listed market for a limited time after launch. The server may add values without a client release, so ignore values you do not recognize."
+    },
     "OrderStatus": {
       "title": "OrderStatus",
       "type": "string",
@@ -2262,6 +2275,13 @@
         },
         "status": {
           "$ref": "#/definitions/MarketStatus"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Categories for market discovery; a market can have several. Display metadata only: they do not affect trading.",
+          "items": {
+            "$ref": "#/definitions/MarketCategory"
+          }
         }
       },
       "additionalProperties": true
