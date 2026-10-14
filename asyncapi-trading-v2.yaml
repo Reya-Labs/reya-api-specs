@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.6.5
+  version: 3.7.0
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -98,14 +98,18 @@ channels:
 
   perpMarketsSummary:
     address: /v2/perpMarkets/summary
-    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all perp market summaries
+    description: Perp market summary channel mirroring `/v2/spotMarkets/summary`. Real-time updates for all listed perp market summaries, including `PREOPEN` markets once their summary is computed; check each row's `status`
     messages:
       marketsSummaryUpdate:
         $ref: '#/components/messages/MarketsSummaryUpdate'
 
   perpMarketSummary:
     address: /v2/perpMarket/{symbol}/summary
-    description: Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary
+    description: |
+      Perp market summary channel mirroring `/v2/spotMarket/{symbol}/summary`. Real-time updates for a specific perp market's summary.
+
+      A `PREOPEN` market can be subscribed to before launch; updates continue on the same
+      subscription once it opens for trading. Its funding rate is indicative until then.
     parameters:
       symbol:
         description: Trading symbol (e.g., BTCRUSDPERP)
@@ -179,6 +183,9 @@ channels:
       replace the total at its `px` (or delete the `px` when `qty` is `0`). This
       channel does not provide a complete book when either side exceeds 100
       levels; use a new subscription to recover a fresh bounded view.
+
+      A `PREOPEN` perp market can be subscribed to before launch. Its `SNAPSHOT` is an empty
+      book, and `UPDATE` frames follow on the same subscription once it opens for trading.
 
       For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
       in the streaming API overview.

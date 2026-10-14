@@ -1,9 +1,7 @@
-# Market operating status stays internal while PREOPEN is unpublished.
-# Expose it when published REDUCE_ONLY/HALTED/CLOSED states give clients an action.
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.6.5
+  version: 3.7.0
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -77,7 +75,11 @@ paths:
   /perpMarketDefinitions:
     get:
       summary: Get perp market definitions
-      description: Canonical perp market definitions endpoint for perpOB. Replaces the removed AMM-era `/marketDefinitions` route.
+      description: |
+        Canonical perp market definitions endpoint for perpOB. Replaces the removed AMM-era `/marketDefinitions` route.
+
+        Includes `PREOPEN` markets announced ahead of launch, so integrations can load them in
+        advance; check each definition's `status`.
       operationId: getPerpMarketDefinitions
       tags:
         - Reference Data
@@ -218,7 +220,11 @@ paths:
   /perpMarkets/summary:
     get:
       summary: Get perp market summaries
-      description: Perp market summary route mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all perp markets. Recalculated every 0.5s
+      description: |
+        Perp market summary route mirroring the `/spotMarkets/summary` naming. Statistics and throttled market data for all listed perp markets. Recalculated every 0.5s
+
+        Includes `PREOPEN` markets once their summary is computed; check each row's `status`
+        (see `/perpMarket/{symbol}/summary`).
       operationId: getPerpMarketsSummary
       tags:
         - Market Data
@@ -239,7 +245,13 @@ paths:
   /perpMarket/{symbol}/summary:
     get:
       summary: Get perp market summary
-      description: Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+      description: |
+        Perp market summary route mirroring the `/spotMarket/{symbol}/summary` naming. Statistics and throttled data for a specific perp market. Recalculated every 0.5s
+
+        Includes `PREOPEN` markets: open interest and volume are zero and there is no mid price until
+        the book has orders. The funding rate is indicative; no position pays it until the market is
+        `TRADING`. Returns 400 `SYMBOL_NOT_FOUND` while a newly listed market's summary is not
+        computed yet.
       operationId: getPerpMarketSummary
       tags:
         - Market Data
@@ -313,7 +325,8 @@ paths:
       summary: Get market depth snapshot
       description: |
         Returns an L2 order book snapshot with aggregated price levels for the specified market.
-        Supports both spot and perp markets.
+        Supports both spot and perp markets. A `PREOPEN` perp market returns an empty book until
+        it opens for trading.
 
         By default the top 100 aggregated price levels per side are returned. Pass the optional
         `limit` query parameter to request between 1 and 1,000 levels per side — the `limit` best
@@ -1323,7 +1336,8 @@ components:
           can be cancelled before their signed expiry to allow settlement; for a protective
           stop this applies to both its armed phase and its fired child.
         - `SERVICE_DISABLED_ERROR`, `TRADING_HALTED_ERROR`: order entry is unavailable for
-          the market. Check market availability before submitting again.
+          the market, for example a `PREOPEN` one. Check the market's `status` before
+          submitting again.
         - `DUPLICATE_CLIENT_ORDER_ID_ERROR`: the client ID belongs to a live order.
           Reconcile that order before submitting another.
         - `ORDER_NOT_FOUND_ERROR`: the target order was not found. Refresh its state before
