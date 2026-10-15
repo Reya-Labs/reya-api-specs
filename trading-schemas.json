@@ -2399,7 +2399,7 @@
     "FundingRateSample": {
       "title": "FundingRateSample",
       "type": "object",
-      "description": "The last funding rate sampled within one interval. See GET /v2/fundingRateHistory/{symbol}/{resolution}.",
+      "description": "The last funding rate sampled in one interval. See GET /v2/fundingRateHistory/{symbol}/{resolution}.",
       "required": [
         "timestamp",
         "fundingRate"
@@ -2407,7 +2407,7 @@
       "properties": {
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Time the rate was sampled (milliseconds). It falls within its interval and is not the interval start.",
+          "description": "Start of the interval (milliseconds).",
           "example": 1747926000000
         },
         "fundingRate": {

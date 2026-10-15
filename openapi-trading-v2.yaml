@@ -449,19 +449,21 @@ paths:
       description: |
         Returns a perp market's funding rate over time, newest first.
 
-        Each entry is the last rate sampled within one `resolution` interval. Intervals are
-        aligned to UTC multiples of the resolution. Intervals with no sample, for example
-        before the market launched, are omitted. Rates are sampled about once a minute.
+        Each entry covers one `resolution` interval, aligned to UTC multiples of the
+        resolution. `timestamp` is the interval start and `fundingRate` is the last rate
+        sampled in it, up to `endTime`. Intervals without samples are skipped, so a page holds
+        the `limit` most recent intervals that have data. Rates are sampled about once a
+        minute.
 
         `fundingRate` has the same units as `MarketSummary.fundingRate`: an hourly rate
         expressed as a percentage (daily rate ÷ 24 × 100). Samples taken while a market was
         `PREOPEN` are indicative; no position paid them. For the current rate, use
         `GET /v2/perpMarket/{symbol}/summary`.
 
-        At most `limit` entries are returned, ending at `endTime` (default: now). To page
-        back, pass the oldest returned `timestamp` minus 1 as the next `endTime`. `startTime`
-        optionally bounds the oldest interval. Retired markets remain queryable. Spot symbols
-        return `SYMBOL_NOT_FOUND_ERROR`.
+        To page back, pass the oldest returned `timestamp` minus 1 as the next `endTime`
+        (default: now). An empty page means there is no older data in range. `startTime`
+        limits results to intervals starting at or after it. Retired markets remain
+        queryable. Spot symbols return `SYMBOL_NOT_FOUND_ERROR`.
       operationId: getFundingRateHistory
       tags:
         - Market Data
@@ -1332,7 +1334,7 @@ components:
       name: resolution
       in: path
       required: true
-      description: Sampling interval. One entry is returned per interval that has a sample.
+      description: Interval length. One entry is returned per interval that has samples.
       schema:
         type: string
         enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
