@@ -97,7 +97,8 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR",
+        "TRANSFER_OTHER_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
@@ -3253,6 +3254,108 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Advisory Unix timestamp in milliseconds at which the countdown will fire unless refreshed or disarmed. The countdown starts when the request is accepted, using the requested `timeoutMs`. Use this timestamp for display and schedule refreshes well before expiry. Omitted when `timeoutMs` is `0`.",
           "example": 1747927119946
+        }
+      },
+      "additionalProperties": true
+    },
+    "TransferBetweenAccountsRequest": {
+      "title": "TransferBetweenAccountsRequest",
+      "description": "Signed transfer of collateral between two accounts of the same owner. See POST /v2/transferBetweenAccounts for the signer permission, the EIP-712 envelope and the nonce sequence.",
+      "type": "object",
+      "required": [
+        "fromAccountId",
+        "toAccountId",
+        "asset",
+        "amount",
+        "signerWallet",
+        "nonce",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "fromAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the collateral leaves. Signed as `ExecuteBySig.accountId`.",
+          "example": 12345
+        },
+        "toAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the collateral arrives in. It must differ from `fromAccountId` and have the same owner. Signed as the command's `toAccountId` input.",
+          "example": 12346
+        },
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "description": "Collateral asset to move, as listed by GET /v2/assetDefinitions. Its token address is the command's signed `collateral` input."
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+)?$",
+          "description": "Amount of `asset` to move, as a plain decimal greater than zero with at most the asset's `decimals` fractional digits. Signed as the command's `amount` input, scaled by 10^decimals.",
+          "example": "100.5"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address that produced `signature`: the owner, or a wallet holding Core `TRANSFER` permission on `fromAccountId`."
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "The owner wallet's next Core signature nonce, as a decimal string: `lastNonce + 1` from GET /v2/wallet/{address}/signatureNonce. Signed as `ExecuteBySig.nonce`. Unrelated to order-entry nonces.",
+          "example": "8"
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds after which the signature is invalid. Signed as `ExecuteBySig.deadline`. Must be in the future and at most 600 seconds ahead.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{130}$",
+          "description": "65-byte EIP-712 signature over Core's `ExecuteBySig` envelope. See POST /v2/transferBetweenAccounts.",
+          "example": "0x1234..."
+        }
+      },
+      "additionalProperties": true
+    },
+    "TransferRequestStatus": {
+      "title": "TransferRequestStatus",
+      "type": "string",
+      "enum": [
+        "SETTLED",
+        "PENDING"
+      ],
+      "description": "`SETTLED`: the transfer transaction was mined successfully. `PENDING`: the transaction was submitted but its outcome was not observed before the response; it may still settle. See POST /v2/transferBetweenAccounts."
+    },
+    "TransferBetweenAccountsResponse": {
+      "title": "TransferBetweenAccountsResponse",
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/TransferRequestStatus"
+        },
+        "transactionHash": {
+          "type": "string",
+          "description": "Hash of the transfer transaction. Always present for `SETTLED`; present for `PENDING` when the submitted hash is known. Matches `Transfer.transactionHash` in GET /v2/wallet/{address}/transfers.",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
+    "WalletSignatureNonce": {
+      "title": "WalletSignatureNonce",
+      "type": "object",
+      "required": [
+        "lastNonce"
+      ],
+      "properties": {
+        "lastNonce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "Last Core signature nonce consumed by this owner wallet, as a decimal string. The next signed Core action, such as POST /v2/transferBetweenAccounts, must use `lastNonce + 1`.",
+          "example": "7"
         }
       },
       "additionalProperties": true
