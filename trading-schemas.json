@@ -3290,7 +3290,7 @@
         "amount": {
           "type": "string",
           "pattern": "^\\d+(\\.\\d+)?$",
-          "description": "Amount of `asset` to move, as a plain decimal greater than zero with at most the asset's `decimals` fractional digits. Signed as the command's `amount` input, scaled by 10^decimals.",
+          "description": "Amount of `asset` to move, as a plain decimal greater than zero. It must convert exactly to base units: at most the asset's `decimals` fractional digits, ignoring trailing zeros. Signed as the command's `amount` input, scaled by 10^decimals.",
           "example": "100.5"
         },
         "signerWallet": {

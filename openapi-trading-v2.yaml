@@ -1559,6 +1559,7 @@ components:
           open orders do not establish whether a timer was armed, refreshed, or disarmed.
 
         Transfers (`POST /v2/transferBetweenAccounts`):
+        - `SERVICE_DISABLED_ERROR`: transfers are not enabled on this environment.
         - `INPUT_VALIDATION_ERROR`: a field is malformed, the accounts are the same, an
           account does not exist, the asset is unknown, or `amount` is zero or has more
           fractional digits than the asset's `decimals`.
