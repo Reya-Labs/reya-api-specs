@@ -2396,6 +2396,45 @@
       },
       "additionalProperties": true
     },
+    "FundingRateSample": {
+      "title": "FundingRateSample",
+      "type": "object",
+      "description": "The last funding rate sampled within one interval. See GET /v2/fundingRateHistory/{symbol}/{resolution}.",
+      "required": [
+        "timestamp",
+        "fundingRate"
+      ],
+      "properties": {
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Time the rate was sampled (milliseconds). It falls within its interval and is not the interval start.",
+          "example": 1747926000000
+        },
+        "fundingRate": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Hourly funding rate as a percentage, in the same units as MarketSummary.fundingRate.",
+          "example": "-0.000509373441021089"
+        }
+      },
+      "additionalProperties": true
+    },
+    "FundingRateHistoryList": {
+      "title": "FundingRateHistoryList",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "description": "Funding rate samples, newest first.",
+          "items": {
+            "$ref": "#/definitions/FundingRateSample"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
       "type": "object",
