@@ -98,7 +98,8 @@
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR",
-        "TRANSFER_OTHER_ERROR"
+        "TRANSFER_OTHER_ERROR",
+        "NONCE_ALREADY_USED_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
     },
@@ -3305,7 +3306,7 @@
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds after which the signature is invalid. Signed as `ExecuteBySig.deadline`. Must be in the future and at most 600 seconds ahead.",
+          "description": "Unix seconds after which the signature is invalid. Signed as `ExecuteBySig.deadline`. Must not have passed and must be at most 600 seconds ahead.",
           "example": 1676923200
         },
         "signature": {

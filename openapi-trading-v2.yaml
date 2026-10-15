@@ -1121,9 +1121,12 @@ paths:
         The nonce belongs to the owner wallet, not the signer. One sequence covers all of the
         owner's accounts and every Core signed action, including transfers, withdrawals and
         permission grants. Only exactly `lastNonce + 1` is accepted, so submit an owner's
-        signed actions one at a time. If another action consumes the nonce first, pending
-        signatures become invalid: re-read the nonce and re-sign. Order-entry nonces are
-        unrelated.
+        signed actions one at a time. Order-entry nonces are unrelated.
+
+        The nonce also makes a signed transfer execute at most once. Resubmitting the same
+        signed request is safe. Signing a new transfer is not, while an earlier attempt may
+        have settled: `NONCE_ALREADY_USED_ERROR` means the nonce was consumed, possibly by
+        that attempt. Confirm in `GET /v2/wallet/{address}/transfers` before signing again.
 
         **Checks**
 
@@ -1567,18 +1570,23 @@ components:
           Check the envelope fields, the Core `verifyingContract` and the Periphery `caller`.
         - `UNAUTHORIZED_ACCOUNT_ERROR`: the accounts have different owners, or the signer is
           neither the owner nor holds `TRANSFER` permission on `fromAccountId`.
-        - `INVALID_NONCE_ERROR`: the nonce is not the owner wallet's `lastNonce + 1`. Re-read
-          `GET /v2/wallet/{address}/signatureNonce` and re-sign.
+        - `INVALID_NONCE_ERROR`: the nonce is ahead of the owner wallet's `lastNonce + 1`.
+          Re-read `GET /v2/wallet/{address}/signatureNonce` and re-sign.
+        - `NONCE_ALREADY_USED_ERROR`: the nonce was already consumed, possibly by an earlier
+          submission of this transfer, or another submission with it is in progress. Do not
+          sign a replacement until `GET /v2/wallet/{address}/transfers` shows whether the
+          earlier transfer settled; re-sign with the next nonce only if it did not.
         - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the signature
-          `deadline` has passed or is more than 600 seconds ahead. Re-sign.
+          `deadline` has passed or is more than 600 seconds ahead. Re-sign with the same
+          nonce.
         - `INSUFFICIENT_BALANCE_ERROR`: the source account's balance in the asset would go
           negative. `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`: the source account would not meet
           initial margin after the transfer. Transfer less or reduce risk first.
         - `SERVICE_UNAVAILABLE_ERROR`: a pre-submission check or the submission itself was
-          unavailable, and the transfer was not submitted. Re-read the nonce, re-sign and
-          retry after backing off.
-        - `TRANSFER_OTHER_ERROR`: the transfer was rejected on-chain for another reason; see
-          `message`.
+          unavailable, and the transfer was not submitted. Retry after backing off; the same
+          signed request stays valid until its deadline.
+        - `TRANSFER_OTHER_ERROR`: the transfer was rejected on-chain for another reason, and
+          was not applied; see `message`.
 
         Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
         not resolved by automatic retries. Contact support if an expected operation is
