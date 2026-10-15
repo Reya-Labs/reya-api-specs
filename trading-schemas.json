@@ -98,7 +98,7 @@
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR",
-        "TRANSFER_OTHER_ERROR",
+        "SIGNED_ACTION_OTHER_ERROR",
         "NONCE_ALREADY_USED_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400; the order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
@@ -3357,14 +3357,14 @@
       },
       "additionalProperties": true
     },
-    "TransferRequestStatus": {
-      "title": "TransferRequestStatus",
+    "SignedActionStatus": {
+      "title": "SignedActionStatus",
       "type": "string",
       "enum": [
         "SETTLED",
         "PENDING"
       ],
-      "description": "`SETTLED`: the transfer transaction was mined successfully. `PENDING`: the transaction was submitted but its outcome was not observed before the response; it may still settle. See POST /v2/transferBetweenAccounts."
+      "description": "Outcome of a signed action Reya submitted on-chain. `SETTLED`: the transaction was mined successfully. `PENDING`: the transaction was submitted but its outcome was not observed before the response; it may still settle, so do not sign a replacement. See POST /v2/transferBetweenAccounts."
     },
     "TransferBetweenAccountsResponse": {
       "title": "TransferBetweenAccountsResponse",
@@ -3374,7 +3374,7 @@
       ],
       "properties": {
         "status": {
-          "$ref": "#/definitions/TransferRequestStatus"
+          "$ref": "#/definitions/SignedActionStatus"
         },
         "transactionHash": {
           "type": "string",

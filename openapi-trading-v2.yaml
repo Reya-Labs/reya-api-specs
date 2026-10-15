@@ -1491,8 +1491,8 @@ components:
     TransferBetweenAccountsResponse:
       $ref: './trading-schemas.json#/definitions/TransferBetweenAccountsResponse'
 
-    TransferRequestStatus:
-      $ref: './trading-schemas.json#/definitions/TransferRequestStatus'
+    SignedActionStatus:
+      $ref: './trading-schemas.json#/definitions/SignedActionStatus'
 
     Depth:
       $ref: './trading-schemas.json#/definitions/Depth'
@@ -1656,7 +1656,7 @@ components:
         - `SERVICE_UNAVAILABLE_ERROR`: a pre-submission check or the submission itself was
           unavailable, and the transfer was not submitted. Retry after backing off; the same
           signed request stays valid until its deadline.
-        - `TRANSFER_OTHER_ERROR`: the transfer was rejected on-chain for another reason, and
+        - `SIGNED_ACTION_OTHER_ERROR`: the transfer was rejected on-chain for another reason, and
           was not applied; see `message`.
 
         Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
