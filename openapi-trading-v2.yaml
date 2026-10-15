@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.1
+  version: 3.7.2
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -438,6 +438,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CandleHistoryData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /fundingRateHistory/{symbol}/{resolution}:
+    get:
+      summary: Get funding rate history
+      description: |
+        Returns a perp market's funding rate over time, newest first.
+
+        Each entry covers one `resolution` interval, aligned to UTC multiples of the
+        resolution. `timestamp` is the interval start and `fundingRate` is the last rate
+        sampled in it, up to `endTime`. Intervals without samples are skipped, so a page holds
+        the `limit` most recent intervals that have data. Rates are sampled about once a
+        minute.
+
+        `fundingRate` has the same units as `MarketSummary.fundingRate`: an hourly rate
+        expressed as a percentage (daily rate ÷ 24 × 100). Samples taken while a market was
+        `PREOPEN` are indicative; no position paid them. For the current rate, use
+        `GET /v2/perpMarket/{symbol}/summary`.
+
+        To page back, pass the oldest returned `timestamp` minus 1 as the next `endTime`
+        (default: now). An empty page means there is no older data in range. `startTime`
+        limits results to intervals starting at or after it. Retired markets remain
+        queryable. Spot symbols return `SYMBOL_NOT_FOUND_ERROR`.
+      operationId: getFundingRateHistory
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+        - $ref: '#/components/parameters/FundingResolutionParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/FundingHistoryLimitParam'
+      responses:
+        '200':
+          description: Funding rate samples, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundingRateHistoryList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -1288,6 +1330,29 @@ components:
         default: 100
         example: 10
 
+    FundingResolutionParam:
+      name: resolution
+      in: path
+      required: true
+      description: Interval length. One entry is returned per interval that has samples.
+      schema:
+        type: string
+        enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
+        example: '1h'
+
+    FundingHistoryLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: >-
+        Maximum number of entries to return. The default is 200 and the maximum is
+        1,000; larger values are clamped to 1,000.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        example: 200
+
     ResolutionParam:
       name: resolution
       in: path
@@ -1377,6 +1442,12 @@ components:
 
     CandleHistoryData:
       $ref: './trading-schemas.json#/definitions/CandleHistoryData'
+
+    FundingRateSample:
+      $ref: './trading-schemas.json#/definitions/FundingRateSample'
+
+    FundingRateHistoryList:
+      $ref: './trading-schemas.json#/definitions/FundingRateHistoryList'
 
     CreateOrderRequest:
       $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
