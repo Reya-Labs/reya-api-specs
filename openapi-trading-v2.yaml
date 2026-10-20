@@ -447,18 +447,32 @@ paths:
     get:
       summary: Get funding rate history
       description: |
-        Returns a perp market's funding rate over time, newest first.
+        Returns a perp market's funding over time, newest first: the funding rate, and the
+        funding a position actually accrued.
 
-        Each entry covers one `resolution` interval, aligned to UTC multiples of the
-        resolution. `timestamp` is the interval start and `fundingRate` is the last rate
-        sampled in it, up to `endTime`. Intervals without samples are skipped, so a page holds
-        the `limit` most recent intervals that have data. Rates are sampled about once a
-        minute.
+        **How Reya funding works.** Funding is not settled at fixed times. The rate updates
+        about every 5 seconds and accrues continuously against the mark price; a position's
+        share is folded into its realized PnL whenever it changes. So there are no settlement
+        records to list; instead each entry summarises one `resolution` interval, aligned to UTC
+        multiples of the resolution, with `timestamp` as the interval start.
 
-        `fundingRate` has the same units as `MarketSummary.fundingRate`: an hourly rate
-        expressed as a percentage (daily rate ÷ 24 × 100). Samples taken while a market was
-        `PREOPEN` are indicative; no position paid them. For the current rate, use
-        `GET /v2/perpMarket/{symbol}/summary`.
+        - `fundingRate`: the last rate sampled in the interval, up to `endTime`. Rates are
+          sampled about once a minute, so this is a point-in-time snapshot, not an average.
+          Units match `MarketSummary.fundingRate`: an hourly rate as a percentage (daily rate ÷
+          24 × 100), so `0.0118` means 0.0118% per hour. Venues quoting decimal rates use 100
+          times smaller numbers.
+        - `fundingPerUnit`: the funding one unit of a long position accrued, in the quote asset,
+          from the previous entry's measurement to this one. It is computed from the market's
+          on-chain funding tracker, exactly as positions are charged, so it covers every rate
+          change in between. Positive means longs paid shorts. Shorts received the same per unit,
+          except across an auto-deleveraging event that reduced positions on one side. For a
+          constant position, `size × fundingPerUnit` summed over entries is the funding it paid
+          or received. It is omitted when no tracker measurement falls in the interval, which
+          applies to `1m` intervals recorded before 1-minute tracker sampling began.
+
+        Intervals without rate samples are skipped, so a page holds the `limit` most recent
+        intervals that have data. Samples taken while a market was `PREOPEN` are indicative; no
+        position paid them. For the current rate, use `GET /v2/perpMarket/{symbol}/summary`.
 
         To page back, pass the oldest returned `timestamp` minus 1 as the next `endTime`
         (default: now). An empty page means there is no older data in range. `startTime`
