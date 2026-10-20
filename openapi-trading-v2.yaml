@@ -462,7 +462,8 @@ paths:
           24 × 100), so `0.0118` means 0.0118% per hour. Venues quoting decimal rates use 100
           times smaller numbers.
         - `fundingPerUnit`: the funding one unit of a long position accrued, in the quote asset,
-          from the previous entry's measurement to this one. It is computed from the market's
+          from the last tracker measurement before the interval to the last one in it, so
+          consecutive entries add up exactly. It is computed from the market's
           on-chain funding tracker, exactly as positions are charged, so it covers every rate
           change in between. Positive means longs paid shorts. Shorts received the same per unit,
           except across an auto-deleveraging event that reduced positions on one side. For a

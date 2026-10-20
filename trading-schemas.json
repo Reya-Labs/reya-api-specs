@@ -2415,7 +2415,7 @@
         },
         "fundingPerUnit": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Funding one unit of a long position accrued since the previous entry's measurement, in the quote asset, from the on-chain funding tracker. Positive means longs paid. Omitted when no tracker measurement falls in the interval.",
+          "description": "Funding one unit of a long position accrued, in the quote asset, from the last on-chain funding-tracker measurement before the interval to the last one in it. Positive means longs paid. Omitted when no tracker measurement falls in the interval.",
           "example": "0.3717"
         }
       },
