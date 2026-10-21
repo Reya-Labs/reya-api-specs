@@ -289,8 +289,8 @@ channels:
 
       Fills are provisional. Confirm each one against the settled `perpExecutions` or
       `spotExecutions` row with the same `fillId`, and reverse it if an `executionBusts`
-      row with that `fillId` arrives. Fees and realized PnL are reported only on the
-      settled execution. Liquidation, ADL and market-close executions are not matched by
+      row with that `fillId` arrives. Each row carries an estimated `takerFee`; the exact
+      fee and realized PnL are reported only on the settled execution. Liquidation, ADL and market-close executions are not matched by
       the matching engine, so they never appear here; they arrive only on the execution
       channels.
 
