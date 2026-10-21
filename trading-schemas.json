@@ -2176,7 +2176,7 @@
     "Fill": {
       "title": "Fill",
       "type": "object",
-      "description": "A single matching-engine fill, published when the fill is matched and before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is provisional: it is confirmed by the settled execution and reversed by an execution bust, both carrying the same `fillId`. A fill can only settle on-chain within five minutes of its `timestamp`, when its settlement signature expires. Its settled execution can still arrive later than that if settlement reporting falls behind. Fees and realized PnL are known only after settlement and are reported on the settled execution.",
+      "description": "A single matching-engine fill, published when the fill is matched and before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is provisional: it is confirmed by the settled execution and reversed by an execution bust, both carrying the same `fillId`. Fees and realized PnL are known only after settlement and are reported on the settled execution.",
       "required": [
         "exchangeId",
         "symbol",
