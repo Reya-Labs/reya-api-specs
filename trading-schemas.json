@@ -2176,7 +2176,7 @@
     "Fill": {
       "title": "Fill",
       "type": "object",
-      "description": "A single matching-engine fill, published when the fill is matched and before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is provisional: it is confirmed by the settled execution and reversed by an execution bust, both carrying the same `fillId`. Fees and realized PnL are known only after settlement and are reported on the settled execution.",
+      "description": "A single matching-engine fill, published when the fill is matched and before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is provisional: it is confirmed by the settled execution and reversed by an execution bust, both carrying the same `fillId`. A fill that has neither settled nor been busted five minutes after its `timestamp` will not settle: its settlement signature has expired. Fees and realized PnL are known only after settlement and are reported on the settled execution.",
       "required": [
         "exchangeId",
         "symbol",
@@ -2193,6 +2193,7 @@
       "properties": {
         "exchangeId": {
           "$ref": "#/definitions/UnsignedInteger",
+          "description": "Exchange ID of the taker order, as on the settled execution. The maker order's exchange ID can differ.",
           "example": 1
         },
         "symbol": {
@@ -2240,7 +2241,7 @@
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Matching timestamp (milliseconds). Fills from the same matching round share this timestamp.",
+          "description": "Timestamp (milliseconds) of the taker order update that reported the fill's matching round: the `lastUpdateAt` of that orderChanges update. Fills from the same matching round share it.",
           "example": 1747927089946
         }
       },
