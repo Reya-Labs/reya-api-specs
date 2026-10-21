@@ -2173,6 +2173,85 @@
       },
       "additionalProperties": true
     },
+    "Fill": {
+      "title": "Fill",
+      "type": "object",
+      "description": "A single matching-engine fill, published when the fill is matched and before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is provisional: it is confirmed by the settled execution and reversed by an execution bust, both carrying the same `fillId`. The taker fee is an estimate; the exact fee and realized PnL are reported on the settled execution.",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "fillId",
+        "takerAccountId",
+        "makerAccountId",
+        "takerOrderId",
+        "makerOrderId",
+        "side",
+        "qty",
+        "price",
+        "timestamp"
+      ],
+      "properties": {
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Exchange ID of the taker order, as on the settled execution. The maker order's exchange ID can differ.",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Stable fill identifier. The settled perpExecutions or spotExecutions row and any executionBusts row for this fill carry the same `fillId`, and it falls inside the `[firstFillId, firstFillId + fillCount - 1]` range of the orderChanges updates that reported the fill.",
+          "example": "7205759403792794624"
+        },
+        "takerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
+          "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "takerOrderId": {
+          "type": "string",
+          "description": "Order ID for the taker",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker",
+          "example": "63552420037263360"
+        },
+        "side": {
+          "$ref": "#/definitions/Side",
+          "description": "Fill side from the taker perspective. The maker traded the opposite side."
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Filled base quantity",
+          "example": "1.0"
+        },
+        "price": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Fill price, excluding fees. Always the maker order's limit price.",
+          "example": "43000.00"
+        },
+        "takerFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Estimated gross taker fee in rUSD, with the meaning of `takerFee` on the settled execution: the taker's fee-tier rate × `qty` × the latest mark price when the fill was published. Settlement charges the mark price at settlement, so the settled `takerFee` can differ slightly; the settled execution carries the exact amount and its breakdown. Makers pay no fee. Always \"0\" on spot fills. Omitted when it cannot be estimated, for example when the server has no recent mark price for the market.",
+          "example": "1.2003"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Timestamp (milliseconds) of the taker order update that reported the fill's matching round: the `lastUpdateAt` of that orderChanges update. Fills from the same matching round share it.",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
     "AssetOraclePrice": {
       "title": "AssetOraclePrice",
       "type": "object",
