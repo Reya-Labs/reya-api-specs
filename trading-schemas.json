@@ -2241,7 +2241,7 @@
         },
         "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Estimated gross taker fee in rUSD, with the meaning of `takerFee` on the settled execution: the taker's fee-tier rate × `qty` × the latest mark price when the fill was published. Settlement charges the mark price at settlement, so the settled `takerFee` can differ slightly; the settled execution carries the exact amount and its breakdown. Makers pay no fee. Always \"0\" on spot fills. Omitted when it cannot be estimated: for example before the server has a mark price for the market, or, on the maker's copy of a row, when the server does not know the taker's fee tier.",
+          "description": "Estimated gross taker fee in rUSD, with the meaning of `takerFee` on the settled execution: the taker's fee-tier rate × `qty` × the latest mark price when the fill was published. Settlement charges the mark price at settlement, so the settled `takerFee` can differ slightly; the settled execution carries the exact amount and its breakdown. Makers pay no fee. Always \"0\" on spot fills. Omitted when it cannot be estimated: for example when the server has no recent mark price for the market, or, on the maker's copy of a row, when the server does not know the taker's fee tier.",
           "example": "1.2003"
         },
         "timestamp": {
