@@ -406,7 +406,7 @@
           "example": 152954
         },
         "markPrice": {
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Mark used to value this position and its margin requirements.",
+          "description": "Mark price used to value this position.",
           "example": "100",
           "allOf": [
             {
@@ -415,7 +415,7 @@
           ]
         },
         "notional": {
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. qty multiplied by markPrice, in rUSD.",
+          "description": "qty × markPrice, in rUSD.",
           "example": "1000",
           "allOf": [
             {
@@ -424,7 +424,7 @@
           ]
         },
         "unrealizedPnl": {
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
+          "description": "Position PnL at markPrice, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
           "example": "100",
           "allOf": [
             {
@@ -433,7 +433,7 @@
           ]
         },
         "liquidationMarginRequirement": {
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. This position's liquidation margin requirement, in rUSD.",
+          "description": "This position's liquidation margin requirement, in rUSD.",
           "example": "50",
           "allOf": [
             {
@@ -444,16 +444,16 @@
         "liquidationPrice": {
           "type": "string",
           "nullable": true,
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Estimated cross-margin liquidation price, rounded to the price tick toward the mark. Other market and collateral prices stay fixed. Null if no positive price is a liquidation boundary; a null value alone does not imply a healthy account.",
+          "description": "Estimated cross-margin liquidation price, holding other prices fixed and rounded to the price tick toward the mark. Null when no positive price is a liquidation boundary.",
           "example": null
         },
         "hasCorrelatedCollateral": {
           "type": "boolean",
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. True when held non-stable collateral tracks this market's underlying. The fixed-collateral-price estimate can then differ materially from liquidation as both prices move.",
+          "description": "True when the account holds non-stable collateral that tracks this market's underlying, so the fixed-collateral-price estimate is less reliable.",
           "example": false
         },
         "updatedAt": {
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
+          "description": "Calculation time, in Unix milliseconds.",
           "example": 1747927090000,
           "allOf": [
             {
@@ -465,12 +465,12 @@
           "type": "integer",
           "nullable": true,
           "minimum": 0,
-          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
+          "description": "Oldest mark or collateral price timestamp used by the account, in Unix milliseconds. Null when no price is needed.",
           "example": 1747927089597
         }
       },
       "additionalProperties": true,
-      "description": "Perpetual position state and optional valuation shared by REST and WebSocket. See GET /wallet/{address}/positions for valuation semantics and walletPositions for stream update rules."
+      "description": "Perpetual position. The valuation fields (markPrice through pricesUpdatedAt) are present together, or omitted together when the account cannot currently be valued."
     },
     "Order": {
       "title": "Order",
@@ -655,10 +655,9 @@
     "AccountSummary": {
       "title": "AccountSummary",
       "type": "object",
-      "description": "Settled perpetual account valuation and margin. See GET /wallet/{address}/accountSummaries for calculation and freshness semantics.",
+      "description": "Perpetual account valuation and margin, in rUSD.",
       "required": [
         "accountId",
-        "settlementAsset",
         "collateralValue",
         "unrealizedPnl",
         "marginBalance",
@@ -679,13 +678,6 @@
               "$ref": "#/definitions/UnsignedInteger"
             }
           ]
-        },
-        "settlementAsset": {
-          "type": "string",
-          "enum": [
-            "RUSD"
-          ],
-          "description": "Unit of every monetary figure in this summary."
         },
         "collateralValue": {
           "description": "Realized collateral value after haircuts, before unrealized position PnL. Positive collateral is discounted; a debt is increased by the inverse haircut.",
@@ -715,7 +707,7 @@
           ]
         },
         "initialMarginRequirement": {
-          "description": "Initial margin required by settled positions. Matches awaiting settlement are not yet included in this indexed valuation.",
+          "description": "Initial margin required by settled positions.",
           "example": "65",
           "allOf": [
             {
@@ -724,7 +716,7 @@
           ]
         },
         "liquidationMarginRequirement": {
-          "description": "Liquidation margin required by settled positions. Reya liquidates below this threshold; it is distinct from the protocol maintenance margin.",
+          "description": "Liquidation margin required by settled positions; the account is liquidatable below it.",
           "example": "50",
           "allOf": [
             {
@@ -733,7 +725,7 @@
           ]
         },
         "freeCollateral": {
-          "description": "marginBalance - initialMarginRequirement. Signed: negative means an initial-margin deficit. Indexed valuation; not an executable order-size quote or withdrawal limit.",
+          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote or withdrawal limit.",
           "example": "935",
           "allOf": [
             {
@@ -754,7 +746,7 @@
           "example": "0.05"
         },
         "updatedAt": {
-          "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
+          "description": "Calculation time, in Unix milliseconds.",
           "example": 1747927090000,
           "allOf": [
             {
@@ -766,7 +758,7 @@
           "type": "integer",
           "nullable": true,
           "minimum": 0,
-          "description": "Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
+          "description": "Oldest mark or collateral price timestamp used by the account, in Unix milliseconds. Null when no price is needed.",
           "example": 1747927089597
         }
       },

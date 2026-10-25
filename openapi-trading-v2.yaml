@@ -593,34 +593,17 @@ paths:
     get:
       summary: Get perpetual account summaries
       description: |
-        Return collateral value, unrealized PnL, margin requirements and free collateral
-        for the wallet's open perpetual accounts (`MAINPERP`, `SUBPERP`, `AGENTPERP`).
-        Spot accounts are excluded. Results are ordered by account ID. Pass `accountId`
-        to select one account; an account outside this wallet's open perpetual accounts
-        returns an empty list. As on other wallet reads, a wallet with no open accounts
-        returns `NO_ACCOUNTS_FOUND_ERROR`.
+        Returns margin figures for the wallet's open perpetual accounts, ordered by
+        account ID; spot accounts are excluded. Pass `accountId` to select one account.
 
-        **Valuation**
+        Amounts are decimal strings in rUSD. `collateralValue` is the haircut value of the
+        account's real balances, which already include realized funding and ADL cashflows.
+        `marginBalance = collateralValue + unrealizedPnl` and
+        `freeCollateral = marginBalance - initialMarginRequirement`. Figures cover settled
+        positions only; they are not an order-size quote or withdrawal limit.
 
-        All monetary amounts are decimal strings in rUSD. Collateral is valued after
-        haircuts; position PnL uses mark prices and ADL-adjusted quantities. Realized
-        balances already include funding and ADL cashflows through the latest indexed
-        market trackers. These cashflows are not counted a second time.
-
-        `freeCollateral = marginBalance - initialMarginRequirement`. It may be negative.
-        This indexed valuation is not an executable order-size quote or withdrawal
-        limit. Reconcile active orders and recent executions before sizing trades or
-        transfers. Matched fills awaiting settlement are not yet part of this valuation.
-        Order admission and settlement remain authoritative.
-
-        **Freshness**
-
-        `updatedAt` is the calculation time. `pricesUpdatedAt` is the oldest price used
-        by that account, or null when no price is needed. Prices, market trackers and
-        indexed account state can advance independently; this is an indexed valuation,
-        not an atomic on-chain snapshot. Compare price timestamps with your freshness
-        requirements. Missing inputs produce HTTP 503 instead of zero or partial figures;
-        an old but available price retains its original timestamp.
+        Returns 503 rather than partial figures when a required price or market input is
+        unavailable.
       operationId: getWalletAccountSummaries
       tags:
         - Wallet Data
@@ -639,7 +622,14 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
         '503':
-          $ref: '#/components/responses/AccountValuationUnavailable'
+          description: A valuation input is temporarily unavailable. Retry after backing off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestError'
+              example:
+                error: SERVICE_UNAVAILABLE_ERROR
+                message: A dependency is temporarily unavailable; retry after backing off
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -647,43 +637,12 @@ paths:
     get:
       summary: Get wallet positions
       description: |
-        Return perpetual positions for the wallet's open accounts. Existing position
-        identity, quantity, entry and trade-sequence fields are always retained.
-        A wallet with no open accounts returns `NO_ACCOUNTS_FOUND_ERROR`; accounts
-        without positions contribute no rows.
-
-        **Valuation fields**
-
-        When valuation inputs are available, each position also includes `markPrice`,
-        `notional`, `unrealizedPnl`, `liquidationMarginRequirement`, `liquidationPrice`,
-        `hasCorrelatedCollateral`, `updatedAt` and `pricesUpdatedAt`. These use the same
-        settled account valuation, units and freshness rules as
-        GET /wallet/{address}/accountSummaries. No display rounding is applied to PnL
-        or notional. Matched fills awaiting settlement are not yet included in this
-        indexed position valuation.
-
-        Missing valuation inputs omit all eight valuation fields for the affected
-        account, while preserving its basic positions. Other accounts may still include
-        valuation. Clients must not interpret omitted fields as zero or carry forward
-        old valuation onto changed positions. An available but old price retains its
-        source timestamp; check `pricesUpdatedAt` against your freshness requirements.
-        The WebSocket positions channel streams the same optional valuation fields.
-        Its snapshot, delta and valuation-invalidation rules are documented on that
-        channel; do not merge stale risk fields into a newer unvalued position row.
-
-        **Liquidation estimates**
-
-        Liquidation prices use cross margin: move only this market's mark until the
-        account's margin balance equals its liquidation margin requirement, keeping
-        every other mark, collateral price and funding value fixed. Round toward the
-        current mark onto the market's price tick. `hasCorrelatedCollateral` flags an
-        account holding non-stable collateral that tracks this market; the estimate
-        does not model that collateral moving with the market. A null liquidation price
-        means no positive price is the boundary, not necessarily that the account is safe.
-        An omitted liquidation price means valuation is unavailable.
-
-        These are estimates from indexed state, not guaranteed execution or liquidation
-        prices. Calculation time does not certify indexer or market-tracker freshness.
+        Returns the wallet's open perpetual positions. When the account can be valued, each
+        position also carries `markPrice`, `notional`, `unrealizedPnl`,
+        `liquidationMarginRequirement`, `liquidationPrice`, `hasCorrelatedCollateral`,
+        `updatedAt` and `pricesUpdatedAt`, computed as in
+        GET /wallet/{address}/accountSummaries. These fields are omitted together for an
+        account whose valuation inputs are unavailable; the position itself is still returned.
       operationId: getWalletPositions
       tags:
         - Wallet Data
@@ -1147,7 +1106,7 @@ components:
       name: accountId
       in: query
       required: false
-      description: Return only this open perpetual account of the wallet.
+      description: Return only this account.
       schema:
         type: integer
         minimum: 1
@@ -1409,15 +1368,6 @@ components:
       $ref: './trading-schemas.json#/definitions/DepthSnapshot'
 
   responses:
-    AccountValuationUnavailable:
-      description: Account valuation inputs are temporarily unavailable. Retry this read after backing off.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/RequestError'
-          example:
-            error: SERVICE_UNAVAILABLE_ERROR
-            message: Account valuation is temporarily unavailable; retry after backing off
     BadRequest:
       description: |
         Standardized error codes for API responses. Branch on `error`, not the free-text
