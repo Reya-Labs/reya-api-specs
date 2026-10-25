@@ -212,7 +212,11 @@ channels:
 
   walletPositions:
     address: /v2/wallet/{address}/positions
-    description: Real-time position updates for a wallet
+    description: |
+      Real-time basic position state for a wallet. The optional valuation fields in
+      the shared Position schema are not populated by this channel. Read
+      GET /wallet/{address}/positions to refresh valuation after position changes
+      or mark moves; do not retain old valuation as if it described a new position.
     parameters:
       address:
         description: Ethereum wallet address

@@ -404,9 +404,73 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Sequence number of last execution taken into account for the position.",
           "example": 152954
+        },
+        "markPrice": {
+          "description": "REST valuation only; omitted when valuation is unavailable. Mark used to value this position and its margin requirements.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "notional": {
+          "description": "REST valuation only; omitted when valuation is unavailable. qty multiplied by markPrice, in rUSD.",
+          "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "unrealizedPnl": {
+          "description": "REST valuation only; omitted when valuation is unavailable. Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "liquidationMarginRequirement": {
+          "description": "REST valuation only; omitted when valuation is unavailable. This position's liquidation margin requirement, in rUSD.",
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "liquidationPrice": {
+          "type": "string",
+          "nullable": true,
+          "description": "REST valuation only; omitted when valuation is unavailable. Estimated cross-margin liquidation price, rounded to the price tick toward the mark. Other market and collateral prices stay fixed. Null if no positive price is a liquidation boundary; a null value alone does not imply a healthy account.",
+          "example": null
+        },
+        "hasCorrelatedCollateral": {
+          "type": "boolean",
+          "description": "REST valuation only; omitted when valuation is unavailable. True when held non-stable collateral tracks this market's underlying. The fixed-collateral-price estimate can then differ materially from liquidation as both prices move.",
+          "example": false
+        },
+        "updatedAt": {
+          "description": "REST valuation only; omitted when valuation is unavailable. Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
+          "example": 1747927090000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "pricesUpdatedAt": {
+          "type": "integer",
+          "nullable": true,
+          "minimum": 0,
+          "description": "REST valuation only; omitted when valuation is unavailable. Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
+          "example": 1747927089597
         }
       },
-      "additionalProperties": true
+      "additionalProperties": true,
+      "description": "Perpetual position state shared by REST and WebSocket. Optional valuation fields are populated by GET /wallet/{address}/positions; see that operation for availability and freshness rules."
     },
     "Order": {
       "title": "Order",
@@ -688,130 +752,6 @@
           "nullable": true,
           "description": "liquidationMarginRequirement / marginBalance as a decimal fraction. Rounded up to at most 18 decimal places. Null when marginBalance is zero or negative.",
           "example": "0.05"
-        },
-        "updatedAt": {
-          "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
-          "example": 1747927090000,
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedInteger"
-            }
-          ]
-        },
-        "pricesUpdatedAt": {
-          "type": "integer",
-          "nullable": true,
-          "minimum": 0,
-          "description": "Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
-          "example": 1747927089597
-        }
-      },
-      "additionalProperties": true
-    },
-    "PositionRisk": {
-      "title": "PositionRisk",
-      "type": "object",
-      "description": "Valuation and estimated liquidation price for an open perpetual position. See GET /wallet/{address}/positionRisk.",
-      "required": [
-        "accountId",
-        "symbol",
-        "side",
-        "qty",
-        "avgEntryPrice",
-        "markPrice",
-        "notional",
-        "unrealizedPnl",
-        "liquidationMarginRequirement",
-        "liquidationPrice",
-        "hasCorrelatedCollateral",
-        "updatedAt",
-        "pricesUpdatedAt"
-      ],
-      "properties": {
-        "accountId": {
-          "description": "Perpetual margin account ID.",
-          "example": 12345,
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedInteger"
-            }
-          ]
-        },
-        "symbol": {
-          "$ref": "#/definitions/Symbol"
-        },
-        "side": {
-          "description": "Position direction: B is long, A is short.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Side"
-            }
-          ]
-        },
-        "qty": {
-          "description": "Unsigned, ADL-adjusted position quantity in base units.",
-          "example": "10",
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedDecimal"
-            }
-          ]
-        },
-        "avgEntryPrice": {
-          "description": "Average entry price in rUSD per base unit.",
-          "example": "90",
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedDecimal"
-            }
-          ]
-        },
-        "markPrice": {
-          "description": "Mark used to value this position and its margin requirements.",
-          "example": "100",
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedDecimal"
-            }
-          ]
-        },
-        "notional": {
-          "description": "qty multiplied by markPrice, in rUSD.",
-          "example": "1000",
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedDecimal"
-            }
-          ]
-        },
-        "unrealizedPnl": {
-          "description": "Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
-          "example": "100",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
-        },
-        "liquidationMarginRequirement": {
-          "description": "This position's liquidation margin requirement, in rUSD.",
-          "example": "50",
-          "allOf": [
-            {
-              "$ref": "#/definitions/UnsignedDecimal"
-            }
-          ]
-        },
-        "liquidationPrice": {
-          "type": "string",
-          "nullable": true,
-          "description": "Estimated cross-margin liquidation price, rounded to the price tick toward the mark. Other market and collateral prices stay fixed. Null if no positive price is a liquidation boundary; a null value alone does not imply a healthy account.",
-          "example": null
-        },
-        "hasCorrelatedCollateral": {
-          "type": "boolean",
-          "description": "True when held non-stable collateral tracks this market's underlying. The fixed-collateral-price estimate can then differ materially from liquidation as both prices move.",
-          "example": false
         },
         "updatedAt": {
           "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",

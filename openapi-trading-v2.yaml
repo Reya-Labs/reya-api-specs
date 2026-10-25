@@ -643,17 +643,33 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /wallet/{address}/positionRisk:
+  /wallet/{address}/positions:
     get:
-      summary: Get perpetual position risk
+      summary: Get wallet positions
       description: |
-        Return open positions with mark price, notional, unrealized PnL, liquidation
-        margin requirement and an estimated liquidation price. Uses the same settled
-        account valuation and freshness rules as GET /wallet/{address}/accountSummaries.
-        Results are ordered by account ID, then symbol. Accounts without positions
-        contribute no rows. `accountId` narrows the accounts valued. An account outside
-        this wallet's open perpetual accounts returns an empty list. As on other wallet
-        reads, a wallet with no open accounts returns `NO_ACCOUNTS_FOUND_ERROR`.
+        Return perpetual positions for the wallet's open accounts. Existing position
+        identity, quantity, entry and trade-sequence fields are always retained.
+        A wallet with no open accounts returns `NO_ACCOUNTS_FOUND_ERROR`; accounts
+        without positions contribute no rows.
+
+        **Valuation fields**
+
+        When valuation inputs are available, each position also includes `markPrice`,
+        `notional`, `unrealizedPnl`, `liquidationMarginRequirement`, `liquidationPrice`,
+        `hasCorrelatedCollateral`, `updatedAt` and `pricesUpdatedAt`. These use the same
+        settled account valuation, units and freshness rules as
+        GET /wallet/{address}/accountSummaries. No display rounding is applied to PnL
+        or notional. Resting orders and matches awaiting settlement are excluded.
+
+        Missing valuation inputs omit all eight valuation fields for the affected
+        account, while preserving its basic positions. Other accounts may still include
+        valuation. Clients must not interpret omitted fields as zero or carry forward
+        old valuation onto changed positions. An available but old price retains its
+        source timestamp; check `pricesUpdatedAt` against your freshness requirements.
+        The WebSocket positions channel currently sends basic position state only;
+        use this REST read to refresh valuation after position changes or mark moves.
+
+        **Liquidation estimates**
 
         Liquidation prices use cross margin: move only this market's mark until the
         account's margin balance equals its liquidation margin requirement, keeping
@@ -662,35 +678,10 @@ paths:
         account holding non-stable collateral that tracks this market; the estimate
         does not model that collateral moving with the market. A null liquidation price
         means no positive price is the boundary, not necessarily that the account is safe.
+        An omitted liquidation price means valuation is unavailable.
 
         These are estimates from indexed state, not guaranteed execution or liquidation
-        prices. No display rounding is applied to PnL or notional. Missing inputs for
-        any selected account fail the read with HTTP 503; positions are never silently omitted.
-      operationId: getWalletPositionRisk
-      tags:
-        - Wallet Data
-      parameters:
-        - $ref: '#/components/parameters/AddressParam'
-        - $ref: '#/components/parameters/AccountIdFilterParam'
-      responses:
-        '200':
-          description: Open perpetual positions with risk figures
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PositionRisk'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '503':
-          $ref: '#/components/responses/AccountValuationUnavailable'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /wallet/{address}/positions:
-    get:
-      summary: Get wallet positions
+        prices. Calculation time does not certify indexer or market-tracker freshness.
       operationId: getWalletPositions
       tags:
         - Wallet Data
@@ -1294,8 +1285,6 @@ components:
   schemas:
     AccountSummary:
       $ref: './trading-schemas.json#/definitions/AccountSummary'
-    PositionRisk:
-      $ref: './trading-schemas.json#/definitions/PositionRisk'
     TriggerOrderType:
       $ref: './trading-schemas.json#/definitions/TriggerOrderType'
     LimitOrderType:
