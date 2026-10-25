@@ -588,6 +588,182 @@
       },
       "additionalProperties": true
     },
+    "AccountSummary": {
+      "title": "AccountSummary",
+      "type": "object",
+      "description": "Settled perpetual account valuation and margin. See GET /wallet/{address}/accountSummaries for calculation and freshness semantics.",
+      "required": [
+        "accountId",
+        "settlementAsset",
+        "collateralValue",
+        "unrealizedPnl",
+        "marginBalance",
+        "initialMarginRequirement",
+        "liquidationMarginRequirement",
+        "freeCollateral",
+        "initialMarginRatio",
+        "liquidationMarginRatio",
+        "updatedAt",
+        "pricesUpdatedAt"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Perpetual margin account ID.",
+          "example": 12345
+        },
+        "settlementAsset": {
+          "type": "string",
+          "enum": [
+            "RUSD"
+          ],
+          "description": "Unit of every monetary figure in this summary."
+        },
+        "collateralValue": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Realized collateral value after haircuts, before unrealized position PnL. Positive collateral is discounted; a debt is increased by the inverse haircut.",
+          "example": "900"
+        },
+        "unrealizedPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Sum of unrealized position PnL at mark prices. Funding and ADL cashflows already included in realized balances are not added again.",
+          "example": "100"
+        },
+        "marginBalance": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "collateralValue + unrealizedPnl. The value available to cover margin requirements, after collateral haircuts.",
+          "example": "1000"
+        },
+        "initialMarginRequirement": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Initial margin required by settled positions. Resting orders and unsettled matches are excluded.",
+          "example": "65"
+        },
+        "liquidationMarginRequirement": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Liquidation margin required by settled positions. Reya liquidates below this threshold; it is distinct from the protocol maintenance margin.",
+          "example": "50"
+        },
+        "freeCollateral": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "marginBalance - initialMarginRequirement. Signed: negative means an initial-margin deficit. Excludes resting-order reservations and unsettled matches; not a withdrawal limit or order-size quote.",
+          "example": "935"
+        },
+        "initialMarginRatio": {
+          "type": "string",
+          "nullable": true,
+          "description": "initialMarginRequirement / marginBalance as a decimal fraction (1 means 100%). Rounded up to at most 18 decimal places. Null when marginBalance is zero or negative.",
+          "example": "0.065"
+        },
+        "liquidationMarginRatio": {
+          "type": "string",
+          "nullable": true,
+          "description": "liquidationMarginRequirement / marginBalance as a decimal fraction. Rounded up to at most 18 decimal places. Null when marginBalance is zero or negative.",
+          "example": "0.05"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
+          "example": 1747927090000
+        },
+        "pricesUpdatedAt": {
+          "type": "integer",
+          "nullable": true,
+          "minimum": 0,
+          "description": "Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
+          "example": 1747927089597
+        }
+      },
+      "additionalProperties": true
+    },
+    "PositionRisk": {
+      "title": "PositionRisk",
+      "type": "object",
+      "description": "Valuation and estimated liquidation price for an open perpetual position. See GET /wallet/{address}/positionRisk.",
+      "required": [
+        "accountId",
+        "symbol",
+        "side",
+        "qty",
+        "avgEntryPrice",
+        "markPrice",
+        "notional",
+        "unrealizedPnl",
+        "liquidationMarginRequirement",
+        "liquidationPrice",
+        "hasCorrelatedCollateral",
+        "updatedAt",
+        "pricesUpdatedAt"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Perpetual margin account ID.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "side": {
+          "$ref": "#/definitions/Side",
+          "description": "Position direction: B is long, A is short."
+        },
+        "qty": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Unsigned, ADL-adjusted position quantity in base units.",
+          "example": "10"
+        },
+        "avgEntryPrice": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Average entry price in rUSD per base unit.",
+          "example": "90"
+        },
+        "markPrice": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Mark used to value this position and its margin requirements.",
+          "example": "100"
+        },
+        "notional": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "qty multiplied by markPrice, in rUSD.",
+          "example": "1000"
+        },
+        "unrealizedPnl": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
+          "example": "100"
+        },
+        "liquidationMarginRequirement": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "This position's liquidation margin requirement, in rUSD.",
+          "example": "50"
+        },
+        "liquidationPrice": {
+          "type": "string",
+          "nullable": true,
+          "description": "Estimated cross-margin liquidation price, rounded to the price tick toward the mark. Other market and collateral prices stay fixed. Null if no positive price is a liquidation boundary; a null value alone does not imply a healthy account.",
+          "example": null
+        },
+        "hasCorrelatedCollateral": {
+          "type": "boolean",
+          "description": "True when held non-stable collateral tracks this market's underlying. The fixed-collateral-price estimate can then differ materially from liquidation as both prices move.",
+          "example": false
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
+          "example": 1747927090000
+        },
+        "pricesUpdatedAt": {
+          "type": "integer",
+          "nullable": true,
+          "minimum": 0,
+          "description": "Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
+          "example": 1747927089597
+        }
+      },
+      "additionalProperties": true
+    },
     "AccountBalance": {
       "title": "AccountBalance",
       "type": "object",
