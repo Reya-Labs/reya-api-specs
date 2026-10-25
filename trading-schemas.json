@@ -715,7 +715,7 @@
           ]
         },
         "initialMarginRequirement": {
-          "description": "Initial margin required by settled positions. Resting orders and unsettled matches are excluded.",
+          "description": "Initial margin required by settled positions. Reya currently reserves no margin for resting orders. Matches awaiting settlement are not yet included in this indexed valuation.",
           "example": "65",
           "allOf": [
             {
@@ -733,7 +733,7 @@
           ]
         },
         "freeCollateral": {
-          "description": "marginBalance - initialMarginRequirement. Signed: negative means an initial-margin deficit. Excludes resting-order reservations and unsettled matches; not a withdrawal limit or order-size quote.",
+          "description": "marginBalance - initialMarginRequirement. Signed: negative means an initial-margin deficit. Reya currently reserves no margin for resting orders. Matched fills awaiting settlement are not yet included; not a withdrawal limit or order-size quote.",
           "example": "935",
           "allOf": [
             {

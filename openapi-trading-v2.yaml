@@ -608,10 +608,13 @@ paths:
         market trackers. These cashflows are not counted a second time.
 
         `freeCollateral = marginBalance - initialMarginRequirement`. It may be negative.
-        It measures headroom on the settled account, excludes resting orders and matched
-        fills awaiting settlement, and is not a withdrawal limit or a guarantee that an
-        order will pass risk checks. Clients that reserve budget for resting orders must
-        apply those reservations themselves. Order admission and settlement remain authoritative.
+        Reya currently does not reserve margin for resting orders, so this value has
+        no resting-order deduction. Clients may apply their own order-budget policy;
+        such deductions are client-side reservations, not margin held by Reya.
+
+        Matched fills awaiting settlement are separate: they are not yet part of this
+        indexed account valuation. The value is not a withdrawal limit or a guarantee
+        that an order will pass risk checks. Order admission and settlement remain authoritative.
 
         **Freshness**
 
@@ -659,7 +662,8 @@ paths:
         `hasCorrelatedCollateral`, `updatedAt` and `pricesUpdatedAt`. These use the same
         settled account valuation, units and freshness rules as
         GET /wallet/{address}/accountSummaries. No display rounding is applied to PnL
-        or notional. Resting orders and matches awaiting settlement are excluded.
+        or notional. Reya currently reserves no margin for resting orders. Matched fills
+        awaiting settlement are not yet included in this indexed position valuation.
 
         Missing valuation inputs omit all eight valuation fields for the affected
         account, while preserving its basic positions. Other accounts may still include
