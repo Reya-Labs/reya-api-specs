@@ -651,7 +651,9 @@ paths:
         margin requirement and an estimated liquidation price. Uses the same settled
         account valuation and freshness rules as GET /wallet/{address}/accountSummaries.
         Results are ordered by account ID, then symbol. Accounts without positions
-        contribute no rows. `accountId` narrows the accounts valued.
+        contribute no rows. `accountId` narrows the accounts valued. An account outside
+        this wallet's open perpetual accounts returns an empty list. As on other wallet
+        reads, a wallet with no open accounts returns `NO_ACCOUNTS_FOUND_ERROR`.
 
         Liquidation prices use cross margin: move only this market's mark until the
         account's margin balance equals its liquidation margin requirement, keeping
