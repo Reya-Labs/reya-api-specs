@@ -608,9 +608,13 @@
       ],
       "properties": {
         "accountId": {
-          "$ref": "#/definitions/UnsignedInteger",
           "description": "Perpetual margin account ID.",
-          "example": 12345
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
         },
         "settlementAsset": {
           "type": "string",
@@ -620,34 +624,58 @@
           "description": "Unit of every monetary figure in this summary."
         },
         "collateralValue": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Realized collateral value after haircuts, before unrealized position PnL. Positive collateral is discounted; a debt is increased by the inverse haircut.",
-          "example": "900"
+          "example": "900",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "unrealizedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Sum of unrealized position PnL at mark prices. Funding and ADL cashflows already included in realized balances are not added again.",
-          "example": "100"
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "marginBalance": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "collateralValue + unrealizedPnl. The value available to cover margin requirements, after collateral haircuts.",
-          "example": "1000"
+          "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "initialMarginRequirement": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "Initial margin required by settled positions. Resting orders and unsettled matches are excluded.",
-          "example": "65"
+          "example": "65",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "liquidationMarginRequirement": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "Liquidation margin required by settled positions. Reya liquidates below this threshold; it is distinct from the protocol maintenance margin.",
-          "example": "50"
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "freeCollateral": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "marginBalance - initialMarginRequirement. Signed: negative means an initial-margin deficit. Excludes resting-order reservations and unsettled matches; not a withdrawal limit or order-size quote.",
-          "example": "935"
+          "example": "935",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "initialMarginRatio": {
           "type": "string",
@@ -662,9 +690,13 @@
           "example": "0.05"
         },
         "updatedAt": {
-          "$ref": "#/definitions/UnsignedInteger",
           "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
-          "example": 1747927090000
+          "example": 1747927090000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
         },
         "pricesUpdatedAt": {
           "type": "integer",
@@ -697,46 +729,78 @@
       ],
       "properties": {
         "accountId": {
-          "$ref": "#/definitions/UnsignedInteger",
           "description": "Perpetual margin account ID.",
-          "example": 12345
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
         },
         "symbol": {
           "$ref": "#/definitions/Symbol"
         },
         "side": {
-          "$ref": "#/definitions/Side",
-          "description": "Position direction: B is long, A is short."
+          "description": "Position direction: B is long, A is short.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Side"
+            }
+          ]
         },
         "qty": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "Unsigned, ADL-adjusted position quantity in base units.",
-          "example": "10"
+          "example": "10",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "avgEntryPrice": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "Average entry price in rUSD per base unit.",
-          "example": "90"
+          "example": "90",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "markPrice": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "Mark used to value this position and its margin requirements.",
-          "example": "100"
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "notional": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "qty multiplied by markPrice, in rUSD.",
-          "example": "1000"
+          "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "unrealizedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
-          "example": "100"
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "liquidationMarginRequirement": {
-          "$ref": "#/definitions/UnsignedDecimal",
           "description": "This position's liquidation margin requirement, in rUSD.",
-          "example": "50"
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         },
         "liquidationPrice": {
           "type": "string",
@@ -750,9 +814,13 @@
           "example": false
         },
         "updatedAt": {
-          "$ref": "#/definitions/UnsignedInteger",
           "description": "Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
-          "example": 1747927090000
+          "example": 1747927090000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
         },
         "pricesUpdatedAt": {
           "type": "integer",
