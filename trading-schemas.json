@@ -406,7 +406,7 @@
           "example": 152954
         },
         "markPrice": {
-          "description": "REST valuation only; omitted when valuation is unavailable. Mark used to value this position and its margin requirements.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Mark used to value this position and its margin requirements.",
           "example": "100",
           "allOf": [
             {
@@ -415,7 +415,7 @@
           ]
         },
         "notional": {
-          "description": "REST valuation only; omitted when valuation is unavailable. qty multiplied by markPrice, in rUSD.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. qty multiplied by markPrice, in rUSD.",
           "example": "1000",
           "allOf": [
             {
@@ -424,7 +424,7 @@
           ]
         },
         "unrealizedPnl": {
-          "description": "REST valuation only; omitted when valuation is unavailable. Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Position PnL at mark, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
           "example": "100",
           "allOf": [
             {
@@ -433,7 +433,7 @@
           ]
         },
         "liquidationMarginRequirement": {
-          "description": "REST valuation only; omitted when valuation is unavailable. This position's liquidation margin requirement, in rUSD.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. This position's liquidation margin requirement, in rUSD.",
           "example": "50",
           "allOf": [
             {
@@ -444,16 +444,16 @@
         "liquidationPrice": {
           "type": "string",
           "nullable": true,
-          "description": "REST valuation only; omitted when valuation is unavailable. Estimated cross-margin liquidation price, rounded to the price tick toward the mark. Other market and collateral prices stay fixed. Null if no positive price is a liquidation boundary; a null value alone does not imply a healthy account.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Estimated cross-margin liquidation price, rounded to the price tick toward the mark. Other market and collateral prices stay fixed. Null if no positive price is a liquidation boundary; a null value alone does not imply a healthy account.",
           "example": null
         },
         "hasCorrelatedCollateral": {
           "type": "boolean",
-          "description": "REST valuation only; omitted when valuation is unavailable. True when held non-stable collateral tracks this market's underlying. The fixed-collateral-price estimate can then differ materially from liquidation as both prices move.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. True when held non-stable collateral tracks this market's underlying. The fixed-collateral-price estimate can then differ materially from liquidation as both prices move.",
           "example": false
         },
         "updatedAt": {
-          "description": "REST valuation only; omitted when valuation is unavailable. Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Time these figures were calculated, in Unix milliseconds; not a settlement or price timestamp.",
           "example": 1747927090000,
           "allOf": [
             {
@@ -465,12 +465,12 @@
           "type": "integer",
           "nullable": true,
           "minimum": 0,
-          "description": "REST valuation only; omitted when valuation is unavailable. Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
+          "description": "Omitted when valuation is unavailable; see the positions REST operation and WebSocket channel. Oldest mark or collateral oracle timestamp used by this account, in Unix milliseconds. Null when no price is required (for example, only rUSD and no positions).",
           "example": 1747927089597
         }
       },
       "additionalProperties": true,
-      "description": "Perpetual position state shared by REST and WebSocket. Optional valuation fields are populated by GET /wallet/{address}/positions; see that operation for availability and freshness rules."
+      "description": "Perpetual position state and optional valuation shared by REST and WebSocket. See GET /wallet/{address}/positions for valuation semantics and walletPositions for stream update rules."
     },
     "Order": {
       "title": "Order",

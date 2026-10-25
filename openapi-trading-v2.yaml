@@ -670,8 +670,9 @@ paths:
         valuation. Clients must not interpret omitted fields as zero or carry forward
         old valuation onto changed positions. An available but old price retains its
         source timestamp; check `pricesUpdatedAt` against your freshness requirements.
-        The WebSocket positions channel currently sends basic position state only;
-        use this REST read to refresh valuation after position changes or mark moves.
+        The WebSocket positions channel streams the same optional valuation fields.
+        Its snapshot, delta and valuation-invalidation rules are documented on that
+        channel; do not merge stale risk fields into a newer unvalued position row.
 
         **Liquidation estimates**
 

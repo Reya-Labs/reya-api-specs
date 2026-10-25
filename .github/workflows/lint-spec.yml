@@ -21,6 +21,7 @@ on:
       - 'trading-schemas.json'
       - 'scripts/verify-perpob-contracts.mjs'
       - 'scripts/test-order-requests.py'
+      - 'scripts/test-risk-streams.py'
       - '.github/workflows/lint-spec.yml'
   workflow_dispatch:
 
@@ -76,5 +77,6 @@ jobs:
 
       - name: Validate order request payload matrix
         run: |
-          python -m pip install jsonschema==4.23.0
+          python -m pip install jsonschema==4.23.0 PyYAML==6.0.2
           python scripts/test-order-requests.py
+          python scripts/test-risk-streams.py

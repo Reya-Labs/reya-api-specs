@@ -213,15 +213,38 @@ channels:
   walletPositions:
     address: /v2/wallet/{address}/positions
     description: |
-      Real-time basic position state for a wallet. The optional valuation fields in
-      the shared Position schema are not populated by this channel. Read
-      GET /wallet/{address}/positions to refresh valuation after position changes
-      or mark moves; do not retain old valuation as if it described a new position.
+      Position state and optional valuation for a wallet, using the same Position
+      fields and valuation rules as GET /wallet/{address}/positions.
+
+      The `subscribed` acknowledgement contains a complete position snapshot in
+      `contents.data`. Subsequent `channel_data` arrays are upserts, not complete
+      wallet replacements: match rows by `accountId` and `symbol`. A zero `qty`
+      removes that position from the wallet's view. Absence from a live frame
+      does not remove a position and does not imply an execution.
+
+      Position changes can first arrive with only the base fields, followed by
+      coalesced valuation updates. Prices, balances, funding/ADL trackers and
+      reference data can also change valuation without a new position execution.
+
+      If a row omits its valuation fields, discard that row's previously cached
+      valuation. `unavailableAccountIds`, when present on a snapshot or update,
+      invalidates cached valuation for every position in those accounts while
+      retaining their base state. Do not merge old risk fields into a newer base
+      row. Recovery publishes fresh enriched rows. A channel-scoped `error`
+      invalidates all cached valuation for this channel; retain base state until
+      a valid update or a fresh subscription snapshot reconciles it.
+
+      The accountSummaries channel documents shared refresh and freshness rules.
+      Wallet ownership or account-visibility changes can close the connection
+      with code `1012` to reconcile the position set. Reconnect and resubscribe
+      after disconnection to obtain a fresh full view.
     parameters:
       address:
         description: Ethereum wallet address
         location: $message.payload#/address
     messages:
+      positionSubscribed:
+        $ref: '#/components/messages/PositionSubscribed'
       positionUpdate:
         $ref: '#/components/messages/PositionUpdate'
 
@@ -299,6 +322,57 @@ channels:
     messages:
       walletExecutionBustUpdate:
         $ref: '#/components/messages/WalletExecutionBustUpdate'
+
+  walletAccountSummaries:
+    address: /v2/wallet/{address}/accountSummaries
+    description: |
+      Account equity, margin requirements and free collateral, using the same
+      AccountSummary rows and valuation semantics as
+      GET /wallet/{address}/accountSummaries. Spot accounts are excluded.
+
+      **Complete wallet snapshots**
+
+      The `subscribed` acknowledgement has `contents.data` and
+      `contents.unavailableAccountIds`. Every subsequent `channel_data` frame has
+      `data` and `unavailableAccountIds` at the top level. Both arrays together
+      describe the complete current wallet view; replace the previous view on
+      each frame. Accounts absent from both arrays have left that view. Empty
+      arrays clear it. Unlike REST's strict all-account valuation, the stream
+      can retain healthy accounts while identifying unavailable ones explicitly.
+
+      `unavailableAccountIds` lists open perpetual accounts whose valuation cannot
+      currently be computed. Discard any cached summary for those accounts; do
+      not substitute zero or keep presenting old figures as current. Recovery
+      replaces the unavailable ID with its newly computed AccountSummary. If the
+      wallet's account scope itself is unavailable, a channel-scoped `error`
+      invalidates all cached summaries; no empty snapshot is fabricated. Retry
+      a failed initial subscription; a successful subscription remains active
+      while a later valuation failure recovers.
+
+      **Refresh and freshness**
+
+      Valuation refreshes are coalesced after changes to positions, balances,
+      funding/ADL trackers, mark prices and collateral prices. Account visibility
+      and reference configuration are also rechecked periodically. The stream
+      delivers current state rather than every intermediate price tick. It does
+      not provide an execution ledger or an atomic on-chain snapshot.
+
+      `updatedAt` is calculation time; `pricesUpdatedAt` is the oldest price used
+      by that account. Compare source-price timestamps with your freshness needs;
+      a newly received frame does not make an old price fresh. Neither timestamp
+      certifies indexer/tracker freshness. Funding treatment, resting-order margin
+      behavior and liquidation assumptions follow the REST valuation contract.
+      On disconnect, invalidate cached valuation and reconnect/resubscribe for a
+      fresh snapshot. The disconnection window is not replayed.
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      accountSummarySubscribed:
+        $ref: '#/components/messages/AccountSummarySubscribed'
+      accountSummaryUpdate:
+        $ref: '#/components/messages/AccountSummaryUpdate'
 
   walletAccountBalances:
     address: /v2/wallet/{address}/accountBalances
@@ -483,6 +557,7 @@ operations:
     channel:
       $ref: '#/channels/walletPositions'
     messages:
+      - $ref: '#/channels/walletPositions/messages/positionSubscribed'
       - $ref: '#/channels/walletPositions/messages/positionUpdate'
     summary: Receive position updates for wallet
 
@@ -526,6 +601,15 @@ operations:
     messages:
       - $ref: '#/channels/walletExecutionBusts/messages/walletExecutionBustUpdate'
     summary: Receive execution bust updates for wallet (spot + perp)
+
+  receiveWalletAccountSummaries:
+    action: receive
+    channel:
+      $ref: '#/channels/walletAccountSummaries'
+    messages:
+      - $ref: '#/channels/walletAccountSummaries/messages/accountSummarySubscribed'
+      - $ref: '#/channels/walletAccountSummaries/messages/accountSummaryUpdate'
+    summary: Receive complete account valuation snapshots for a wallet
 
   receiveWalletAccountBalances:
     action: receive
@@ -593,6 +677,13 @@ components:
       summary: Real-time update for a specific spot market summary
       payload:
         $ref: '#/components/schemas/SpotMarketSummaryUpdatePayload'
+
+    PositionSubscribed:
+      name: subscribed
+      title: Position Subscription Snapshot
+      summary: Full initial position snapshot with explicit valuation availability
+      payload:
+        $ref: '#/components/schemas/PositionSubscribedPayload'
 
     PositionUpdate:
       name: positionUpdate
@@ -676,6 +767,20 @@ components:
       summary: Real-time execution bust update for wallet (spot + perp)
       payload:
         $ref: '#/components/schemas/WalletExecutionBustUpdatePayload'
+
+    AccountSummarySubscribed:
+      name: subscribed
+      title: Account Summary Subscription Snapshot
+      summary: Complete initial account valuation view
+      payload:
+        $ref: '#/components/schemas/AccountSummarySubscribedPayload'
+
+    AccountSummaryUpdate:
+      name: accountSummaryUpdate
+      title: Account Summary Update
+      summary: Complete replacement of the wallet account valuation view
+      payload:
+        $ref: '#/components/schemas/AccountSummaryUpdatePayload'
 
     AccountBalanceUpdate:
       name: accountBalanceUpdate
@@ -900,6 +1005,11 @@ components:
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/executionBusts$'
       description: Channel pattern for wallet execution busts (spot + perp)
 
+    WalletAccountSummariesChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountSummaries$'
+      description: Channel pattern for wallet account valuation snapshots
+
     WalletAccountBalancesChannelPattern:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountBalances$'
@@ -988,6 +1098,101 @@ components:
         data:
           $ref: './trading-schemas.json#/definitions/SpotMarketSummary'
 
+    UnavailableAccountIds:
+      type: array
+      title: UnavailableAccountIds
+      description: Account IDs whose derived valuation is unavailable and must be discarded from the client cache. Base position state remains valid unless separately updated.
+      uniqueItems: true
+      items:
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
+
+    PositionSnapshot:
+      type: object
+      title: PositionSnapshot
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: './trading-schemas.json#/definitions/Position'
+        unavailableAccountIds:
+          $ref: '#/components/schemas/UnavailableAccountIds'
+
+    PositionSubscribedPayload:
+      type: object
+      title: PositionSubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/WalletPositionsChannelPattern'
+        contents:
+          $ref: '#/components/schemas/PositionSnapshot'
+
+    AccountSummarySnapshot:
+      type: object
+      title: AccountSummarySnapshot
+      additionalProperties: false
+      required:
+        - data
+        - unavailableAccountIds
+      properties:
+        data:
+          type: array
+          items:
+            $ref: './trading-schemas.json#/definitions/AccountSummary'
+        unavailableAccountIds:
+          $ref: '#/components/schemas/UnavailableAccountIds'
+
+    AccountSummarySubscribedPayload:
+      type: object
+      title: AccountSummarySubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/WalletAccountSummariesChannelPattern'
+        contents:
+          $ref: '#/components/schemas/AccountSummarySnapshot'
+
+    AccountSummaryUpdatePayload:
+      type: object
+      title: AccountSummaryUpdatePayload
+      additionalProperties: false
+      required:
+        - type
+        - timestamp
+        - channel
+        - data
+        - unavailableAccountIds
+      properties:
+        type:
+          $ref: '#/components/schemas/ChannelDataMessageType'
+        timestamp:
+          type: integer
+          minimum: 0
+          description: Frame emission time in Unix milliseconds; source freshness is carried on each summary.
+        channel:
+          $ref: '#/components/schemas/WalletAccountSummariesChannelPattern'
+        data:
+          type: array
+          items:
+            $ref: './trading-schemas.json#/definitions/AccountSummary'
+        unavailableAccountIds:
+          $ref: '#/components/schemas/UnavailableAccountIds'
+
     PositionUpdateBody:
       type: object
       title: PositionUpdateBody
@@ -1003,6 +1208,8 @@ components:
           title: PositionList
           items:
             $ref: './trading-schemas.json#/definitions/Position'
+        unavailableAccountIds:
+          $ref: '#/components/schemas/UnavailableAccountIds'
 
     OrderChangeUpdateBody:
       type: object
@@ -1304,10 +1511,28 @@ components:
         - $ref: '#/components/schemas/SpotMarketSummaryUpdateBody'
 
     PositionUpdatePayload:
+      type: object
       title: PositionUpdatePayload
-      allOf:
-        - $ref: '#/components/schemas/BaseUpdateEnvelope'
-        - $ref: '#/components/schemas/PositionUpdateBody'
+      additionalProperties: false
+      required:
+        - type
+        - timestamp
+        - channel
+        - data
+      properties:
+        type:
+          $ref: '#/components/schemas/ChannelDataMessageType'
+        timestamp:
+          type: integer
+          minimum: 0
+        channel:
+          $ref: '#/components/schemas/WalletPositionsChannelPattern'
+        data:
+          type: array
+          items:
+            $ref: './trading-schemas.json#/definitions/Position'
+        unavailableAccountIds:
+          $ref: '#/components/schemas/UnavailableAccountIds'
 
     OrderChangeUpdatePayload:
       title: OrderChangeUpdatePayload
