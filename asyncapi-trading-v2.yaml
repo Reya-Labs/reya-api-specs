@@ -235,7 +235,9 @@ channels:
       a valid update or a fresh subscription snapshot reconciles it.
 
       The accountSummaries channel documents shared refresh and freshness rules.
-      Wallet ownership or account-visibility changes can close the connection
+      This stream includes every perpetual account owned by the wallet.
+      Account-profile status does not filter positions or trigger updates.
+      Wallet ownership changes can close the connection
       with code `1012` to reconcile the position set. Reconnect and resubscribe
       after disconnection to obtain a fresh full view.
     parameters:
@@ -328,7 +330,9 @@ channels:
     description: |
       Account equity, margin requirements and free collateral, using the same
       AccountSummary rows and valuation semantics as
-      GET /wallet/{address}/accountSummaries. Spot accounts are excluded.
+      GET /wallet/{address}/accountSummaries. The stream includes every perpetual
+      account owned by the wallet, regardless of account-profile status. Spot
+      accounts are excluded.
 
       **Complete wallet snapshots**
 
@@ -340,7 +344,7 @@ channels:
       arrays clear it. Unlike REST's strict all-account valuation, the stream
       can retain healthy accounts while identifying unavailable ones explicitly.
 
-      `unavailableAccountIds` lists open perpetual accounts whose valuation cannot
+      `unavailableAccountIds` lists owned perpetual accounts whose valuation cannot
       currently be computed. Discard any cached summary for those accounts; do
       not substitute zero or keep presenting old figures as current. Recovery
       replaces the unavailable ID with its newly computed AccountSummary. If the
@@ -352,7 +356,7 @@ channels:
       **Refresh and freshness**
 
       Valuation refreshes are coalesced after changes to positions, balances,
-      funding/ADL trackers, mark prices and collateral prices. Account visibility
+      funding/ADL trackers, mark prices and collateral prices. Account ownership
       and reference configuration are also rechecked periodically. The stream
       delivers current state rather than every intermediate price tick. It does
       not provide an execution ledger or an atomic on-chain snapshot.
