@@ -275,7 +275,7 @@
         },
         "fundingRate": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Current hourly funding rate",
+          "description": "Current hourly funding rate in percentage points. Divide by 100 for a fractional rate; 0.01 means 0.01% per hour. Funding accrues continuously.",
           "example": "-0.000509373441021089"
         },
         "longFundingValue": {
