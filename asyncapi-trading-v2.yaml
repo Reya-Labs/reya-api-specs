@@ -360,8 +360,8 @@ channels:
       `updatedAt` is calculation time; `pricesUpdatedAt` is the oldest price used
       by that account. Compare source-price timestamps with your freshness needs;
       a newly received frame does not make an old price fresh. Neither timestamp
-      certifies indexer/tracker freshness. Funding treatment, resting-order margin
-      behavior and liquidation assumptions follow the REST valuation contract.
+      certifies indexer/tracker freshness. Funding treatment and liquidation
+      assumptions follow the REST valuation contract.
       On disconnect, invalidate cached valuation and reconnect/resubscribe for a
       fresh snapshot. The disconnection window is not replayed.
     parameters:
