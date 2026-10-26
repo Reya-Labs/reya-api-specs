@@ -716,6 +716,7 @@
         "markPrice",
         "notional",
         "unrealizedPnl",
+        "fundingPnl",
         "liquidationMarginRequirement",
         "liquidationPrice",
         "hasCorrelatedCollateral",
@@ -777,6 +778,15 @@
         "unrealizedPnl": {
           "description": "Position PnL at markPrice, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
           "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "fundingPnl": {
+          "description": "Funding on the open position since entry, in rUSD; positive means the position earned funding. Kept on the same basis as avgEntryPrice: averaged in when the position grows, unchanged on a partial close, and reset when the position reopens or flips. It has already settled into the account balance; unrealizedPnl + fundingPnl is the position's live PnL.",
+          "example": "-1.25",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
