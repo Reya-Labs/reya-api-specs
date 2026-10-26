@@ -659,7 +659,14 @@ paths:
         account's real balances, which already include realized funding and ADL cashflows.
         `marginBalance = collateralValue + unrealizedPnl` and
         `freeCollateral = marginBalance - initialMarginRequirement`. Figures cover settled
-        positions only; they are not an order-size quote or withdrawal limit.
+        positions only and are not an order-size quote.
+
+        `withdrawable` gives, for each asset the account holds, the most a withdrawal or a
+        transfer to another account can take out now, as the chain checks it: no more than
+        the asset's real balance, and no more than keeps
+        `min(freeCollateral, collateralValue)` non-negative, the value removed counted after
+        the asset's haircut. Unrealized PnL is never withdrawable, and the amounts share one
+        headroom: withdrawing one asset lowers what the others allow.
 
         `pricesUpdatedAt` is the source time of the oldest price used: the matching engine's
         timestamp for a mark, the oracle's for a collateral price. Returns 503 rather than
@@ -1364,6 +1371,8 @@ components:
   schemas:
     AccountSummary:
       $ref: './trading-schemas.json#/definitions/AccountSummary'
+    WithdrawableAmount:
+      $ref: './trading-schemas.json#/definitions/WithdrawableAmount'
     PositionRisk:
       $ref: './trading-schemas.json#/definitions/PositionRisk'
     TriggerOrderType:
