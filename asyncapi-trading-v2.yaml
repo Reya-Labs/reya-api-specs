@@ -308,6 +308,11 @@ channels:
       An account is recalculated when its balances, positions or settlement trackers change,
       or when the mark of a market it holds or the price of collateral it holds moves; at
       most about once per second per account.
+
+      Figures are never partial. If any of the wallet's accounts cannot be valued (for
+      example, a mark older than 60 seconds), the subscription fails with an error frame;
+      retry it after backing off. An account that cannot be valued later gets no frames
+      until it can be.
     parameters:
       address:
         description: Ethereum wallet address
@@ -320,10 +325,12 @@ channels:
     address: /v2/wallet/{address}/positionRisk
     description: |
       Real-time position risk for a wallet, as in GET /wallet/{address}/positionRisk. The
-      `subscribed` frame's `contents.data` holds the snapshot. Each live frame covers one
-      account (`accountId`): its rows replace all of that account's previous rows, and an
-      empty list means the account has no open positions. Accounts are recalculated on the
-      same triggers and cadence as /v2/wallet/{address}/accountSummaries.
+      `subscribed` frame's `contents.data` holds the snapshot: the rows of all of the
+      wallet's accounts together. Group them by `accountId`; an account without rows has no
+      open positions. Each live frame covers one account (`accountId`): its rows replace all
+      of that account's previous rows, and an empty list means the account has no open
+      positions. Accounts are recalculated on the same triggers and cadence, and fail in the
+      same way when they cannot be valued, as /v2/wallet/{address}/accountSummaries.
 
       Fills and position changes keep arriving on /v2/wallet/{address}/positions; this
       channel adds valuation only.

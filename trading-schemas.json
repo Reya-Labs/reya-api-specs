@@ -99,7 +99,7 @@
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR"
       ],
-      "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance."
+      "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance. For an HTTP 503 on a read endpoint, retry the same request after backing off; no signature, nonce or clientOrderId is involved."
     },
     "ServerErrorCode": {
       "title": "ServerErrorCode",
@@ -825,9 +825,8 @@
         },
         "pricesUpdatedAt": {
           "type": "integer",
-          "nullable": true,
           "minimum": 0,
-          "description": "Source time of the oldest mark or collateral price used by the account, in Unix milliseconds: the matching engine's timestamp for a mark, the oracle's for a collateral price. Null when no price is needed.",
+          "description": "Source time of the oldest mark or collateral price used to value the account, in Unix milliseconds: the matching engine's timestamp for a mark, the oracle's for a collateral price. Every row of the account carries the same value.",
           "example": 1747927089597
         }
       },
