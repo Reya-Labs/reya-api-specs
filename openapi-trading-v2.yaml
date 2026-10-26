@@ -1270,9 +1270,11 @@ paths:
         signed actions one at a time. Order-entry nonces are unrelated.
 
         Signers sharing an owner (the app, API wallets, hosted strategies) draw from that one
-        sequence, so two of them can sign the same nonce. The one that lands second gets
-        `INVALID_NONCE_ERROR` with nothing applied: read `lastNonce` again, then sign and
-        submit a new request.
+        sequence, so two of them can sign the same nonce. Only one executes; the other gets
+        `NONCE_ALREADY_USED_ERROR` with nothing applied. That is the same answer a retry of an
+        already settled request gets, so first check `GET /v2/wallet/{address}/transfers` for
+        your transfer; if it is not there, read `lastNonce` again and sign a new request.
+        `INVALID_NONCE_ERROR` means the nonce skipped ahead of `lastNonce + 1`.
 
         The nonce also makes a signed transfer execute at most once. Resubmitting the same
         signed request is safe. Signing a new transfer is not, while an earlier attempt may
