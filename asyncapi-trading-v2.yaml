@@ -212,11 +212,7 @@ channels:
 
   walletPositions:
     address: /v2/wallet/{address}/positions
-    description: |
-      Real-time position updates for a wallet. Rows carry the optional valuation fields of
-      GET /wallet/{address}/positions and are refreshed when the position, the account's
-      balances or the prices of its markets change. A row replaces the previous row for the
-      same `accountId` and `symbol`; one without valuation fields has none currently.
+    description: Real-time position updates for a wallet
     parameters:
       address:
         description: Ethereum wallet address
@@ -304,8 +300,14 @@ channels:
     address: /v2/wallet/{address}/accountSummaries
     description: |
       Real-time account summary updates for a wallet, as in
-      GET /wallet/{address}/accountSummaries. Each row replaces the previous summary for
-      its `accountId`.
+      GET /wallet/{address}/accountSummaries. The `subscribed` frame's `contents.data` holds
+      the snapshot. Each live row replaces the previous summary for its `accountId`. A frame
+      carries only the accounts that were recalculated, so an account missing from a frame
+      is unchanged, not removed.
+
+      An account is recalculated when its balances, positions or settlement trackers change,
+      or when the mark of a market it holds or the price of collateral it holds moves; at
+      most about once per second per account.
     parameters:
       address:
         description: Ethereum wallet address
@@ -313,6 +315,25 @@ channels:
     messages:
       accountSummaryUpdate:
         $ref: '#/components/messages/AccountSummaryUpdate'
+
+  walletPositionRisk:
+    address: /v2/wallet/{address}/positionRisk
+    description: |
+      Real-time position risk for a wallet, as in GET /wallet/{address}/positionRisk. The
+      `subscribed` frame's `contents.data` holds the snapshot. Each live frame covers one
+      account (`accountId`): its rows replace all of that account's previous rows, and an
+      empty list means the account has no open positions. Accounts are recalculated on the
+      same triggers and cadence as /v2/wallet/{address}/accountSummaries.
+
+      Fills and position changes keep arriving on /v2/wallet/{address}/positions; this
+      channel adds valuation only.
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      positionRiskUpdate:
+        $ref: '#/components/messages/PositionRiskUpdate'
 
   walletAccountBalances:
     address: /v2/wallet/{address}/accountBalances
@@ -549,6 +570,14 @@ operations:
       - $ref: '#/channels/walletAccountSummaries/messages/accountSummaryUpdate'
     summary: Receive account summary updates for wallet
 
+  receiveWalletPositionRisk:
+    action: receive
+    channel:
+      $ref: '#/channels/walletPositionRisk'
+    messages:
+      - $ref: '#/channels/walletPositionRisk/messages/positionRiskUpdate'
+    summary: Receive position risk updates for wallet
+
   receiveWalletAccountBalances:
     action: receive
     channel:
@@ -705,6 +734,13 @@ components:
       summary: Real-time account summary update for wallet
       payload:
         $ref: '#/components/schemas/AccountSummaryUpdatePayload'
+
+    PositionRiskUpdate:
+      name: positionRiskUpdate
+      title: Position Risk Update
+      summary: Real-time position risk update for one account of a wallet
+      payload:
+        $ref: '#/components/schemas/PositionRiskUpdatePayload'
 
     AccountBalanceUpdate:
       name: accountBalanceUpdate
@@ -933,6 +969,11 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountSummaries$'
       description: Channel pattern for wallet account summaries
+
+    WalletPositionRiskChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/positionRisk$'
+      description: Channel pattern for wallet position risk
 
     WalletAccountBalancesChannelPattern:
       type: string
@@ -1233,6 +1274,30 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/AccountSummary'
 
+    PositionRiskUpdateBody:
+      type: object
+      title: PositionRiskUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - accountId
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletPositionRiskChannelPattern'
+        accountId:
+          type: integer
+          minimum: 1
+          description: |
+            The account this frame covers. Its rows replace all of the account's previous
+            rows; an empty list means the account has no open positions.
+          example: 12345
+        data:
+          type: array
+          title: PositionRiskList
+          items:
+            $ref: './trading-schemas.json#/definitions/PositionRisk'
+
     AccountBalanceUpdateBody:
       type: object
       title: AccountBalanceUpdateBody
@@ -1412,6 +1477,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/AccountSummaryUpdateBody'
+
+    PositionRiskUpdatePayload:
+      title: PositionRiskUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/PositionRiskUpdateBody'
 
     AccountBalanceUpdatePayload:
       title: AccountBalanceUpdatePayload
