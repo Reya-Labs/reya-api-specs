@@ -948,10 +948,10 @@ paths:
         Lists the wallets that can act for an owner wallet:
 
         - API wallets that can sign orders for all of the owner's accounts (`trading`), managed
-          with `POST /v2/setApiWallet`.
-        - Wallets holding Core permissions on the owner's accounts (`accountPermissions`), such as
-          `TRANSFER` granted with `POST /v2/setAccountPermission`. `ADMIN` includes every
-          permission.
+          with `POST /v2/setTradingPermission`.
+        - Wallets holding Core permissions on the owner's accounts (`accountPermissions`), managed
+          with `POST /v2/setAccountPermission`: it grants `TRANSFER` and revokes any of them.
+          `ADMIN` includes every permission.
 
         The owner itself is not listed. The list is read from the chain on each request.
       operationId: getWalletApiWallets
@@ -1359,14 +1359,14 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /setApiWallet:
+  /setTradingPermission:
     post:
-      summary: Enable or disable an API wallet
+      summary: Grant or revoke an API wallet's trading permission
       description: |
-        Enable or disable an API wallet: a wallet that can create, modify and cancel orders for
-        all of the owner's accounts. The owner signs; Reya submits it on-chain and pays the gas.
-        An API wallet cannot transfer or withdraw; transfers need a separate
-        `POST /v2/setAccountPermission` grant.
+        Grant or revoke an API wallet's trading permission: the right to create, modify and
+        cancel orders for all of the owner's accounts. The owner signs; Reya submits it on-chain
+        and pays the gas. Trading permission does not allow transfers or withdrawals; transfers
+        need a separate `TRANSFER` grant with `POST /v2/setAccountPermission`.
 
         **Signature**
 
@@ -1382,7 +1382,7 @@ paths:
         wallet, wait until the earlier request's `deadline` has passed.
 
         `SETTLED` and `PENDING` have the same meaning as for `POST /v2/transferBetweenAccounts`.
-      operationId: setApiWallet
+      operationId: setTradingPermission
       tags:
         - API Wallets
       requestBody:
@@ -1390,7 +1390,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetApiWalletRequest'
+              $ref: '#/components/schemas/SetTradingPermissionRequest'
       responses:
         '200':
           description: Submission result
@@ -1407,11 +1407,15 @@ paths:
     post:
       summary: Grant or revoke an account permission
       description: |
-        Grant or revoke a Core permission for `user` on `accountId`. Only `TRANSFER` is accepted.
-        It lets `user` move collateral from `accountId` to another account of the same owner with
-        `POST /v2/transferBetweenAccounts`. Core rejects transfers to accounts of other owners,
-        and the permission does not allow withdrawals or trading. The account owner signs; Reya
-        submits it on-chain and pays the gas.
+        Grant or revoke a Core permission for `user` on `accountId`. The account owner signs;
+        Reya submits it on-chain and pays the gas.
+
+        - **Grant:** only `TRANSFER`. It lets `user` move collateral from `accountId` to another
+          account of the same owner with `POST /v2/transferBetweenAccounts`. Core rejects
+          transfers to accounts of other owners, and the permission does not allow withdrawals
+          or trading.
+        - **Revoke:** any permission `GET /v2/wallet/{address}/apiWallets` lists (`ADMIN`,
+          `WITHDRAW`, `TRANSFER`, `DUTCH_LIQUIDATION`), including ones granted outside this API.
 
         **Signature**
 
@@ -1421,13 +1425,14 @@ paths:
         - Grant: `GrantAccountPermissionBySig(uint256 verifyingChainId,uint128 accountId,bytes32 permission,address user,uint256 nonce,uint256 deadline)`
         - Revoke: `RevokeAccountPermissionBySig(uint256 verifyingChainId,uint128 accountId,bytes32 permission,address user,uint256 nonce,uint256 deadline)`
 
-        `permission` is `keccak256("TRANSFER")`. `nonce` is the owner wallet's `lastNonce + 1`
+        `permission` is `keccak256` of the permission name, such as `keccak256("TRANSFER")`.
+        `nonce` is the owner wallet's `lastNonce + 1`
         from `GET /v2/wallet/{address}/signatureNonce`. It is the same sequence transfers use, so
         the nonce rules of `POST /v2/transferBetweenAccounts` apply, including
         `NONCE_ALREADY_USED_ERROR`.
 
         Granting a permission the wallet already holds, or revoking one it lacks, succeeds
-        without change. A change applies to transfers submitted after it settles.
+        without change. A change applies to actions submitted after it settles.
       operationId: setAccountPermission
       tags:
         - API Wallets
@@ -1665,8 +1670,8 @@ components:
     ApiWalletList:
       $ref: './trading-schemas.json#/definitions/ApiWalletList'
 
-    SetApiWalletRequest:
-      $ref: './trading-schemas.json#/definitions/SetApiWalletRequest'
+    SetTradingPermissionRequest:
+      $ref: './trading-schemas.json#/definitions/SetTradingPermissionRequest'
 
     SetAccountPermissionRequest:
       $ref: './trading-schemas.json#/definitions/SetAccountPermissionRequest'
@@ -1938,13 +1943,15 @@ components:
         - `SIGNED_ACTION_OTHER_ERROR`: the transfer was rejected on-chain for another reason, and
           was not applied; see `message`.
 
-        API wallets and permissions (`POST /v2/setApiWallet`, `POST /v2/setAccountPermission`):
-        - `INPUT_VALIDATION_ERROR`: a field is malformed, the account does not exist, or the
-          wallet is the zero address or the owner itself.
+        API wallets and permissions (`POST /v2/setTradingPermission`,
+        `POST /v2/setAccountPermission`):
+        - `INPUT_VALIDATION_ERROR`: a field is malformed, the account does not exist, the
+          wallet is the zero address or the owner itself, or a grant names a permission other
+          than `TRANSFER`.
         - `UNAUTHORIZED_SIGNATURE_ERROR`: the signature does not recover to the owner (`owner`, or
           the owner of `accountId`).
         - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the `deadline` has
-          passed or is too far ahead (60 seconds for `setApiWallet`, 600 for
+          passed or is too far ahead (60 seconds for `setTradingPermission`, 600 for
           `setAccountPermission`). Re-sign.
         - `INVALID_NONCE_ERROR`, `NONCE_ALREADY_USED_ERROR`, `SERVICE_DISABLED_ERROR`,
           `SERVICE_UNAVAILABLE_ERROR`, `SIGNED_ACTION_OTHER_ERROR`: as for transfers. Nonce codes

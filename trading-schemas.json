@@ -3675,7 +3675,7 @@
         "TRANSFER",
         "DUTCH_LIQUIDATION"
       ],
-      "description": "Core account permission. `TRANSFER` allows transfers out of the account to other accounts of the same owner; `WITHDRAW` allows withdrawals; `ADMIN` includes every permission. Only `TRANSFER` can be granted through POST /v2/setAccountPermission."
+      "description": "Core account permission. `TRANSFER` allows transfers out of the account to other accounts of the same owner; `WITHDRAW` allows withdrawals; `DUTCH_LIQUIDATION` allows taking Dutch liquidations with the account; `ADMIN` includes every permission. POST /v2/setAccountPermission grants only `TRANSFER` and revokes any of them."
     },
     "AccountPermissionGrant": {
       "title": "AccountPermissionGrant",
@@ -3715,7 +3715,7 @@
         },
         "trading": {
           "type": "boolean",
-          "description": "Whether the wallet can sign orders for all of the owner's accounts (POST /v2/setApiWallet)."
+          "description": "Whether the wallet can sign orders for all of the owner's accounts (POST /v2/setTradingPermission)."
         },
         "accountPermissions": {
           "type": "array",
@@ -3743,10 +3743,10 @@
       },
       "additionalProperties": true
     },
-    "SetApiWalletRequest": {
-      "title": "SetApiWalletRequest",
+    "SetTradingPermissionRequest": {
+      "title": "SetTradingPermissionRequest",
       "type": "object",
-      "description": "Owner-signed request to enable or disable an API wallet. See POST /v2/setApiWallet for the EIP-712 envelope and deadline rules.",
+      "description": "Owner-signed request to grant or revoke an API wallet's trading permission. See POST /v2/setTradingPermission for the EIP-712 envelope and deadline rules.",
       "required": [
         "owner",
         "apiWallet",
@@ -3761,11 +3761,11 @@
         },
         "apiWallet": {
           "$ref": "#/definitions/Address",
-          "description": "Wallet to enable or disable. Signed as `target`."
+          "description": "Wallet whose trading permission changes. Signed as `target`."
         },
         "enabled": {
           "type": "boolean",
-          "description": "`true` to enable, `false` to disable. Signed as `permissionState`."
+          "description": "`true` grants trading permission, `false` revokes it. Signed as `permissionState`."
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -3805,11 +3805,8 @@
           "description": "Wallet receiving or losing the permission. Signed as `user`."
         },
         "permission": {
-          "type": "string",
-          "enum": [
-            "TRANSFER"
-          ],
-          "description": "Permission to grant or revoke. Signed as `permission` = keccak256 of the name (keccak256(\"TRANSFER\"))."
+          "$ref": "#/definitions/AccountPermission",
+          "description": "Permission to grant or revoke. Only `TRANSFER` can be granted; any can be revoked. Signed as `permission` = keccak256 of the name, such as keccak256(\"TRANSFER\")."
         },
         "granted": {
           "type": "boolean",
