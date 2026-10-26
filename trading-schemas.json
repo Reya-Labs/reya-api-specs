@@ -2572,6 +2572,50 @@
       },
       "additionalProperties": true
     },
+    "FundingRateSample": {
+      "title": "FundingRateSample",
+      "type": "object",
+      "description": "Funding for one interval: the last rate sampled and the funding accrued per unit. See GET /v2/fundingRateHistory/{symbol}/{resolution}.",
+      "required": [
+        "timestamp",
+        "fundingRate"
+      ],
+      "properties": {
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Start of the interval (milliseconds).",
+          "example": 1747926000000
+        },
+        "fundingRate": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Last funding rate sampled in the interval: an hourly rate as a percentage, in the same units as MarketSummary.fundingRate. A snapshot, not an average.",
+          "example": "0.0118"
+        },
+        "fundingPerUnit": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Funding one unit of a long position accrued, in the quote asset, from the last on-chain funding-tracker measurement before the interval to the last one in it. Positive means longs paid. Omitted when no tracker measurement falls in the interval.",
+          "example": "0.3717"
+        }
+      },
+      "additionalProperties": true
+    },
+    "FundingRateHistoryList": {
+      "title": "FundingRateHistoryList",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "description": "Funding rate samples, newest first.",
+          "items": {
+            "$ref": "#/definitions/FundingRateSample"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
       "type": "object",

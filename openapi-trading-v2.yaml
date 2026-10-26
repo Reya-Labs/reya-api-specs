@@ -443,6 +443,63 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /fundingRateHistory/{symbol}/{resolution}:
+    get:
+      summary: Get funding rate history
+      description: |
+        Returns a perp market's funding over time, newest first: the funding rate, and the
+        funding a position actually accrued.
+
+        **How Reya funding works.** Funding is not settled at fixed times. The rate updates
+        about every 5 seconds and accrues continuously against the mark price; a position's
+        share is folded into its realized PnL whenever it changes. So there are no settlement
+        records to list; instead each entry summarises one `resolution` interval, aligned to UTC
+        multiples of the resolution, with `timestamp` as the interval start.
+
+        - `fundingRate`: the last rate sampled in the interval, up to `endTime`. Rates are
+          sampled about once a minute, so this is a point-in-time snapshot, not an average.
+          Units match `MarketSummary.fundingRate`: an hourly rate as a percentage (daily rate ÷
+          24 × 100), so `0.0118` means 0.0118% per hour. Venues quoting decimal rates use 100
+          times smaller numbers.
+        - `fundingPerUnit`: the funding one unit of a long position accrued, in the quote asset,
+          from the last tracker measurement before the interval to the last one in it, so
+          consecutive entries add up exactly. It is computed from the market's
+          on-chain funding tracker, exactly as positions are charged, so it covers every rate
+          change in between. Positive means longs paid shorts. Shorts received the same per unit,
+          except across an auto-deleveraging event that reduced positions on one side. For a
+          constant position, `size × fundingPerUnit` summed over entries is the funding it paid
+          or received. It is omitted when no tracker measurement falls in the interval, which
+          applies to `1m` intervals recorded before 1-minute tracker sampling began.
+
+        Intervals without rate samples are skipped, so a page holds the `limit` most recent
+        intervals that have data. Samples taken while a market was `PREOPEN` are indicative; no
+        position paid them. For the current rate, use `GET /v2/perpMarket/{symbol}/summary`.
+
+        To page back, pass the oldest returned `timestamp` minus 1 as the next `endTime`
+        (default: now). An empty page means there is no older data in range. `startTime`
+        limits results to intervals starting at or after it. Retired markets remain
+        queryable. Spot symbols return `SYMBOL_NOT_FOUND_ERROR`.
+      operationId: getFundingRateHistory
+      tags:
+        - Market Data
+      parameters:
+        - $ref: '#/components/parameters/SymbolParam'
+        - $ref: '#/components/parameters/FundingResolutionParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/FundingHistoryLimitParam'
+      responses:
+        '200':
+          description: Funding rate samples, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundingRateHistoryList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/accounts:
     get:
       summary: Get wallet accounts
@@ -1471,6 +1528,29 @@ components:
         default: 100
         example: 10
 
+    FundingResolutionParam:
+      name: resolution
+      in: path
+      required: true
+      description: Interval length. One entry is returned per interval that has samples.
+      schema:
+        type: string
+        enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
+        example: '1h'
+
+    FundingHistoryLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: >-
+        Maximum number of entries to return. The default is 200 and the maximum is
+        1,000; larger values are clamped to 1,000.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        example: 200
+
     ResolutionParam:
       name: resolution
       in: path
@@ -1583,6 +1663,12 @@ components:
 
     CandleHistoryData:
       $ref: './trading-schemas.json#/definitions/CandleHistoryData'
+
+    FundingRateSample:
+      $ref: './trading-schemas.json#/definitions/FundingRateSample'
+
+    FundingRateHistoryList:
+      $ref: './trading-schemas.json#/definitions/FundingRateHistoryList'
 
     CreateOrderRequest:
       $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
