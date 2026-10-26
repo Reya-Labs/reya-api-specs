@@ -661,7 +661,7 @@
           ]
         },
         "freeCollateral": {
-          "description": "marginBalance - initialMarginRequirement, in Core's margin model. Negative means an initial-margin deficit. Not an order-size quote or withdrawal limit: order entry runs the matching engine's own margin check, which can credit collateral differently, so an order can be rejected with ACCOUNT_BELOW_INITIAL_MARGIN_ERROR while this is positive.",
+          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote or withdrawal limit.",
           "example": "935",
           "allOf": [
             {
