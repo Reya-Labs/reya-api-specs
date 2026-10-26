@@ -277,7 +277,7 @@
         },
         "fundingRate": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Current hourly funding rate",
+          "description": "Current hourly funding rate in percentage points. Divide by 100 for a fractional rate; 0.01 means 0.01% per hour. Funding accrues continuously.",
           "example": "-0.000509373441021089"
         },
         "longFundingValue": {
@@ -406,9 +406,73 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Sequence number of last execution taken into account for the position.",
           "example": 152954
+        },
+        "markPrice": {
+          "description": "Mark price used to value this position.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "notional": {
+          "description": "qty × markPrice, in rUSD.",
+          "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "unrealizedPnl": {
+          "description": "Position PnL at markPrice, in rUSD. Realized funding and ADL cashflows are already in the account balance.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "liquidationMarginRequirement": {
+          "description": "This position's liquidation margin requirement, in rUSD.",
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "liquidationPrice": {
+          "type": "string",
+          "nullable": true,
+          "description": "Estimated cross-margin liquidation price, holding other prices fixed and rounded to the price tick toward the mark. Null when no positive price is a liquidation boundary.",
+          "example": null
+        },
+        "hasCorrelatedCollateral": {
+          "type": "boolean",
+          "description": "True when the account holds non-stable collateral that tracks this market's underlying, so the fixed-collateral-price estimate is less reliable.",
+          "example": false
+        },
+        "updatedAt": {
+          "description": "Calculation time, in Unix milliseconds.",
+          "example": 1747927090000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "pricesUpdatedAt": {
+          "type": "integer",
+          "nullable": true,
+          "minimum": 0,
+          "description": "Oldest mark or collateral price timestamp used by the account, in Unix milliseconds. Null when no price is needed.",
+          "example": 1747927089597
         }
       },
-      "additionalProperties": true
+      "additionalProperties": true,
+      "description": "Perpetual position. The valuation fields (markPrice through pricesUpdatedAt) are present together, or omitted together when the account cannot currently be valued."
     },
     "Order": {
       "title": "Order",
@@ -586,6 +650,118 @@
         },
         "meta": {
           "$ref": "#/definitions/PaginationMeta"
+        }
+      },
+      "additionalProperties": true
+    },
+    "AccountSummary": {
+      "title": "AccountSummary",
+      "type": "object",
+      "description": "Perpetual account valuation and margin, in rUSD.",
+      "required": [
+        "accountId",
+        "collateralValue",
+        "unrealizedPnl",
+        "marginBalance",
+        "initialMarginRequirement",
+        "liquidationMarginRequirement",
+        "freeCollateral",
+        "initialMarginRatio",
+        "liquidationMarginRatio",
+        "updatedAt",
+        "pricesUpdatedAt"
+      ],
+      "properties": {
+        "accountId": {
+          "description": "Perpetual margin account ID.",
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "collateralValue": {
+          "description": "Realized collateral value after haircuts, before unrealized position PnL. Positive collateral is discounted; a debt is increased by the inverse haircut.",
+          "example": "900",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "unrealizedPnl": {
+          "description": "Sum of unrealized position PnL at mark prices. Funding and ADL cashflows already included in realized balances are not added again.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "marginBalance": {
+          "description": "collateralValue + unrealizedPnl. The value available to cover margin requirements, after collateral haircuts.",
+          "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "initialMarginRequirement": {
+          "description": "Initial margin required by settled positions.",
+          "example": "65",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "liquidationMarginRequirement": {
+          "description": "Liquidation margin required by settled positions; the account is liquidatable below it.",
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "freeCollateral": {
+          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote or withdrawal limit.",
+          "example": "935",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "initialMarginRatio": {
+          "type": "string",
+          "nullable": true,
+          "description": "initialMarginRequirement / marginBalance as a decimal fraction (1 means 100%). Rounded up to at most 18 decimal places. Null when marginBalance is zero or negative.",
+          "example": "0.065"
+        },
+        "liquidationMarginRatio": {
+          "type": "string",
+          "nullable": true,
+          "description": "liquidationMarginRequirement / marginBalance as a decimal fraction. Rounded up to at most 18 decimal places. Null when marginBalance is zero or negative.",
+          "example": "0.05"
+        },
+        "updatedAt": {
+          "description": "Calculation time, in Unix milliseconds.",
+          "example": 1747927090000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "pricesUpdatedAt": {
+          "type": "integer",
+          "nullable": true,
+          "minimum": 0,
+          "description": "Oldest mark or collateral price timestamp used by the account, in Unix milliseconds. Null when no price is needed.",
+          "example": 1747927089597
         }
       },
       "additionalProperties": true

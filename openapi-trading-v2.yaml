@@ -589,9 +589,60 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/accountSummaries:
+    get:
+      summary: Get perpetual account summaries
+      description: |
+        Returns margin figures for the wallet's open perpetual accounts, ordered by
+        account ID; spot accounts are excluded. Pass `accountId` to select one account.
+
+        Amounts are decimal strings in rUSD. `collateralValue` is the haircut value of the
+        account's real balances, which already include realized funding and ADL cashflows.
+        `marginBalance = collateralValue + unrealizedPnl` and
+        `freeCollateral = marginBalance - initialMarginRequirement`. Figures cover settled
+        positions only; they are not an order-size quote or withdrawal limit.
+
+        Returns 503 rather than partial figures when a required price or market input is
+        unavailable.
+      operationId: getWalletAccountSummaries
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/AccountIdFilterParam'
+      responses:
+        '200':
+          description: Perpetual account summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          description: A valuation input is temporarily unavailable. Retry after backing off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestError'
+              example:
+                error: SERVICE_UNAVAILABLE_ERROR
+                message: A dependency is temporarily unavailable; retry after backing off
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/positions:
     get:
       summary: Get wallet positions
+      description: |
+        Returns the wallet's open perpetual positions. When the account can be valued, each
+        position also carries `markPrice`, `notional`, `unrealizedPnl`,
+        `liquidationMarginRequirement`, `liquidationPrice`, `hasCorrelatedCollateral`,
+        `updatedAt` and `pricesUpdatedAt`, computed as in
+        GET /wallet/{address}/accountSummaries. These fields are omitted together for an
+        account whose valuation inputs are unavailable; the position itself is still returned.
       operationId: getWalletPositions
       tags:
         - Wallet Data
@@ -1289,6 +1340,16 @@ paths:
 
 components:
   parameters:
+    AccountIdFilterParam:
+      name: accountId
+      in: query
+      required: false
+      description: Return only this account.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 9007199254740991
+        example: 12345
     SymbolParam:
       name: symbol
       in: path
@@ -1421,6 +1482,8 @@ components:
         example: '1m'
 
   schemas:
+    AccountSummary:
+      $ref: './trading-schemas.json#/definitions/AccountSummary'
     TriggerOrderType:
       $ref: './trading-schemas.json#/definitions/TriggerOrderType'
     LimitOrderType:
