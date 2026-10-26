@@ -3633,6 +3633,193 @@
       },
       "additionalProperties": true
     },
+    "AccountPermission": {
+      "title": "AccountPermission",
+      "type": "string",
+      "enum": [
+        "ADMIN",
+        "WITHDRAW",
+        "TRANSFER",
+        "DUTCH_LIQUIDATION"
+      ],
+      "description": "Core account permission. `TRANSFER` allows transfers out of the account to other accounts of the same owner; `WITHDRAW` allows withdrawals; `ADMIN` includes every permission. Only `TRANSFER` can be granted through POST /v2/setAccountPermission."
+    },
+    "AccountPermissionGrant": {
+      "title": "AccountPermissionGrant",
+      "type": "object",
+      "required": [
+        "accountId",
+        "permissions"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the permissions apply to.",
+          "example": 12345
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Core permissions the wallet holds on this account.",
+          "items": {
+            "$ref": "#/definitions/AccountPermission"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWallet": {
+      "title": "ApiWallet",
+      "type": "object",
+      "description": "A wallet that can act for an owner. See GET /v2/wallet/{address}/apiWallets.",
+      "required": [
+        "address",
+        "trading",
+        "accountPermissions"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "trading": {
+          "type": "boolean",
+          "description": "Whether the wallet can sign orders for all of the owner's accounts (POST /v2/setApiWallet)."
+        },
+        "accountPermissions": {
+          "type": "array",
+          "description": "Core permissions held on the owner's accounts; empty when the wallet only trades.",
+          "items": {
+            "$ref": "#/definitions/AccountPermissionGrant"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWalletList": {
+      "title": "ApiWalletList",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ApiWallet"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "SetApiWalletRequest": {
+      "title": "SetApiWalletRequest",
+      "type": "object",
+      "description": "Owner-signed request to enable or disable an API wallet. See POST /v2/setApiWallet for the EIP-712 envelope and replay rules.",
+      "required": [
+        "owner",
+        "apiWallet",
+        "enabled",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "owner": {
+          "$ref": "#/definitions/Address",
+          "description": "Owner wallet; it must produce `signature`. Signed as `owner`."
+        },
+        "apiWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Wallet to enable or disable. Signed as `target`."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "`true` to enable, `false` to disable. Signed as `permissionState`."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Must not have passed and must be at most 60 seconds ahead. Signed as `deadline`.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{130}$",
+          "description": "65-byte EIP-712 signature over `ManagePermissionBySig`.",
+          "example": "0x1234..."
+        }
+      },
+      "additionalProperties": true
+    },
+    "SetAccountPermissionRequest": {
+      "title": "SetAccountPermissionRequest",
+      "type": "object",
+      "description": "Owner-signed request to grant or revoke a Core account permission. See POST /v2/setAccountPermission for the EIP-712 envelopes and the nonce sequence.",
+      "required": [
+        "accountId",
+        "user",
+        "permission",
+        "granted",
+        "nonce",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the permission applies to. Its owner must produce `signature`. Signed as `accountId`.",
+          "example": 12345
+        },
+        "user": {
+          "$ref": "#/definitions/Address",
+          "description": "Wallet receiving or losing the permission. Signed as `user`."
+        },
+        "permission": {
+          "type": "string",
+          "enum": [
+            "TRANSFER"
+          ],
+          "description": "Permission to grant or revoke. Signed as `permission` = keccak256 of the name (keccak256(\"TRANSFER\"))."
+        },
+        "granted": {
+          "type": "boolean",
+          "description": "`true` grants (sign `GrantAccountPermissionBySig`); `false` revokes (sign `RevokeAccountPermissionBySig`)."
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "The owner wallet's next Core signature nonce: `lastNonce + 1` from GET /v2/wallet/{address}/signatureNonce, shared with transfers. Signed as `nonce`.",
+          "example": "8"
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Must not have passed and must be at most 600 seconds ahead. Signed as `deadline`.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{130}$",
+          "description": "65-byte EIP-712 signature over the grant or revoke envelope.",
+          "example": "0x1234..."
+        }
+      },
+      "additionalProperties": true
+    },
+    "SignedActionResponse": {
+      "title": "SignedActionResponse",
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/SignedActionStatus"
+        },
+        "transactionHash": {
+          "type": "string",
+          "description": "Hash of the submitted transaction. Always present for `SETTLED`; present for `PENDING` when the submitted hash is known.",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
     "WalletSignatureNonce": {
       "title": "WalletSignatureNonce",
       "type": "object",
