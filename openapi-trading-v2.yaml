@@ -1226,9 +1226,9 @@ paths:
     post:
       summary: Transfer collateral between accounts
       description: |
-        Move collateral from one account to another account of the same owner. The owner
-        wallet, or a signer the owner has allowed to transfer, signs the request; Reya submits
-        it on-chain and pays the gas.
+        Move collateral from one account to another account of the same owner. Either account
+        can be a perpetual or a spot account. The owner wallet, or a signer the owner has
+        allowed to transfer, signs the request; Reya submits it on-chain and pays the gas.
 
         **Who can sign**
 
@@ -1269,6 +1269,11 @@ paths:
         permission grants. Only exactly `lastNonce + 1` is accepted, so submit an owner's
         signed actions one at a time. Order-entry nonces are unrelated.
 
+        Signers sharing an owner (the app, API wallets, hosted strategies) draw from that one
+        sequence, so two of them can sign the same nonce. The one that lands second gets
+        `INVALID_NONCE_ERROR` with nothing applied: read `lastNonce` again, then sign and
+        submit a new request.
+
         The nonce also makes a signed transfer execute at most once. Resubmitting the same
         signed request is safe. Signing a new transfer is not, while an earlier attempt may
         have settled: `NONCE_ALREADY_USED_ERROR` means the nonce was consumed, possibly by
@@ -1287,7 +1292,9 @@ paths:
         `SETTLED` means the transaction was mined successfully. `PENDING` means it was
         submitted but its outcome was not observed before the response. It may still settle,
         so do not sign a replacement. Look for `transactionHash` in
-        `GET /v2/wallet/{address}/transfers` to confirm it. Settled transfers appear there
+        `GET /v2/wallet/{address}/transfers` to confirm it. When a `PENDING` response has no
+        `transactionHash`, `GET /v2/wallet/{address}/signatureNonce` shows whether its nonce
+        was consumed: once `lastNonce` reaches it, the action with that nonce executed. Settled transfers appear there
         and on the `walletTransfers` stream once indexed. Rejections return HTTP 400 with no
         transfer applied; see the HTTP 400 response reference.
       operationId: transferBetweenAccounts
