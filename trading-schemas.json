@@ -600,6 +600,7 @@
         "initialMarginRequirement",
         "liquidationMarginRequirement",
         "freeCollateral",
+        "withdrawable",
         "initialMarginRatio",
         "liquidationMarginRatio",
         "updatedAt",
@@ -661,13 +662,20 @@
           ]
         },
         "freeCollateral": {
-          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote or withdrawal limit.",
+          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote; see withdrawable for withdrawal limits.",
           "example": "935",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
             }
           ]
+        },
+        "withdrawable": {
+          "type": "array",
+          "description": "The most of each held asset a withdrawal or a transfer to another account can take out now, as the chain checks it: the asset's real balance stays non-negative, and afterwards min(freeCollateral, collateralValue) stays non-negative, counting the value removed after the asset's haircut. Unrealized PnL is never withdrawable. The amounts share that headroom, so withdrawing one asset lowers the others. One row per asset with a positive real balance, ordered by asset; an amount can be zero.",
+          "items": {
+            "$ref": "#/definitions/WithdrawableAmount"
+          }
         },
         "initialMarginRatio": {
           "type": "string",
@@ -698,6 +706,31 @@
           "minimum": 0,
           "description": "Source time of the oldest mark or collateral price used by the account, in Unix milliseconds: the matching engine's timestamp for a mark, the oracle's for a collateral price. Null when no price is needed.",
           "example": 1747927089597
+        }
+      },
+      "additionalProperties": true
+    },
+    "WithdrawableAmount": {
+      "title": "WithdrawableAmount",
+      "type": "object",
+      "description": "How much of one asset an account can withdraw or transfer out now. See AccountSummary.withdrawable.",
+      "required": [
+        "asset",
+        "amount"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "RUSD"
+        },
+        "amount": {
+          "description": "In units of the asset, at the prices the summary uses, rounded down to the asset's decimals.",
+          "example": "900",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         }
       },
       "additionalProperties": true
