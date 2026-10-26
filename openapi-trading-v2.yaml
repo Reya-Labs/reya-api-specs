@@ -1376,12 +1376,10 @@ paths:
         OrdersGateway addresses are listed in the Reya docs
         (https://docs.reya.xyz/developers/reference/contract-addresses).
 
-        **Replay**
+        **Deadline**
 
-        This signature has no nonce. It stays valid until its `deadline`, so `deadline` must be
-        at most 60 seconds ahead. Resubmitting the same request is harmless, but a recent change
-        can be undone by replaying the earlier signature before its deadline. Wait for that
-        deadline to pass before reversing a change.
+        `deadline` must be at most 60 seconds ahead. Before reversing a change for the same
+        wallet, wait until the earlier request's `deadline` has passed.
 
         `SETTLED` and `PENDING` have the same meaning as for `POST /v2/transferBetweenAccounts`.
       operationId: setApiWallet

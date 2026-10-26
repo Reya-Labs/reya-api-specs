@@ -3220,7 +3220,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; a reused nonce is rejected with `INVALID_NONCE_ERROR`.",
           "example": "1234567890"
         },
         "signerWallet": {
@@ -3421,7 +3421,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; a reused nonce is rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -3482,7 +3482,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; a reused nonce is rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -3539,7 +3539,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; a reused nonce is rejected with `INVALID_NONCE_ERROR`.",
           "example": "1234567890"
         },
         "signerWallet": {
@@ -3746,7 +3746,7 @@
     "SetApiWalletRequest": {
       "title": "SetApiWalletRequest",
       "type": "object",
-      "description": "Owner-signed request to enable or disable an API wallet. See POST /v2/setApiWallet for the EIP-712 envelope and replay rules.",
+      "description": "Owner-signed request to enable or disable an API wallet. See POST /v2/setApiWallet for the EIP-712 envelope and deadline rules.",
       "required": [
         "owner",
         "apiWallet",
