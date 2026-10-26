@@ -212,7 +212,11 @@ channels:
 
   walletPositions:
     address: /v2/wallet/{address}/positions
-    description: Real-time position updates for a wallet
+    description: |
+      Real-time position updates for a wallet. Rows carry the optional valuation fields of
+      GET /wallet/{address}/positions and are refreshed when the position, the account's
+      balances or the prices of its markets change. A row replaces the previous row for the
+      same `accountId` and `symbol`; one without valuation fields has none currently.
     parameters:
       address:
         description: Ethereum wallet address
@@ -295,6 +299,20 @@ channels:
     messages:
       walletExecutionBustUpdate:
         $ref: '#/components/messages/WalletExecutionBustUpdate'
+
+  walletAccountSummaries:
+    address: /v2/wallet/{address}/accountSummaries
+    description: |
+      Real-time account summary updates for a wallet, as in
+      GET /wallet/{address}/accountSummaries. Each row replaces the previous summary for
+      its `accountId`.
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      accountSummaryUpdate:
+        $ref: '#/components/messages/AccountSummaryUpdate'
 
   walletAccountBalances:
     address: /v2/wallet/{address}/accountBalances
@@ -523,6 +541,14 @@ operations:
       - $ref: '#/channels/walletExecutionBusts/messages/walletExecutionBustUpdate'
     summary: Receive execution bust updates for wallet (spot + perp)
 
+  receiveWalletAccountSummaries:
+    action: receive
+    channel:
+      $ref: '#/channels/walletAccountSummaries'
+    messages:
+      - $ref: '#/channels/walletAccountSummaries/messages/accountSummaryUpdate'
+    summary: Receive account summary updates for wallet
+
   receiveWalletAccountBalances:
     action: receive
     channel:
@@ -672,6 +698,13 @@ components:
       summary: Real-time execution bust update for wallet (spot + perp)
       payload:
         $ref: '#/components/schemas/WalletExecutionBustUpdatePayload'
+
+    AccountSummaryUpdate:
+      name: accountSummaryUpdate
+      title: Account Summary Update
+      summary: Real-time account summary update for wallet
+      payload:
+        $ref: '#/components/schemas/AccountSummaryUpdatePayload'
 
     AccountBalanceUpdate:
       name: accountBalanceUpdate
@@ -895,6 +928,11 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/executionBusts$'
       description: Channel pattern for wallet execution busts (spot + perp)
+
+    WalletAccountSummariesChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/accountSummaries$'
+      description: Channel pattern for wallet account summaries
 
     WalletAccountBalancesChannelPattern:
       type: string
@@ -1179,6 +1217,22 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/ExecutionBust'
 
+    AccountSummaryUpdateBody:
+      type: object
+      title: AccountSummaryUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletAccountSummariesChannelPattern'
+        data:
+          type: array
+          title: AccountSummaryList
+          items:
+            $ref: './trading-schemas.json#/definitions/AccountSummary'
+
     AccountBalanceUpdateBody:
       type: object
       title: AccountBalanceUpdateBody
@@ -1352,6 +1406,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletExecutionBustUpdateBody'
+
+    AccountSummaryUpdatePayload:
+      title: AccountSummaryUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/AccountSummaryUpdateBody'
 
     AccountBalanceUpdatePayload:
       title: AccountBalanceUpdatePayload
