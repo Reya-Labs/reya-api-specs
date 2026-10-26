@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.5
+  version: 3.7.6
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -651,7 +651,9 @@ paths:
       summary: Get perpetual account summaries
       description: |
         Returns margin figures for the wallet's open perpetual accounts, ordered by
-        account ID; spot accounts are excluded. Pass `accountId` to select one account.
+        account ID; spot accounts are excluded. Pass `accountId` to select one account; an
+        `accountId` the wallet does not own returns an empty list. A wallet with no accounts
+        returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
 
         Amounts are decimal strings in rUSD. `collateralValue` is the haircut value of the
         account's real balances, which already include realized funding and ADL cashflows.
@@ -659,8 +661,10 @@ paths:
         `freeCollateral = marginBalance - initialMarginRequirement`. Figures cover settled
         positions only; they are not an order-size quote or withdrawal limit.
 
-        Returns 503 rather than partial figures when a required price or market input is
-        unavailable.
+        `pricesUpdatedAt` is the source time of the oldest price used: the matching engine's
+        timestamp for a mark, the oracle's for a collateral price. Returns 503 rather than
+        partial figures when a required price or market input is unavailable, including a
+        mark older than 60 seconds, the chain's mark staleness window.
       operationId: getWalletAccountSummaries
       tags:
         - Wallet Data
@@ -679,27 +683,61 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
         '503':
-          description: A valuation input is temporarily unavailable. Retry after backing off.
+          $ref: '#/components/responses/ValuationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /wallet/{address}/positionRisk:
+    get:
+      summary: Get perpetual position risk
+      description: |
+        Returns the wallet's open perpetual positions with mark price, notional, unrealized
+        PnL, funding since entry, liquidation margin requirement and an estimated liquidation
+        price, ordered by account ID, then symbol. Accounts without positions contribute no rows. Pass
+        `accountId` to select one account; an `accountId` the wallet does not own returns an
+        empty list. A wallet with no accounts returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
+        `lastTradeSequenceNumber` is the last execution each valued position includes, so a
+        client can tell whether a valuation already reflects a fill it has seen.
+
+        Positions are valued with the same inputs and freshness rules as
+        GET /wallet/{address}/accountSummaries, and the request returns 503 rather than
+        partial figures when any selected account cannot be valued.
+        GET /wallet/{address}/positions stays the position record itself and never fails
+        on valuation inputs.
+
+        Liquidation prices use cross margin: move only this market's mark until the
+        account's margin balance equals its liquidation margin requirement, keeping every
+        other mark, collateral price and funding value fixed, then round toward the current
+        mark onto the market's price tick. `hasCorrelatedCollateral` flags an account holding
+        non-stable collateral that tracks this market; the estimate does not model that
+        collateral moving with the market. A null liquidation price means no positive price
+        is the boundary, not necessarily that the account is safe. These are estimates from
+        indexed state, not guaranteed execution or liquidation prices.
+      operationId: getWalletPositionRisk
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/AccountIdFilterParam'
+      responses:
+        '200':
+          description: Open perpetual positions with risk figures
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestError'
-              example:
-                error: SERVICE_UNAVAILABLE_ERROR
-                message: A dependency is temporarily unavailable; retry after backing off
+                type: array
+                items:
+                  $ref: '#/components/schemas/PositionRisk'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ValuationUnavailable'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
   /wallet/{address}/positions:
     get:
       summary: Get wallet positions
-      description: |
-        Returns the wallet's open perpetual positions. When the account can be valued, each
-        position also carries `markPrice`, `notional`, `unrealizedPnl`,
-        `liquidationMarginRequirement`, `liquidationPrice`, `hasCorrelatedCollateral`,
-        `updatedAt` and `pricesUpdatedAt`, computed as in
-        GET /wallet/{address}/accountSummaries. These fields are omitted together for an
-        account whose valuation inputs are unavailable; the position itself is still returned.
       operationId: getWalletPositions
       tags:
         - Wallet Data
@@ -1326,6 +1364,8 @@ components:
   schemas:
     AccountSummary:
       $ref: './trading-schemas.json#/definitions/AccountSummary'
+    PositionRisk:
+      $ref: './trading-schemas.json#/definitions/PositionRisk'
     TriggerOrderType:
       $ref: './trading-schemas.json#/definitions/TriggerOrderType'
     LimitOrderType:
@@ -1601,6 +1641,16 @@ components:
           example:
             error: INPUT_VALIDATION_ERROR
             message: Invalid request parameters
+
+    ValuationUnavailable:
+      description: A valuation input is temporarily unavailable. Retry after backing off.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RequestError'
+          example:
+            error: SERVICE_UNAVAILABLE_ERROR
+            message: A dependency is temporarily unavailable; retry after backing off
 
     InternalServerError:
       description: Internal server error
