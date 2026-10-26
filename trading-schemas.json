@@ -712,6 +712,7 @@
         "side",
         "qty",
         "avgEntryPrice",
+        "lastTradeSequenceNumber",
         "markPrice",
         "notional",
         "unrealizedPnl",
@@ -749,6 +750,11 @@
         "avgEntryPrice": {
           "$ref": "#/definitions/SignedDecimal",
           "example": "43000.00"
+        },
+        "lastTradeSequenceNumber": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Sequence number of the last execution the valued position includes, as in GET /wallet/{address}/positions.",
+          "example": 152954
         },
         "markPrice": {
           "description": "Mark price used to value this position.",

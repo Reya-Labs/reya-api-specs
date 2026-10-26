@@ -696,6 +696,8 @@ paths:
         account ID, then symbol. Accounts without positions contribute no rows. Pass
         `accountId` to select one account; an `accountId` the wallet does not own returns an
         empty list. A wallet with no accounts returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
+        `lastTradeSequenceNumber` is the last execution each valued position includes, so a
+        client can tell whether a valuation already reflects a fill it has seen.
 
         Positions are valued with the same inputs and freshness rules as
         GET /wallet/{address}/accountSummaries, and the request returns 503 rather than
