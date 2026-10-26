@@ -1325,6 +1325,8 @@ paths:
         the nonce. The transfer also fails if the source account's balance in `asset` would go
         negative, if the source account would not meet initial margin afterwards, or if the
         destination cannot accept the asset. Unrealized PnL cannot be transferred.
+        `withdrawable` in GET /wallet/{address}/accountSummaries gives the most of each asset
+        the source account can transfer out under these balance and margin checks.
 
         **Response**
 
