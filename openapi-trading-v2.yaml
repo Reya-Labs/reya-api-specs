@@ -658,8 +658,10 @@ paths:
         Amounts are decimal strings in rUSD. `collateralValue` is the haircut value of the
         account's real balances, which already include realized funding and ADL cashflows.
         `marginBalance = collateralValue + unrealizedPnl` and
-        `freeCollateral = marginBalance - initialMarginRequirement`. Figures cover settled
-        positions only; they are not an order-size quote or withdrawal limit.
+        `freeCollateral = marginBalance - initialMarginRequirement`. `equity` is the same
+        account value before haircuts, each collateral at its oracle price; it is for display,
+        and margin is measured against `marginBalance`. Figures cover settled positions only;
+        they are not an order-size quote or withdrawal limit.
 
         `pricesUpdatedAt` is the source time of the oldest price used: the matching engine's
         timestamp for a mark, the oracle's for a collateral price. Returns 503 rather than
