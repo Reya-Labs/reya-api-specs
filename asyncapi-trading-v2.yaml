@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.7.6
+  version: 3.7.7
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -9,12 +9,13 @@ info:
 
     Market depth (`/v2/market/{symbol}/depth`) and wallet order changes
     (`/v2/wallet/{address}/orderChanges`) provide ordered updates after an initial snapshot.
+    Wallet fills (`/v2/wallet/{address}/fills`) provide ordered updates with an empty snapshot.
     A client that cannot keep up is disconnected with code `1013` (slow consumer).
     Code `1012` means the connection must be restarted, for example to obtain a fresh snapshot.
     For either code, reconnect and resubscribe. Treat the reason text as advisory.
 
     Resubscribing returns a fresh snapshot of the channel's documented view. Updates from the
-    disconnection window are not replayed. Reconcile current state from the snapshot and use
+    disconnection window are not resent. Reconcile current state from the snapshot and use
     the execution channels and corresponding REST endpoints for individual fills.
 
     Asset oracle price updates may omit intermediate ticks when a client falls behind, while
@@ -273,6 +274,47 @@ channels:
     messages:
       walletSpotExecutionUpdate:
         $ref: '#/components/messages/WalletSpotExecutionUpdate'
+
+  walletFills:
+    address: /v2/wallet/{address}/fills
+    description: |
+      Matching-engine fills for a wallet, published as each fill is matched, usually before it
+      settles on-chain. Covers both spot and perp.
+
+      Each `Fill` row is exactly one fill, with the same shape whether the wallet's account
+      was the maker or the taker. When an order takes liquidity from several makers in one
+      matching round, the wallet receives one row per maker, each with its own `fillId`,
+      price and quantity. When both sides of a fill belong to the wallet, it receives the
+      row once.
+
+      Fills are provisional. Confirm each one against the settled `perpExecutions` or
+      `spotExecutions` row with the same `fillId`, and reverse it if an `executionBusts`
+      row with that `fillId` arrives. Delivery across channels is not ordered: the settled
+      execution or the bust can arrive before the fill, so match them by `fillId` in either
+      order. A row may carry an estimated `takerFee`; the exact fee and realized PnL are
+      reported only on the settled execution. Liquidation, ADL and market-close executions
+      are not matched by the matching engine, so they never appear here; they arrive only on
+      the execution channels.
+
+      The subscription snapshot is empty: the channel carries only fills matched after
+      subscribing. Each `channel_data` frame may carry several fills; process the `data`
+      array in order. On a connection that is also subscribed to the same wallet's
+      `orderChanges`, each fill arrives after the order update that reports it.
+
+      Fills from a disconnection window are not resent. After reconnecting, recover them
+      from the settled executions by `fillId`. In rare cases a fill can settle without
+      appearing on this channel, so the settled executions remain the source of truth for a
+      wallet's fill history.
+
+      For disconnect codes and resubscription recovery, see Connection lifecycle and recovery
+      in the streaming API overview.
+    parameters:
+      address:
+        description: Ethereum wallet address
+        location: $message.payload#/address
+    messages:
+      walletFillUpdate:
+        $ref: '#/components/messages/WalletFillUpdate'
 
   marketExecutionBusts:
     address: /v2/market/{symbol}/executionBusts
@@ -553,6 +595,14 @@ operations:
       - $ref: '#/channels/walletSpotExecutions/messages/walletSpotExecutionUpdate'
     summary: Receive spot execution updates for wallet
 
+  receiveWalletFills:
+    action: receive
+    channel:
+      $ref: '#/channels/walletFills'
+    messages:
+      - $ref: '#/channels/walletFills/messages/walletFillUpdate'
+    summary: Receive pre-settlement fill updates for wallet (spot + perp)
+
   receiveMarketExecutionBusts:
     action: receive
     channel:
@@ -720,6 +770,13 @@ components:
       summary: Real-time spot execution update for wallet
       payload:
         $ref: '#/components/schemas/WalletSpotExecutionUpdatePayload'
+
+    WalletFillUpdate:
+      name: walletFillUpdate
+      title: Wallet Fill Update
+      summary: Pre-settlement fill update for wallet (spot + perp)
+      payload:
+        $ref: '#/components/schemas/WalletFillUpdatePayload'
 
     MarketExecutionBustUpdate:
       name: marketExecutionBustUpdate
@@ -961,6 +1018,11 @@ components:
       type: string
       pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/spotExecutions$'
       description: Channel pattern for wallet spot executions
+
+    WalletFillsChannelPattern:
+      type: string
+      pattern: '^/v2/wallet/0x[a-fA-F0-9]{40}/fills$'
+      description: Channel pattern for wallet pre-settlement fills (spot + perp)
 
     MarketExecutionBustsChannelPattern:
       type: string
@@ -1233,6 +1295,22 @@ components:
           items:
             $ref: './trading-schemas.json#/definitions/SpotExecution'
 
+    WalletFillUpdateBody:
+      type: object
+      title: WalletFillUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/WalletFillsChannelPattern'
+        data:
+          type: array
+          title: WalletFillList
+          items:
+            $ref: './trading-schemas.json#/definitions/Fill'
+
     MarketExecutionBustUpdateBody:
       type: object
       title: MarketExecutionBustUpdateBody
@@ -1466,6 +1544,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/WalletSpotExecutionUpdateBody'
+
+    WalletFillUpdatePayload:
+      title: WalletFillUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/WalletFillUpdateBody'
 
     MarketExecutionBustUpdatePayload:
       title: MarketExecutionBustUpdatePayload
