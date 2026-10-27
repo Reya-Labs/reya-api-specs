@@ -97,7 +97,9 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR",
+        "SIGNED_ACTION_OTHER_ERROR",
+        "NONCE_ALREADY_USED_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance. For an HTTP 503 on a read endpoint, retry the same request after backing off; no signature, nonce or clientOrderId is involved."
     },
@@ -215,6 +217,12 @@
           "type": "string",
           "description": "Human-readable error message",
           "example": "Invalid symbol format"
+        },
+        "transactionHash": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "description": "For `NONCE_ALREADY_USED_ERROR` on a signed Core action (transfers, account permissions): the transaction that used the nonce, when it can be identified.",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
         },
         "retryAfterMs": {
           "type": "integer",
@@ -600,6 +608,7 @@
         "initialMarginRequirement",
         "liquidationMarginRequirement",
         "freeCollateral",
+        "withdrawable",
         "initialMarginRatio",
         "liquidationMarginRatio",
         "updatedAt",
@@ -661,13 +670,20 @@
           ]
         },
         "freeCollateral": {
-          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote or withdrawal limit.",
+          "description": "marginBalance - initialMarginRequirement. Negative means an initial-margin deficit. Not an order-size quote; see withdrawable for withdrawal limits.",
           "example": "935",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
             }
           ]
+        },
+        "withdrawable": {
+          "type": "array",
+          "description": "An estimate, per held asset, of the most a withdrawal or a transfer to another account can take out now under the chain's balance and margin checks: the asset's real balance stays non-negative, and afterwards min(freeCollateral, collateralValue) stays non-negative, counting the value removed after the asset's haircut. Unrealized PnL is never withdrawable. The amounts share that headroom, so withdrawing one asset lowers the others. It uses the same indexed prices and balances as the other figures, so a request can still be refused if prices or funding move before it executes, and it does not include protocol withdrawal limits or the destination account's limits. One row per asset with a positive real balance, ordered by asset; an amount can be zero.",
+          "items": {
+            "$ref": "#/definitions/WithdrawableAmount"
+          }
         },
         "initialMarginRatio": {
           "type": "string",
@@ -698,6 +714,31 @@
           "minimum": 0,
           "description": "Source time of the oldest mark or collateral price used by the account, in Unix milliseconds: the matching engine's timestamp for a mark, the oracle's for a collateral price. Null when no price is needed.",
           "example": 1747927089597
+        }
+      },
+      "additionalProperties": true
+    },
+    "WithdrawableAmount": {
+      "title": "WithdrawableAmount",
+      "type": "object",
+      "description": "An estimate of how much of one asset an account can withdraw or transfer out now. See AccountSummary.withdrawable.",
+      "required": [
+        "asset",
+        "amount"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "example": "RUSD"
+        },
+        "amount": {
+          "description": "In units of the asset, at the prices the summary uses, rounded down to the asset's decimals.",
+          "example": "900",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
         }
       },
       "additionalProperties": true
@@ -2599,7 +2640,8 @@
         "liquidationDiscount",
         "status",
         "decimals",
-        "displayDecimals"
+        "displayDecimals",
+        "tokenAddress"
       ],
       "properties": {
         "asset": {
@@ -2634,6 +2676,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Number of decimal places shown for display purposes in frontends",
           "example": 4
+        },
+        "tokenAddress": {
+          "$ref": "#/definitions/Address",
+          "description": "The asset's token contract on this chain: the `collateral` a signed transfer names.",
+          "example": "0xa9F32a851B1800742e47725DA54a09A7Ef2556A3"
         }
       },
       "additionalProperties": true
@@ -3185,7 +3232,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; a reused nonce is rejected with `INVALID_NONCE_ERROR`.",
           "example": "1234567890"
         },
         "signerWallet": {
@@ -3386,7 +3433,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; a reused nonce is rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -3447,7 +3494,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; a reused nonce is rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -3504,7 +3551,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; a reused nonce is rejected with `INVALID_NONCE_ERROR`.",
           "example": "1234567890"
         },
         "signerWallet": {
@@ -3541,6 +3588,292 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Advisory Unix timestamp in milliseconds at which the countdown will fire unless refreshed or disarmed. The countdown starts when the request is accepted, using the requested `timeoutMs`. Use this timestamp for display and schedule refreshes well before expiry. Omitted when `timeoutMs` is `0`.",
           "example": 1747927119946
+        }
+      },
+      "additionalProperties": true
+    },
+    "TransferBetweenAccountsRequest": {
+      "title": "TransferBetweenAccountsRequest",
+      "description": "Signed transfer of collateral between two accounts of the same owner. See POST /v2/transferBetweenAccounts for the signer permission, the EIP-712 envelope and the nonce sequence.",
+      "type": "object",
+      "required": [
+        "fromAccountId",
+        "toAccountId",
+        "asset",
+        "amount",
+        "signerWallet",
+        "nonce",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "fromAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the collateral leaves. Signed as `ExecuteBySig.accountId`.",
+          "example": 12345
+        },
+        "toAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the collateral arrives in. It must differ from `fromAccountId` and have the same owner. Signed as the command's `toAccountId` input.",
+          "example": 12346
+        },
+        "asset": {
+          "$ref": "#/definitions/Asset",
+          "description": "Collateral asset to move, as listed by GET /v2/assetDefinitions. Its token address is the command's signed `collateral` input."
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+)?$",
+          "description": "Amount of `asset` to move, as a plain decimal greater than zero. It must convert exactly to base units: at most the asset's `decimals` fractional digits, ignoring trailing zeros. Signed as the command's `amount` input, scaled by 10^decimals.",
+          "example": "100.5"
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address that produced `signature`: the owner, or a wallet holding Core `TRANSFER` permission on `fromAccountId`."
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "The owner wallet's next Core signature nonce, as a decimal string: `lastNonce + 1` from GET /v2/wallet/{address}/signatureNonce. Signed as `ExecuteBySig.nonce`. Unrelated to order-entry nonces.",
+          "example": "8"
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds after which the signature is invalid. Signed as `ExecuteBySig.deadline`. Must not have passed and must be at most 600 seconds ahead.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{130}$",
+          "description": "65-byte EIP-712 signature over Core's `ExecuteBySig` envelope. See POST /v2/transferBetweenAccounts.",
+          "example": "0x59dc9c7ef7d00c8a86b03bd82b7b3cd01f3de221d0729fd47c3f164f6c53c73b2c0a4cdd6f01474e3effaf1463722a277038492380cfa647f7d2bd226919345e1c"
+        }
+      },
+      "additionalProperties": true
+    },
+    "SignedActionStatus": {
+      "title": "SignedActionStatus",
+      "type": "string",
+      "enum": [
+        "SETTLED",
+        "PENDING"
+      ],
+      "description": "Outcome of a signed action Reya submitted on-chain. `SETTLED`: the transaction was mined successfully. `PENDING`: the transaction was submitted but its outcome was not observed before the response; it may still settle, so do not sign a replacement. See POST /v2/transferBetweenAccounts."
+    },
+    "TransferBetweenAccountsResponse": {
+      "title": "TransferBetweenAccountsResponse",
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/SignedActionStatus"
+        },
+        "transactionHash": {
+          "type": "string",
+          "description": "Hash of the transfer transaction. Always present for `SETTLED`; present for `PENDING` when the submitted hash is known. Matches `Transfer.transactionHash` in GET /v2/wallet/{address}/transfers.",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
+    "AccountPermission": {
+      "title": "AccountPermission",
+      "type": "string",
+      "enum": [
+        "ADMIN",
+        "WITHDRAW",
+        "TRANSFER",
+        "DUTCH_LIQUIDATION"
+      ],
+      "description": "Core account permission. `TRANSFER` allows transfers out of the account to other accounts of the same owner; `WITHDRAW` allows withdrawals; `DUTCH_LIQUIDATION` allows taking Dutch liquidations with the account; `ADMIN` includes every permission. POST /v2/setAccountPermission grants only `TRANSFER` and revokes any of them."
+    },
+    "AccountPermissionGrant": {
+      "title": "AccountPermissionGrant",
+      "type": "object",
+      "required": [
+        "accountId",
+        "permissions"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the permissions apply to.",
+          "example": 12345
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Core permissions the wallet holds on this account.",
+          "items": {
+            "$ref": "#/definitions/AccountPermission"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWallet": {
+      "title": "ApiWallet",
+      "type": "object",
+      "description": "A wallet that can act for an owner. See GET /v2/wallet/{address}/apiWallets.",
+      "required": [
+        "address",
+        "trading",
+        "accountPermissions"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "trading": {
+          "type": "boolean",
+          "description": "Whether the wallet can sign orders for all of the owner's accounts (POST /v2/setTradingPermission)."
+        },
+        "accountPermissions": {
+          "type": "array",
+          "description": "Core permissions held on the owner's accounts; empty when the wallet only trades.",
+          "items": {
+            "$ref": "#/definitions/AccountPermissionGrant"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWalletList": {
+      "title": "ApiWalletList",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ApiWallet"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "SetTradingPermissionRequest": {
+      "title": "SetTradingPermissionRequest",
+      "type": "object",
+      "description": "Owner-signed request to grant or revoke an API wallet's trading permission. See POST /v2/setTradingPermission for the EIP-712 envelope and deadline rules.",
+      "required": [
+        "owner",
+        "apiWallet",
+        "enabled",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "owner": {
+          "$ref": "#/definitions/Address",
+          "description": "Owner wallet; it must produce `signature`. Signed as `owner`."
+        },
+        "apiWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Wallet whose trading permission changes. Signed as `target`."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "`true` grants trading permission, `false` revokes it. Signed as `permissionState`."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Must not have passed and must be at most 60 seconds ahead. Signed as `deadline`.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{130}$",
+          "description": "65-byte EIP-712 signature over `ManagePermissionBySig`.",
+          "example": "0x43a73fdc9fb4d1d8aa8661c666a90c3a3284a954c8dbc4d362d1ac53fb7d2d534cc4238ec94d256928a54a96434b1de2255898c5c66c3598f99c3d2b564a1fdb1b"
+        }
+      },
+      "additionalProperties": true
+    },
+    "SetAccountPermissionRequest": {
+      "title": "SetAccountPermissionRequest",
+      "type": "object",
+      "description": "Owner-signed request to grant or revoke a Core account permission. See POST /v2/setAccountPermission for the EIP-712 envelopes and the nonce sequence.",
+      "required": [
+        "accountId",
+        "user",
+        "permission",
+        "granted",
+        "nonce",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the permission applies to. Its owner must produce `signature`. Signed as `accountId`.",
+          "example": 12345
+        },
+        "user": {
+          "$ref": "#/definitions/Address",
+          "description": "Wallet receiving or losing the permission. Signed as `user`."
+        },
+        "permission": {
+          "$ref": "#/definitions/AccountPermission",
+          "description": "Permission to grant or revoke. Only `TRANSFER` can be granted; any can be revoked. Signed as `permission` = keccak256 of the name, such as keccak256(\"TRANSFER\")."
+        },
+        "granted": {
+          "type": "boolean",
+          "description": "`true` grants (sign `GrantAccountPermissionBySig`); `false` revokes (sign `RevokeAccountPermissionBySig`)."
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "The owner wallet's next Core signature nonce: `lastNonce + 1` from GET /v2/wallet/{address}/signatureNonce, shared with transfers. Signed as `nonce`.",
+          "example": "9"
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Must not have passed and must be at most 600 seconds ahead. Signed as `deadline`.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{130}$",
+          "description": "65-byte EIP-712 signature over the grant or revoke envelope.",
+          "example": "0x602d50b39b3ba9dba249e69c4d9918583c5ac4676b12f926aada3069eafa15f3221565ff60c076b5856c596643df43aaf7e58987091cab3a917e8eaf149fad721c"
+        }
+      },
+      "additionalProperties": true
+    },
+    "SignedActionResponse": {
+      "title": "SignedActionResponse",
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/SignedActionStatus"
+        },
+        "transactionHash": {
+          "type": "string",
+          "description": "Hash of the submitted transaction. Always present for `SETTLED`; present for `PENDING` when the submitted hash is known.",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        }
+      },
+      "additionalProperties": true
+    },
+    "WalletSignatureNonce": {
+      "title": "WalletSignatureNonce",
+      "type": "object",
+      "required": [
+        "lastNonce"
+      ],
+      "properties": {
+        "lastNonce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "Last Core signature nonce consumed by this owner wallet, as a decimal string. The next signed Core action, such as POST /v2/transferBetweenAccounts, must use `lastNonce + 1`.",
+          "example": "7"
         }
       },
       "additionalProperties": true

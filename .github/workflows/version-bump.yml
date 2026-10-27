@@ -54,20 +54,22 @@ jobs:
           # Get the base branch commit
           BASE_SHA=$(git merge-base HEAD origin/${{ github.base_ref }})
 
-          # Simple check: did the version line change?
-          if git diff $BASE_SHA HEAD -- openapi-trading-v2.yaml | grep -q "^\+.*version:"; then
+          # Did the spec's own version line change? Only `info.version` sits at
+          # two-space indent (the line the bump step rewrites); prose such as an
+          # EIP-712 domain's `version: "1"` must not count as a manual bump.
+          if git diff $BASE_SHA HEAD -- openapi-trading-v2.yaml | grep -qE '^\+  version: '; then
             OPENAPI_MODIFIED=1
           else
             OPENAPI_MODIFIED=0
           fi
 
-          if git diff $BASE_SHA HEAD -- asyncapi-trading-v2.yaml | grep -q "^\+.*version:"; then
+          if git diff $BASE_SHA HEAD -- asyncapi-trading-v2.yaml | grep -qE '^\+  version: '; then
             ASYNCAPI_MODIFIED=1
           else
             ASYNCAPI_MODIFIED=0
           fi
 
-          if git diff $BASE_SHA HEAD -- asyncapi-exec-v2.yaml | grep -q "^\+.*version:"; then
+          if git diff $BASE_SHA HEAD -- asyncapi-exec-v2.yaml | grep -qE '^\+  version: '; then
             EXEC_MODIFIED=1
           else
             EXEC_MODIFIED=0

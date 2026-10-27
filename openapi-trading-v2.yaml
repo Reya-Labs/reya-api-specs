@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.6
+  version: 3.7.7
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -659,7 +659,17 @@ paths:
         account's real balances, which already include realized funding and ADL cashflows.
         `marginBalance = collateralValue + unrealizedPnl` and
         `freeCollateral = marginBalance - initialMarginRequirement`. Figures cover settled
-        positions only; they are not an order-size quote or withdrawal limit.
+        positions only and are not an order-size quote.
+
+        `withdrawable` estimates, for each asset the account holds, the most a withdrawal or a
+        transfer to another account can take out now under the chain's balance and margin
+        checks: no more than the asset's real balance, and no more than keeps
+        `min(freeCollateral, collateralValue)` non-negative, the value removed counted after
+        the asset's haircut. Unrealized PnL is never withdrawable, and the amounts share one
+        headroom: withdrawing one asset lowers what the others allow. It uses the same
+        indexed prices and balances as the other figures, so a request can still be refused
+        if prices or funding move before it executes, and it does not include protocol
+        withdrawal limits or the destination account's limits.
 
         `pricesUpdatedAt` is the source time of the oldest price used: the matching engine's
         timestamp for a mark, the oracle's for a collateral price. Returns 503 rather than
@@ -902,6 +912,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WalletConfiguration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /wallet/{address}/signatureNonce:
+    get:
+      summary: Get wallet signature nonce
+      description: |
+        Returns the last Core signature nonce consumed by an owner wallet. Sign the next Core
+        action, such as `POST /v2/transferBetweenAccounts`, with `lastNonce + 1`.
+
+        The value is read from the chain on each request. It is one sequence per owner wallet,
+        shared by all of the owner's accounts, every signer acting for them and every Core
+        signed action. Order-entry nonces are unrelated.
+      operationId: getWalletSignatureNonce
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+      responses:
+        '200':
+          description: Wallet signature nonce
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletSignatureNonce'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /wallet/{address}/apiWallets:
+    get:
+      summary: Get wallet API wallets and permissions
+      description: |
+        Lists the wallets that can act for an owner wallet:
+
+        - API wallets that can sign orders for all of the owner's accounts (`trading`), managed
+          with `POST /v2/setTradingPermission`.
+        - Wallets holding Core permissions on the owner's accounts (`accountPermissions`), managed
+          with `POST /v2/setAccountPermission`: it grants `TRANSFER` and revokes any of them.
+          `ADMIN` includes every permission.
+
+        The owner itself is not listed. Trading permissions come from indexed chain events and
+        account permissions are read from the chain on each request; an account created in
+        the last few seconds may not be included yet.
+      operationId: getWalletApiWallets
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+      responses:
+        '200':
+          description: Wallets that can act for the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiWalletList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -1195,6 +1264,242 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /transferBetweenAccounts:
+    post:
+      summary: Transfer collateral between accounts
+      description: |
+        Move collateral from one account to another account of the same owner. Either account
+        can be a perpetual or a spot account. The owner wallet, or a signer the owner has
+        allowed to transfer, signs the request; Reya submits it on-chain and pays the gas.
+
+        **Who can sign**
+
+        - The account owner.
+        - A wallet holding Core `TRANSFER` permission on `fromAccountId` (or `ADMIN`, which
+          includes it). The owner grants it per source account with Core
+          `grantAccountPermission(fromAccountId, keccak256("TRANSFER"), signer)`, directly or
+          by signature with `POST /v2/setAccountPermission`, and only the owner can grant or
+          revoke it.
+
+        An API wallet enabled for trading cannot transfer until it is also granted `TRANSFER`.
+        A transfer signer can only move collateral between the owner's accounts. It cannot
+        withdraw or send funds to another wallet.
+
+        **Signature**
+
+        Sign Core's EIP-712 `ExecuteBySig` envelope over one transfer command:
+
+        | Field | Value |
+        | --- | --- |
+        | Domain | `name: "Reya"`, `version: "1"`, `verifyingContract`: the Core proxy. No `chainId`. |
+        | `verifyingChainId` | Chain id of the environment. |
+        | `caller` | The Periphery proxy. |
+        | `accountId` | `fromAccountId`. |
+        | `commands` | One `Command` with `commandType: 4`, `marketId: 0`, `exchangeId: 0` and `inputs = abi.encode(uint128 toAccountId, address collateral, uint256 amount)`. `collateral` is the asset's token address; `amount` is the request `amount` scaled by the asset's `decimals`. |
+        | `nonce` | `lastNonce + 1` from `GET /v2/wallet/{address}/signatureNonce` for the owner. |
+        | `deadline` | The request `deadline`. |
+        | `extraSignatureData` | Empty bytes (`0x`). |
+
+        The type strings are `ExecuteBySig(uint256 verifyingChainId,address caller,uint128 accountId,Command[] commands,uint256 nonce,uint256 deadline,bytes extraSignatureData)`
+        and `Command(uint8 commandType,bytes inputs,uint128 marketId,uint128 exchangeId)`.
+        `tokenAddress` in `GET /v2/assetDefinitions` is each asset's token address. Core and
+        Periphery addresses per environment are listed in the Reya docs
+        (https://docs.reya.xyz/developers/reference/contract-addresses).
+
+        Test vector (mainnet: chain id 1729, Core `0xA763B6a5E09378434406C003daE6487FbbDc1a80`,
+        Periphery `0xCd2869d1eb1BC8991Bc55de9E9B779e912faF736`), signed with the well-known test
+        key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+        (`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`): `fromAccountId` 12345, `toAccountId`
+        12346, `RUSD` (`0xa9F32a851B1800742e47725DA54a09A7Ef2556A3`, 6 decimals), `amount`
+        `100.5`, `nonce` 8, `deadline` 1676923200.
+
+        - `inputs`: `0x000000000000000000000000000000000000000000000000000000000000303a000000000000000000000000a9f32a851b1800742e47725da54a09a7ef2556a30000000000000000000000000000000000000000000000000000000005fd8220`
+        - Digest: `0xc44d8b8ceb771397dd338799afe7c4fb950d62698ea0243cb265e2a42536f34a`
+        - `signature`: `0x59dc9c7ef7d00c8a86b03bd82b7b3cd01f3de221d0729fd47c3f164f6c53c73b2c0a4cdd6f01474e3effaf1463722a277038492380cfa647f7d2bd226919345e1c`
+
+        **Nonce**
+
+        The nonce belongs to the owner wallet, not the signer. One sequence covers all of the
+        owner's accounts and every Core signed action, including transfers, withdrawals and
+        permission grants. Only exactly `lastNonce + 1` is accepted, so submit an owner's
+        signed actions one at a time. Order-entry nonces are unrelated.
+
+        The nonce makes a signed transfer execute at most once, and resubmitting the same
+        signed request is always safe: once it has executed, a resubmission returns `SETTLED`
+        with the transaction that executed it.
+
+        Signers sharing an owner (the app, API wallets, hosted strategies) draw from that one
+        sequence, so two of them can sign the same nonce. Only one executes. The other gets
+        `NONCE_ALREADY_USED_ERROR` with nothing applied, and its `transactionHash` names the
+        transaction that used the nonce; read `lastNonce` again and sign a new request. If the
+        error has no `transactionHash`, the action that used the nonce could not be
+        identified: confirm in `GET /v2/wallet/{address}/transfers` that your transfer did
+        not settle before signing a new one. `INVALID_NONCE_ERROR` means the nonce skipped
+        ahead of `lastNonce + 1`.
+
+        **Checks**
+
+        Before submitting, Reya verifies the signature and that `signerWallet` produced it,
+        that both accounts exist and share an owner, the signer's permission, the deadline and
+        the nonce. The transfer also fails if the source account's balance in `asset` would go
+        negative, if the source account would not meet initial margin afterwards, or if the
+        destination cannot accept the asset. Unrealized PnL cannot be transferred.
+        `withdrawable` in GET /wallet/{address}/accountSummaries gives the most of each asset
+        the source account can transfer out under these balance and margin checks.
+
+        **Response**
+
+        `SETTLED` means the transaction was mined successfully. `PENDING` means it was
+        submitted but its outcome was not observed before the response. It may still settle,
+        so do not sign a replacement while it can: resubmit the same signed request, which
+        returns `SETTLED` once it has executed, or watch
+        `GET /v2/wallet/{address}/signatureNonce` (`lastNonce` reaching the request's nonce
+        means an action with that nonce executed). Once the request's `deadline` has passed
+        with `lastNonce` still below its nonce, it can never execute, and a new request is
+        safe. Settled transfers appear in `GET /v2/wallet/{address}/transfers` and on the
+        `walletTransfers` stream a few seconds later, once indexed; match them by
+        `transactionHash`. Rejections return HTTP 400 with no transfer applied; see the HTTP
+        400 response reference.
+      operationId: transferBetweenAccounts
+      tags:
+        - Transfers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferBetweenAccountsRequest'
+      responses:
+        '200':
+          description: Transfer submission result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferBetweenAccountsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /setTradingPermission:
+    post:
+      summary: Grant or revoke an API wallet's trading permission
+      description: |
+        Grant or revoke an API wallet's trading permission: the right to create, modify and
+        cancel orders for all of the owner's accounts. The owner signs; Reya submits it on-chain
+        and pays the gas. Trading permission does not allow transfers or withdrawals; transfers
+        need a separate `TRANSFER` grant with `POST /v2/setAccountPermission`.
+
+        **Signature**
+
+        Sign `ManagePermissionBySig(uint256 verifyingChainId,address owner,address target,bool permissionState,uint256 deadline)`
+        with domain `name: "Reya"`, `version: "1"` and `verifyingContract`: the OrdersGateway
+        proxy (no `chainId`). `target` is `apiWallet` and `permissionState` is `enabled`.
+        OrdersGateway addresses are listed in the Reya docs
+        (https://docs.reya.xyz/developers/reference/contract-addresses).
+
+        **Deadline**
+
+        `deadline` must be at most 60 seconds ahead. Before reversing a change for the same
+        wallet, wait until the earlier request's `deadline` has passed.
+
+        `SETTLED` and `PENDING` have the same meaning as for `POST /v2/transferBetweenAccounts`.
+        The change does not appear in `/transfers`: confirm it with `trading` in
+        `GET /v2/wallet/{address}/apiWallets`. Once the request's `deadline` has passed, the
+        result shown there is final.
+
+        Test vector (mainnet: chain id 1729, OrdersGateway
+        `0xfc8c96be87da63cecddbf54abfa7b13ee8044739`), signed with the test key above
+        (`owner` `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`): `apiWallet`
+        `0x70997970C51812dc3A010C7d01b50e0d17dc79C8`, `enabled` `true`, `deadline` 1676923200.
+        Digest `0x2ec479e4c3254e8115fdfa035944fde7dfe30fde4bca7bc28a6fb3e35bf93bb2`, `signature`
+        `0x43a73fdc9fb4d1d8aa8661c666a90c3a3284a954c8dbc4d362d1ac53fb7d2d534cc4238ec94d256928a54a96434b1de2255898c5c66c3598f99c3d2b564a1fdb1b`.
+      operationId: setTradingPermission
+      tags:
+        - API Wallets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTradingPermissionRequest'
+      responses:
+        '200':
+          description: Submission result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedActionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /setAccountPermission:
+    post:
+      summary: Grant or revoke an account permission
+      description: |
+        Grant or revoke a Core permission for `user` on `accountId`. The account owner signs;
+        Reya submits it on-chain and pays the gas.
+
+        - **Grant:** only `TRANSFER`. It lets `user` move collateral from `accountId` to another
+          account of the same owner with `POST /v2/transferBetweenAccounts`. Core rejects
+          transfers to accounts of other owners, and the permission does not allow withdrawals
+          or trading.
+        - **Revoke:** any permission `GET /v2/wallet/{address}/apiWallets` lists (`ADMIN`,
+          `WITHDRAW`, `TRANSFER`, `DUTCH_LIQUIDATION`), including ones granted outside this API.
+
+        **Signature**
+
+        Sign one of these with domain `name: "Reya"`, `version: "1"` and `verifyingContract`: the
+        Core proxy (no `chainId`):
+
+        - Grant: `GrantAccountPermissionBySig(uint256 verifyingChainId,uint128 accountId,bytes32 permission,address user,uint256 nonce,uint256 deadline)`
+        - Revoke: `RevokeAccountPermissionBySig(uint256 verifyingChainId,uint128 accountId,bytes32 permission,address user,uint256 nonce,uint256 deadline)`
+
+        `permission` is `keccak256` of the permission name, such as `keccak256("TRANSFER")`.
+        `nonce` is the owner wallet's `lastNonce + 1`
+        from `GET /v2/wallet/{address}/signatureNonce`. It is the same sequence transfers use, so
+        the nonce rules of `POST /v2/transferBetweenAccounts` apply, including
+        `NONCE_ALREADY_USED_ERROR`.
+
+        Granting a permission the wallet already holds, or revoking one it does not hold, is
+        rejected with `INPUT_VALIDATION_ERROR` and uses no nonce. Revoking `TRANSFER` from a
+        wallet that holds only `ADMIN` is such a case: revoke `ADMIN` instead.
+        `GET /v2/wallet/{address}/apiWallets` shows the current grants. A change applies to
+        actions submitted after it settles.
+
+        `SETTLED` and `PENDING` have the same meaning as for `POST /v2/transferBetweenAccounts`,
+        and resubmitting the same signed request is safe in the same way. The change does not
+        appear in `/transfers`: confirm it in `GET /v2/wallet/{address}/apiWallets`.
+
+        Test vector (mainnet, Core as above), signed with the test key above as the owner of
+        `accountId` 12345: grant `TRANSFER`
+        (`0x9143236d81225394f3bd65b44e6e29fdf4d7ba0773d9bb3f5cc15eb80ba37777`) to `user`
+        `0x70997970C51812dc3A010C7d01b50e0d17dc79C8`, `nonce` 9, `deadline` 1676923200.
+        Digest `0xc2938b7e1912b0d605b8955938de6b7a4733f5645ea039fe37d2c7a12d27a7b6`, `signature`
+        `0x602d50b39b3ba9dba249e69c4d9918583c5ac4676b12f926aada3069eafa15f3221565ff60c076b5856c596643df43aaf7e58987091cab3a917e8eaf149fad721c`.
+      operationId: setAccountPermission
+      tags:
+        - API Wallets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetAccountPermissionRequest'
+      responses:
+        '200':
+          description: Submission result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedActionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   parameters:
     AccountIdFilterParam:
@@ -1364,6 +1669,8 @@ components:
   schemas:
     AccountSummary:
       $ref: './trading-schemas.json#/definitions/AccountSummary'
+    WithdrawableAmount:
+      $ref: './trading-schemas.json#/definitions/WithdrawableAmount'
     PositionRisk:
       $ref: './trading-schemas.json#/definitions/PositionRisk'
     TriggerOrderType:
@@ -1393,6 +1700,30 @@ components:
 
     WalletConfiguration:
       $ref: './trading-schemas.json#/definitions/WalletConfiguration'
+
+    WalletSignatureNonce:
+      $ref: './trading-schemas.json#/definitions/WalletSignatureNonce'
+
+    AccountPermission:
+      $ref: './trading-schemas.json#/definitions/AccountPermission'
+
+    AccountPermissionGrant:
+      $ref: './trading-schemas.json#/definitions/AccountPermissionGrant'
+
+    ApiWallet:
+      $ref: './trading-schemas.json#/definitions/ApiWallet'
+
+    ApiWalletList:
+      $ref: './trading-schemas.json#/definitions/ApiWalletList'
+
+    SetTradingPermissionRequest:
+      $ref: './trading-schemas.json#/definitions/SetTradingPermissionRequest'
+
+    SetAccountPermissionRequest:
+      $ref: './trading-schemas.json#/definitions/SetAccountPermissionRequest'
+
+    SignedActionResponse:
+      $ref: './trading-schemas.json#/definitions/SignedActionResponse'
 
     MarketSummary:
       $ref: './trading-schemas.json#/definitions/MarketSummary'
@@ -1484,6 +1815,15 @@ components:
     CancelAllAfterResponse:
       $ref: './trading-schemas.json#/definitions/CancelAllAfterResponse'
 
+    TransferBetweenAccountsRequest:
+      $ref: './trading-schemas.json#/definitions/TransferBetweenAccountsRequest'
+
+    TransferBetweenAccountsResponse:
+      $ref: './trading-schemas.json#/definitions/TransferBetweenAccountsResponse'
+
+    SignedActionStatus:
+      $ref: './trading-schemas.json#/definitions/SignedActionStatus'
+
     Depth:
       $ref: './trading-schemas.json#/definitions/Depth'
 
@@ -1515,8 +1855,9 @@ components:
           `UNAUTHORIZED_ACCOUNT_ERROR`: the signer is not permitted to act on the target
           order. For an armed protective stop, modify and cancel require the signer that
           created it.
-        - `INVALID_NONCE_ERROR`: use a fresh, monotonically increasing nonce for the signer
-          and re-sign.
+        - `INVALID_NONCE_ERROR`: for order entry, use a fresh, monotonically increasing nonce
+          for the signer and re-sign. Signed Core actions (transfers, account permissions) use
+          the owner's nonce sequence instead; see their section below.
         - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the signature's
           `deadline` has passed or is too far in the future. Correct it and re-sign. This
           deadline controls request acceptance, not the lifetime of an accepted order.
@@ -1622,13 +1963,58 @@ components:
           Insufficient or ambiguous evidence remains unresolved. For `cancelAllAfter`,
           open orders do not establish whether a timer was armed, refreshed, or disarmed.
 
+        Transfers (`POST /v2/transferBetweenAccounts`):
+        - `SERVICE_DISABLED_ERROR`: transfers are not enabled on this environment.
+        - `INPUT_VALIDATION_ERROR`: a field is malformed, the accounts are the same, an
+          account does not exist, the asset is unknown, or `amount` is zero or has more
+          fractional digits than the asset's `decimals`.
+        - `UNAUTHORIZED_SIGNATURE_ERROR`: the signature does not recover to `signerWallet`.
+          Check the envelope fields, the Core `verifyingContract` and the Periphery `caller`.
+        - `UNAUTHORIZED_ACCOUNT_ERROR`: the accounts have different owners, or the signer is
+          neither the owner nor holds `TRANSFER` permission on `fromAccountId`.
+        - `INVALID_NONCE_ERROR`: the nonce is ahead of the owner wallet's `lastNonce + 1`.
+          Re-read `GET /v2/wallet/{address}/signatureNonce` and re-sign.
+        - `NONCE_ALREADY_USED_ERROR`: a different action used this nonce, and this request was
+          not applied. `transactionHash` names its transaction when it can be identified; then
+          re-read `lastNonce` and sign a new request. Without `transactionHash`, confirm in
+          `GET /v2/wallet/{address}/transfers` that your transfer did not settle first.
+          (Resubmitting a request that already executed returns `SETTLED` instead.)
+        - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the signature
+          `deadline` has passed or is more than 600 seconds ahead. Re-sign with the same
+          nonce.
+        - `INSUFFICIENT_BALANCE_ERROR`: the source account's balance in the asset would go
+          negative. `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`: the source account would not meet
+          initial margin after the transfer. Transfer less or reduce risk first.
+        - `SERVICE_UNAVAILABLE_ERROR`: a pre-submission check or the submission itself was
+          unavailable, or another submission of the same nonce was in progress, and this
+          request was not submitted. Resubmit the same signed request after backing off; it
+          stays valid until its deadline. Do not sign a new one.
+        - `SIGNED_ACTION_OTHER_ERROR`: the transfer was rejected on-chain for another reason, and
+          was not applied; see `message`.
+
+        API wallets and permissions (`POST /v2/setTradingPermission`,
+        `POST /v2/setAccountPermission`):
+        - `INPUT_VALIDATION_ERROR`: a field is malformed, the account does not exist, the
+          wallet is the zero address or the owner itself, a grant names a permission other
+          than `TRANSFER`, or the wallet already holds the permission granted (or does not hold
+          the one revoked).
+        - `UNAUTHORIZED_SIGNATURE_ERROR`: the signature does not recover to the owner (`owner`, or
+          the owner of `accountId`).
+        - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the `deadline` has
+          passed or is too far ahead (60 seconds for `setTradingPermission`, 600 for
+          `setAccountPermission`). Re-sign.
+        - `INVALID_NONCE_ERROR`, `NONCE_ALREADY_USED_ERROR`, `SERVICE_DISABLED_ERROR`,
+          `SERVICE_UNAVAILABLE_ERROR`, `SIGNED_ACTION_OTHER_ERROR`: as for transfers. Nonce codes
+          apply to `setAccountPermission` only.
+
         Permission errors such as `NOT_WHITELISTED_ERROR` and `ACCOUNT_SUSPENDED_ERROR` are
         not resolved by automatic retries. Contact support if an expected operation is
         refused.
 
         Retry policy: retry unchanged after a short delay for
-        `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`; re-sign with a fresh nonce for
-        `SERVICE_UNAVAILABLE_ERROR`; reconcile first for
+        `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`; for `SERVICE_UNAVAILABLE_ERROR`,
+        re-sign order-entry requests with a fresh nonce but resubmit signed Core actions
+        (transfers, account permissions) unchanged; reconcile first for
         `ORDER_OUTCOME_UNKNOWN_ERROR`; retry
         `RATE_LIMITED_ERROR` after at least `retryAfterMs`; retry `CAPACITY_LIMITED_ERROR`
         using backoff with jitter. Correct validation failures and re-sign where required.
@@ -1733,3 +2119,13 @@ tags:
       signed `expiresAfter` to allow settlement. Explicit `cancelAll` includes fired
       children and reports `MASS_CANCEL`; cancel-all-after leaves armed protective stops
       and their fired children in place.
+  - name: API Wallets
+    description: |
+      Owner-signed management of the wallets that act for an owner: API wallets that trade for
+      all of the owner's accounts, and Core `TRANSFER` grants per account. List them with
+      `GET /v2/wallet/{address}/apiWallets`.
+  - name: Transfers
+    description: |
+      Move collateral between accounts of the same owner with a signed request. The owner
+      or a signer holding Core `TRANSFER` permission on the source account signs it, and
+      Reya submits it on-chain. Trading permission alone does not allow transfers.

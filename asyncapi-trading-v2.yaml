@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.7.6
+  version: 3.7.7
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -14,7 +14,7 @@ info:
     For either code, reconnect and resubscribe. Treat the reason text as advisory.
 
     Resubscribing returns a fresh snapshot of the channel's documented view. Updates from the
-    disconnection window are not replayed. Reconcile current state from the snapshot and use
+    disconnection window are not resent. Reconcile current state from the snapshot and use
     the execution channels and corresponding REST endpoints for individual fills.
 
     Asset oracle price updates may omit intermediate ticks when a client falls behind, while
