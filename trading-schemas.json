@@ -218,6 +218,12 @@
           "description": "Human-readable error message",
           "example": "Invalid symbol format"
         },
+        "transactionHash": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "description": "For `NONCE_ALREADY_USED_ERROR` on a signed Core action (transfers, account permissions): the transaction that used the nonce, when it can be identified.",
+          "example": "0x1dfdfed33589363842c4d8e5cfa1b3a9782ec07cb9a5ab5236ad1e1c224b64ea"
+        },
         "retryAfterMs": {
           "type": "integer",
           "minimum": 1,
@@ -674,7 +680,7 @@
         },
         "withdrawable": {
           "type": "array",
-          "description": "The most of each held asset a withdrawal or a transfer to another account can take out now, as the chain checks it: the asset's real balance stays non-negative, and afterwards min(freeCollateral, collateralValue) stays non-negative, counting the value removed after the asset's haircut. Unrealized PnL is never withdrawable. The amounts share that headroom, so withdrawing one asset lowers the others. One row per asset with a positive real balance, ordered by asset; an amount can be zero.",
+          "description": "An estimate, per held asset, of the most a withdrawal or a transfer to another account can take out now under the chain's balance and margin checks: the asset's real balance stays non-negative, and afterwards min(freeCollateral, collateralValue) stays non-negative, counting the value removed after the asset's haircut. Unrealized PnL is never withdrawable. The amounts share that headroom, so withdrawing one asset lowers the others. It uses the same indexed prices and balances as the other figures, so a request can still be refused if prices or funding move before it executes, and it does not include protocol withdrawal limits or the destination account's limits. One row per asset with a positive real balance, ordered by asset; an amount can be zero.",
           "items": {
             "$ref": "#/definitions/WithdrawableAmount"
           }
@@ -715,7 +721,7 @@
     "WithdrawableAmount": {
       "title": "WithdrawableAmount",
       "type": "object",
-      "description": "How much of one asset an account can withdraw or transfer out now. See AccountSummary.withdrawable.",
+      "description": "An estimate of how much of one asset an account can withdraw or transfer out now. See AccountSummary.withdrawable.",
       "required": [
         "asset",
         "amount"
@@ -2634,7 +2640,8 @@
         "liquidationDiscount",
         "status",
         "decimals",
-        "displayDecimals"
+        "displayDecimals",
+        "tokenAddress"
       ],
       "properties": {
         "asset": {
@@ -2669,6 +2676,11 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Number of decimal places shown for display purposes in frontends",
           "example": 4
+        },
+        "tokenAddress": {
+          "$ref": "#/definitions/Address",
+          "description": "The asset's token contract on this chain: the `collateral` a signed transfer names.",
+          "example": "0xa9F32a851B1800742e47725DA54a09A7Ef2556A3"
         }
       },
       "additionalProperties": true
@@ -3634,7 +3646,7 @@
           "type": "string",
           "pattern": "^0x[a-fA-F0-9]{130}$",
           "description": "65-byte EIP-712 signature over Core's `ExecuteBySig` envelope. See POST /v2/transferBetweenAccounts.",
-          "example": "0x1234..."
+          "example": "0x59dc9c7ef7d00c8a86b03bd82b7b3cd01f3de221d0729fd47c3f164f6c53c73b2c0a4cdd6f01474e3effaf1463722a277038492380cfa647f7d2bd226919345e1c"
         }
       },
       "additionalProperties": true
@@ -3776,7 +3788,7 @@
           "type": "string",
           "pattern": "^0x[a-fA-F0-9]{130}$",
           "description": "65-byte EIP-712 signature over `ManagePermissionBySig`.",
-          "example": "0x1234..."
+          "example": "0x43a73fdc9fb4d1d8aa8661c666a90c3a3284a954c8dbc4d362d1ac53fb7d2d534cc4238ec94d256928a54a96434b1de2255898c5c66c3598f99c3d2b564a1fdb1b"
         }
       },
       "additionalProperties": true
@@ -3816,7 +3828,7 @@
           "type": "string",
           "pattern": "^\\d+$",
           "description": "The owner wallet's next Core signature nonce: `lastNonce + 1` from GET /v2/wallet/{address}/signatureNonce, shared with transfers. Signed as `nonce`.",
-          "example": "8"
+          "example": "9"
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -3827,7 +3839,7 @@
           "type": "string",
           "pattern": "^0x[a-fA-F0-9]{130}$",
           "description": "65-byte EIP-712 signature over the grant or revoke envelope.",
-          "example": "0x1234..."
+          "example": "0x602d50b39b3ba9dba249e69c4d9918583c5ac4676b12f926aada3069eafa15f3221565ff60c076b5856c596643df43aaf7e58987091cab3a917e8eaf149fad721c"
         }
       },
       "additionalProperties": true
