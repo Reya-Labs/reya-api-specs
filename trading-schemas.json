@@ -597,6 +597,7 @@
         "collateralValue",
         "unrealizedPnl",
         "marginBalance",
+        "equity",
         "initialMarginRequirement",
         "liquidationMarginRequirement",
         "freeCollateral",
@@ -636,6 +637,15 @@
         "marginBalance": {
           "description": "collateralValue + unrealizedPnl. The value available to cover margin requirements, after collateral haircuts.",
           "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "equity": {
+          "description": "Account value before collateral haircuts: each realized collateral balance at its oracle price, a debt included at its price, each rounded down to rUSD precision, + unrealizedPnl. marginBalance is the same with haircuts applied, so equity is never below it and equals it for an account holding only rUSD. Margin requirements are measured against marginBalance, not equity.",
+          "example": "1050",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
