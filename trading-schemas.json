@@ -597,6 +597,7 @@
         "collateralValue",
         "unrealizedPnl",
         "marginBalance",
+        "equity",
         "initialMarginRequirement",
         "liquidationMarginRequirement",
         "freeCollateral",
@@ -636,6 +637,15 @@
         "marginBalance": {
           "description": "collateralValue + unrealizedPnl. The value available to cover margin requirements, after collateral haircuts.",
           "example": "1000",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "equity": {
+          "description": "Account value before collateral haircuts: each realized collateral balance at its oracle price, a debt included at its price, each rounded down to rUSD precision, + unrealizedPnl. collateralValue applies haircuts in the account's disfavour, discounting a holding to price × (1 − haircut) and charging a debt at price / (1 − haircut), so equity is never below marginBalance, for holdings and debts alike, and equals it for an account holding only rUSD. Margin requirements are measured against marginBalance, not equity.",
+          "example": "1050",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
@@ -716,7 +726,7 @@
         "markPrice",
         "notional",
         "unrealizedPnl",
-        "fundingPnl",
+        "fundingSinceChange",
         "liquidationMarginRequirement",
         "liquidationPrice",
         "hasCorrelatedCollateral",
@@ -784,8 +794,8 @@
             }
           ]
         },
-        "fundingPnl": {
-          "description": "Funding on the open position since entry, in rUSD; positive means the position earned funding. Kept on the same basis as avgEntryPrice: averaged in when the position grows, unchanged on a partial close, and reset when the position reopens or flips. It has already settled into the account balance; unrealizedPnl + fundingPnl is the position's live PnL.",
+        "fundingSinceChange": {
+          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL unwind), in rUSD; positive means the position received funding. The contract settles a position's accrued funding into its realized PnL at each such change, so this is the funding not yet settled on-chain, and it resets to zero at the next change. It is already included in collateralValue and marginBalance: do not add it to them. Funding settled at earlier changes is in the account balance and is not reported per position.",
           "example": "-1.25",
           "allOf": [
             {
