@@ -694,8 +694,8 @@ paths:
       summary: Get perpetual position risk
       description: |
         Returns the wallet's open perpetual positions with mark price, notional, unrealized
-        PnL, funding since entry, liquidation margin requirement and an estimated liquidation
-        price, ordered by account ID, then symbol. Accounts without positions contribute no rows. Pass
+        PnL, funding since the position's size last changed, liquidation margin requirement and
+        an estimated liquidation price, ordered by account ID, then symbol. Accounts without positions contribute no rows. Pass
         `accountId` to select one account; an `accountId` the wallet does not own returns an
         empty list. A wallet with no accounts returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
         `lastTradeSequenceNumber` is the last execution each valued position includes, so a
