@@ -2430,7 +2430,7 @@
     "Fill": {
       "title": "Fill",
       "type": "object",
-      "description": "A single matching-engine fill, published when the fill is matched, usually before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is provisional: it is confirmed by the settled execution and reversed by an execution bust, both carrying the same `fillId`, and either can arrive before the fill. The taker fee, when present, is an estimate; the exact fee and realized PnL are reported on the settled execution.",
+      "description": "A single matching-engine fill, published when the fill is matched, usually before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is unconfirmed: the settled executions are the source of truth for the wallet's trades. The fill's settled execution, and any execution bust that reverses it, carry the same `fillId`, and either can arrive before the fill. The taker fee, when present, is an estimate; the exact fee and realized PnL are reported on the settled execution.",
       "required": [
         "exchangeId",
         "symbol",
