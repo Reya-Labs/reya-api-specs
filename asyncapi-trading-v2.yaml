@@ -296,10 +296,12 @@ channels:
       are not matched by the matching engine, so they never appear here; they arrive only on
       the execution channels.
 
-      The subscription snapshot is empty: the channel carries only fills matched after
-      subscribing. Each `channel_data` frame may carry several fills; process the `data`
-      array in order. On a connection that is also subscribed to the same wallet's
-      `orderChanges`, each fill arrives after the order update that reports it.
+      The subscription snapshot is empty: the channel carries the fills processed after the
+      subscription is registered, which can include a fill matched shortly before it.
+      Deduplicate against fills recovered from the settled executions by `fillId`. Each
+      `channel_data` frame may carry several fills; process the `data` array in order. On a
+      connection that is also subscribed to the same wallet's `orderChanges`, each fill
+      arrives after the order update that reports it.
 
       Fills from a disconnection window are not resent. After reconnecting, recover them
       from the settled executions by `fillId`. In rare cases a fill can settle without
