@@ -2753,6 +2753,8 @@
         "tierId",
         "takerFee",
         "makerFee",
+        "volume",
+        "lookbackWindowSeconds",
         "volume30d",
         "tierType"
       ],
@@ -2771,10 +2773,21 @@
           "description": "Maker fee rate (fee will be qty * makerFee)",
           "example": "0.0002"
         },
+        "volume": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Taker volume a wallet needs over the trailing lookbackWindowSeconds to earn this fee tier, on match executions across all of its accounts and markets. 0 for tier 0 and for tiers that are not volume-based",
+          "example": "2000000"
+        },
+        "lookbackWindowSeconds": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Length of the trailing window volume is measured over, in seconds",
+          "example": 1209600
+        },
         "volume30d": {
           "$ref": "#/definitions/UnsignedDecimal",
-          "description": "30-day volume level required for this fee tier to be applied to a wallet",
-          "example": "10000.0"
+          "description": "Deprecated: the same value as volume, kept so existing clients still parse this object, and to be removed in a future release. Use volume and lookbackWindowSeconds",
+          "deprecated": true,
+          "example": "2000000"
         },
         "tierType": {
           "$ref": "#/definitions/TierType"
