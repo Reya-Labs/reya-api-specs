@@ -2755,6 +2755,7 @@
         "makerFee",
         "volume",
         "lookbackWindowSeconds",
+        "volume30d",
         "tierType"
       ],
       "properties": {
@@ -2781,6 +2782,12 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Length of the trailing window volume is measured over, in seconds",
           "example": 1209600
+        },
+        "volume30d": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Deprecated: the same value as volume, kept so existing clients still parse this object, and to be removed in a future release. Use volume and lookbackWindowSeconds",
+          "deprecated": true,
+          "example": "2000000"
         },
         "tierType": {
           "$ref": "#/definitions/TierType"
