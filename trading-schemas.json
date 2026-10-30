@@ -2692,6 +2692,265 @@
       },
       "additionalProperties": true
     },
+    "MarketPnl": {
+      "title": "MarketPnl",
+      "type": "object",
+      "description": "One account's PnL in one perpetual market over a time window, in rUSD. See GET /wallet/{address}/marketPnl.",
+      "required": [
+        "accountId",
+        "symbol",
+        "startTime",
+        "endTime",
+        "resolution",
+        "startQty",
+        "qty",
+        "avgEntryPrice",
+        "markPrice",
+        "realizedPnl",
+        "unrealizedPnl",
+        "totalPnl",
+        "breakdown",
+        "asOf",
+        "complete",
+        "series"
+      ],
+      "properties": {
+        "accountId": {
+          "description": "Perpetual margin account ID.",
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "startTime": {
+          "description": "Window start, millisecond POSIX timestamp.",
+          "example": 1793000000000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "endTime": {
+          "description": "Window end, millisecond POSIX timestamp: the request's endTime, or the time of the request when it was omitted.",
+          "example": 1793300000000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "1m",
+            "5m",
+            "1h",
+            "1d"
+          ],
+          "description": "Interval of the series points.",
+          "example": "1h"
+        },
+        "startQty": {
+          "description": "Position held just before startTime; positive is long.",
+          "example": "0",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "qty": {
+          "description": "Position at endTime, rescaled for ADL; positive is long.",
+          "example": "0.5",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "avgEntryPrice": {
+          "type": "string",
+          "nullable": true,
+          "pattern": "^\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
+          "description": "The protocol's average entry price of the position at endTime; null when flat.",
+          "example": "2000"
+        },
+        "markPrice": {
+          "type": "string",
+          "nullable": true,
+          "pattern": "^\\d+(\\.\\d+)?([eE][+-]?\\d+)?$",
+          "description": "Mark price used for unrealizedPnl at endTime; null when the position is flat and no mark was needed.",
+          "example": "2100"
+        },
+        "realizedPnl": {
+          "description": "Trading PnL + funding + ADL − fees − liquidation penalty over the window.",
+          "example": "97.65",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "unrealizedPnl": {
+          "description": "Unrealized PnL at endTime minus at startTime; the unrealized PnL at endTime when startQty is 0.",
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "totalPnl": {
+          "description": "realizedPnl + unrealizedPnl.",
+          "example": "147.65",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "breakdown": {
+          "$ref": "#/definitions/MarketPnlBreakdown"
+        },
+        "asOf": {
+          "description": "Block timestamp the indexed executions reach, millisecond POSIX timestamp.",
+          "example": 1793300000000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "complete": {
+          "type": "boolean",
+          "description": "True when asOf is at or after endTime, so no execution in the window can still arrive."
+        },
+        "series": {
+          "type": "array",
+          "description": "One point per resolution interval, oldest first, each the window's figures up to that interval's end.",
+          "items": {
+            "$ref": "#/definitions/MarketPnlPoint"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "MarketPnlBreakdown": {
+      "title": "MarketPnlBreakdown",
+      "type": "object",
+      "description": "The parts of MarketPnl.realizedPnl: tradingPnl + fundingPnl + adlPnl − feesPaid − liquidationPenalty.",
+      "required": [
+        "tradingPnl",
+        "fundingPnl",
+        "adlPnl",
+        "feesPaid",
+        "liquidationPenalty"
+      ],
+      "properties": {
+        "tradingPnl": {
+          "description": "Price PnL of the window's executions at the protocol's average entry price, liquidation and dust fills included.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "fundingPnl": {
+          "description": "Funding over the window; positive means the position received funding.",
+          "example": "-0.3",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "adlPnl": {
+          "description": "ADL cashflows over the window.",
+          "example": "0",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "feesPaid": {
+          "description": "Taker fees net of the taker rebate; positive when paid.",
+          "example": "2.05",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "liquidationPenalty": {
+          "description": "This market's share of liquidation fees and rewards the account paid; positive when paid.",
+          "example": "0",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "MarketPnlPoint": {
+      "title": "MarketPnlPoint",
+      "type": "object",
+      "description": "MarketPnl figures from the window start up to t.",
+      "required": [
+        "t",
+        "realizedPnl",
+        "unrealizedPnl",
+        "totalPnl"
+      ],
+      "properties": {
+        "t": {
+          "description": "End of the interval, millisecond POSIX timestamp.",
+          "example": 1793003600000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "realizedPnl": {
+          "description": "realizedPnl from startTime to t.",
+          "example": "0",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "unrealizedPnl": {
+          "description": "unrealizedPnl at t, relative to startTime.",
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "totalPnl": {
+          "description": "realizedPnl + unrealizedPnl.",
+          "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
     "CandleHistoryData": {
       "title": "CandleHistoryData",
       "type": "object",
