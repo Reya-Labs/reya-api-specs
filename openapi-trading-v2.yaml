@@ -737,6 +737,88 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/marketPnl:
+    get:
+      summary: Get an account's PnL in one market over a time window
+      description: |
+        Returns one account's profit and loss in one perpetual market over a time window,
+        with its history. Hosted strategies use it for a strategy's result: a Live strategy
+        owns its market while it runs, so its result is the account's PnL there over the
+        strategy's lifetime. The endpoint itself knows nothing about strategies.
+
+        **Figures**
+
+        | Field | Meaning |
+        | --- | --- |
+        | `realizedPnl` | Trading PnL + funding + ADL − fees − liquidation penalty over the window. |
+        | `unrealizedPnl` | Change in the position's unrealized PnL over the window: at `endTime` minus at `startTime`. It is the unrealized PnL at `endTime` when `startQty` is 0. |
+        | `totalPnl` | `realizedPnl + unrealizedPnl`. |
+        | `breakdown` | The parts of `realizedPnl`, for explanation and checks. |
+
+        All amounts are in rUSD as exact decimal strings. Positive means profit, except
+        `breakdown.feesPaid` and `breakdown.liquidationPenalty`, which are positive when paid.
+
+        **How it is computed**
+
+        From indexed executions, using the protocol's own position state, so it matches
+        the contracts to the wei:
+        - Trading PnL: each execution's change in the position's realized PnL. It is the
+          price PnL at the protocol's average entry price, liquidation and dust fills included.
+        - Funding and ADL: what the protocol settled into the position between executions,
+          plus what is pending from the last execution to the time, from the position's own
+          side of the market's funding and ADL trackers. Funding lands when a funding rate is
+          pushed.
+        - Unrealized PnL: the position, rescaled for ADL, times (mark price − average entry
+          price), at the market's last tracker snapshot before the time (about once a minute).
+        - Fees: the taker fee net of the taker rebate. Makers, liquidations, ADL and market
+          closes pay none.
+        - Liquidation penalty: the account's liquidation fee and reward transfers, split
+          between the markets liquidated in the same transaction in proportion to each
+          market's drop in liquidation margin, as the protocol charges it.
+
+        **Window**
+
+        `startTime` is required and must be on or after 2026-10-01T00:00:00Z
+        (1790812800000). `endTime` defaults to now. A window covers at most 90 days and
+        at most 5,000 executions; larger windows return `INPUT_VALIDATION_ERROR`, and a
+        shorter window can be requested instead. `startQty` is the position held just
+        before `startTime`.
+
+        `complete` is false while the indexer has not reached `endTime` (`asOf` says how
+        far it has); the figures then cover executions up to `asOf` and are refreshed on
+        a later request.
+
+        **History**
+
+        `series` holds one point per `resolution` interval, aligned to UTC multiples of
+        the resolution, each the window's figures up to the end of that interval. The
+        default resolution is the finest of `1m`, `5m`, `1h` and `1d` that gives at most
+        1,000 points; a resolution giving more returns `INPUT_VALIDATION_ERROR`.
+
+        `accountId` must be an account of the wallet, else `NO_ACCOUNTS_FOUND_ERROR`.
+        Spot symbols and unknown symbols return `SYMBOL_NOT_FOUND_ERROR`.
+      operationId: getWalletMarketPnl
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/MarketPnlAccountIdParam'
+        - $ref: '#/components/parameters/MarketPnlSymbolParam'
+        - $ref: '#/components/parameters/MarketPnlStartTimeParam'
+        - $ref: '#/components/parameters/MarketPnlEndTimeParam'
+        - $ref: '#/components/parameters/MarketPnlResolutionParam'
+      responses:
+        '200':
+          description: The account's PnL in the market over the window, with its history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPnl'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/positions:
     get:
       summary: Get wallet positions
@@ -1340,6 +1422,60 @@ components:
         enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
         example: '1h'
 
+    MarketPnlAccountIdParam:
+      name: accountId
+      in: query
+      required: true
+      description: The account, which must belong to the wallet.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 9007199254740991
+        example: 12345
+
+    MarketPnlSymbolParam:
+      name: symbol
+      in: query
+      required: true
+      description: Perpetual market symbol (e.g., ETHRUSDPERP).
+      schema:
+        $ref: './trading-schemas.json#/definitions/Symbol'
+        example: ETHRUSDPERP
+
+    MarketPnlStartTimeParam:
+      name: startTime
+      in: query
+      required: true
+      description: >-
+        Window start, a millisecond POSIX timestamp matched against on-chain block
+        timestamps. On or after 1790812800000 (2026-10-01T00:00:00Z).
+      schema:
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
+        example: 1793000000000
+
+    MarketPnlEndTimeParam:
+      name: endTime
+      in: query
+      required: false
+      description: >-
+        Window end, a millisecond POSIX timestamp matched against on-chain block
+        timestamps. Defaults to now. At most 90 days after startTime.
+      schema:
+        $ref: './trading-schemas.json#/definitions/UnsignedInteger'
+        example: 1793300000000
+
+    MarketPnlResolutionParam:
+      name: resolution
+      in: query
+      required: false
+      description: >-
+        Interval of the history points. Defaults to the finest that gives at most
+        1,000 points.
+      schema:
+        type: string
+        enum: ['1m', '5m', '1h', '1d']
+        example: '1h'
+
     FundingHistoryLimitParam:
       name: limit
       in: query
@@ -1449,6 +1585,15 @@ components:
 
     FundingRateHistoryList:
       $ref: './trading-schemas.json#/definitions/FundingRateHistoryList'
+
+    MarketPnl:
+      $ref: './trading-schemas.json#/definitions/MarketPnl'
+
+    MarketPnlBreakdown:
+      $ref: './trading-schemas.json#/definitions/MarketPnlBreakdown'
+
+    MarketPnlPoint:
+      $ref: './trading-schemas.json#/definitions/MarketPnlPoint'
 
     CreateOrderRequest:
       $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
