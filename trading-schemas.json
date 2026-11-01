@@ -2748,7 +2748,6 @@
         "resolution": {
           "type": "string",
           "enum": [
-            "1m",
             "5m",
             "1h",
             "1d"
@@ -2757,7 +2756,7 @@
           "example": "1h"
         },
         "startQty": {
-          "description": "Position held just before startTime; positive is long.",
+          "description": "Position held at startTime, rescaled for ADL; positive is long.",
           "example": "0",
           "allOf": [
             {
@@ -2789,7 +2788,7 @@
           "example": "2100"
         },
         "realizedPnl": {
-          "description": "Trading PnL + funding + ADL − fees − liquidation penalty over the window.",
+          "description": "Realized PnL with funding and ADL, minus fees and liquidation penalty, over the window: breakdown.positionPnl − breakdown.feesPaid − breakdown.liquidationPenalty.",
           "example": "97.65",
           "allOf": [
             {
@@ -2819,7 +2818,7 @@
           "$ref": "#/definitions/MarketPnlBreakdown"
         },
         "asOf": {
-          "description": "Block timestamp the indexed executions reach, millisecond POSIX timestamp.",
+          "description": "The time the figures are at, millisecond POSIX timestamp: endTime once the history has reached it.",
           "example": 1793300000000,
           "allOf": [
             {
@@ -2829,11 +2828,11 @@
         },
         "complete": {
           "type": "boolean",
-          "description": "True when asOf is at or after endTime, so no execution in the window can still arrive."
+          "description": "True when asOf has reached endTime."
         },
         "series": {
           "type": "array",
-          "description": "One point per resolution interval, oldest first, each the window's figures up to that interval's end.",
+          "description": "One point per resolution interval, oldest first, each the window's figures up to that interval's end; the last point is at asOf.",
           "items": {
             "$ref": "#/definitions/MarketPnlPoint"
           }
@@ -2844,36 +2843,16 @@
     "MarketPnlBreakdown": {
       "title": "MarketPnlBreakdown",
       "type": "object",
-      "description": "The parts of MarketPnl.realizedPnl: tradingPnl + fundingPnl + adlPnl − feesPaid − liquidationPenalty.",
+      "description": "The parts of MarketPnl.realizedPnl: positionPnl − feesPaid − liquidationPenalty.",
       "required": [
-        "tradingPnl",
-        "fundingPnl",
-        "adlPnl",
+        "positionPnl",
         "feesPaid",
         "liquidationPenalty"
       ],
       "properties": {
-        "tradingPnl": {
-          "description": "Price PnL of the window's executions at the protocol's average entry price, liquidation and dust fills included.",
-          "example": "100",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
-        },
-        "fundingPnl": {
-          "description": "Funding over the window; positive means the position received funding.",
-          "example": "-0.3",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
-        },
-        "adlPnl": {
-          "description": "ADL cashflows over the window.",
-          "example": "0",
+        "positionPnl": {
+          "description": "Change in the position's realized PnL over the window, with funding and ADL settled to the market's trackers: price PnL of the window's executions at the protocol's average entry price (liquidation and dust fills included), funding and ADL.",
+          "example": "99.7",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
