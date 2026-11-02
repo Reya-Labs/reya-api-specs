@@ -796,7 +796,7 @@
           ]
         },
         "fundingSinceChange": {
-          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL unwind), in rUSD; positive means the position received funding. The contract settles a position's accrued funding into its realized PnL at each such change, so this is the funding not yet settled on-chain, and it resets to zero at the next change. It is already included in collateralValue and marginBalance: do not add it to them. Funding settled at earlier changes is in fundingSinceOpen.",
+          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL unwind), in rUSD; positive means the position received funding. The contract settles a position's accrued funding into its realized PnL at each such change, so this is the funding not yet settled on-chain, and it resets to zero at the next change. It is already included in collateralValue and marginBalance: do not add it to them. Funding settled at this position's earlier changes is in fundingSinceOpen; funding of earlier positions is in GET /wallet/{address}/fundingPayments and the account's balance.",
           "example": "-1.25",
           "allOf": [
             {
@@ -805,7 +805,7 @@
           ]
         },
         "fundingSinceOpen": {
-          "description": "Funding on the position since it opened, in rUSD; positive means the position received funding. A position opens from flat, or by a flip to the other side; increases and partial closes keep the figure, including the funding earned on size that was later closed. It is the funding settled into the position's realized PnL at each size change since it opened, plus fundingSinceChange, so it includes fundingSinceChange and moves with every funding update. It is already included in collateralValue and marginBalance: do not add it to them.",
+          "description": "Funding on the position since it opened, in rUSD; positive means the position received funding. A position opens from flat, or by a flip to the other side; increases and partial closes keep the figure, including the funding earned on size that was later closed. It is the funding settled into the position's realized PnL at each size change since it opened (not the funding settled at the execution that opened or flipped it, which was the previous position's), plus fundingSinceChange, so it includes fundingSinceChange and moves with every funding update. The hourly entries of GET /wallet/{address}/fundingPayments add up to it only from the first full hour after the position opened. It is already included in collateralValue and marginBalance: do not add it to them.",
           "example": "-6.84",
           "allOf": [
             {
@@ -990,16 +990,24 @@
           "example": "-0.10"
         },
         "takerOpeningFee": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: an estimate, takerFee scaled by the position's entry price over the execution price, not a fee that was charged. Absent for position-extending executions.",
           "deprecated": true,
-          "example": "0.25"
+          "example": "0.25",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerOpeningFee": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: an estimate, `makerFee` scaled by the position's entry price over the execution price, not a fee that was charged. Omitted when `makerFee` is absent and on position-extending executions.",
           "deprecated": true,
-          "example": "-0.05"
+          "example": "-0.05",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -1020,50 +1028,82 @@
           "example": "42"
         },
         "takerClosedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price, and exactly the change the execution made to the position's realized PnL on chain. 0 when the execution opens or extends a position; on a flip, the PnL of the part closed. Fees are not included (see takerFee), and neither is funding (see GET /wallet/{address}/fundingPayments). Absent on executions recorded before October 2025, which lack the position's state before the execution.",
-          "example": "12.50"
+          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price, and exactly the change the execution made to the position's realized PnL on chain. 0 when the execution opens or extends a position; on a flip, the PnL of the part closed. Fees are not included (see takerFee), and neither is funding (see GET /wallet/{address}/fundingPayments). An auto-deleveraging that reduced the position through its side's base multiplier, rather than through an execution, is settled into realized PnL at the position's next execution and is in neither figure. On a self-trade (taker and maker the same account), takerClosedPnl and makerClosedPnl each carry the account's combined result: count it once. Absent on executions before 24 December 2025, whose recorded state before the execution is not brought up to it.",
+          "example": "12.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerClosedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "As takerClosedPnl, for the maker's position. Absent when the execution has no maker (ADL and MARKET_CLOSE executions) and on executions recorded before October 2025.",
-          "example": "-12.50"
+          "description": "As takerClosedPnl, for the maker's position. Absent when the execution has no maker (ADL and MARKET_CLOSE executions) and on executions before 24 December 2025.",
+          "example": "-12.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "takerRealizedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: use takerClosedPnl, and GET /wallet/{address}/fundingPayments for funding. takerPriceVariationPnl + takerFundingPnl, in rUSD. Absent for position-extending executions.",
           "deprecated": true,
-          "example": "12.50"
+          "example": "12.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerRealizedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: use makerClosedPnl, and GET /wallet/{address}/fundingPayments for funding. makerPriceVariationPnl + makerFundingPnl, in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "deprecated": true,
-          "example": "-12.50"
+          "example": "-12.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "takerPriceVariationPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: use takerClosedPnl, the exact on-chain figure. Taker PnL from price movement in rUSD. Absent for position-extending executions.",
           "deprecated": true,
-          "example": "15.00"
+          "example": "15.00",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerPriceVariationPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: use makerClosedPnl, the exact on-chain figure. Maker PnL from price movement in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "deprecated": true,
-          "example": "-15.00"
+          "example": "-15.00",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "takerFundingPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: funding is reported per hour by GET /wallet/{address}/fundingPayments. This figure is the closed size's funding since the position's average entry funding value, not funding that was paid at this execution. In rUSD. Absent for position-extending executions.",
           "deprecated": true,
-          "example": "-2.50"
+          "example": "-2.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerFundingPnl": {
-          "$ref": "#/definitions/SignedDecimal",
           "description": "Deprecated: funding is reported per hour by GET /wallet/{address}/fundingPayments. This figure is the closed size's funding since the position's average entry funding value, not funding that was paid at this execution. In rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "deprecated": true,
-          "example": "2.50"
+          "example": "2.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         }
       },
       "additionalProperties": true
@@ -2746,9 +2786,13 @@
           "$ref": "#/definitions/Symbol"
         },
         "timestamp": {
-          "$ref": "#/definitions/UnsignedInteger",
           "description": "Start of the hour (milliseconds). The entry covers [timestamp, timestamp + 1 hour).",
-          "example": 1793602800000
+          "example": 1793602800000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
         },
         "side": {
           "description": "Side of the position at the end of the hour, or the side it last held if it closed during the hour.",
@@ -2759,7 +2803,7 @@
           ]
         },
         "qty": {
-          "description": "Position size at the end of the hour; 0 if it closed during the hour.",
+          "description": "Position size at the end of the hour, after any auto-deleveraging; 0 if it closed during the hour.",
           "example": "10",
           "allOf": [
             {
@@ -2777,7 +2821,7 @@
           ]
         },
         "fundingRate": {
-          "description": "The market's funding rate at the end of the hour, as GET /fundingRateHistory/{symbol}/1h reports it for the same hour: an hourly rate as a percentage, in the same units as MarketSummary.fundingRate. Omitted when none was recorded.",
+          "description": "The market's funding rate at the end of the hour, from the last funding snapshot before it; normally the rate GET /fundingRateHistory/{symbol}/1h reports for the same hour. An hourly rate as a percentage, in the same units as MarketSummary.fundingRate. Omitted when none was recorded.",
           "example": "0.0013",
           "allOf": [
             {
