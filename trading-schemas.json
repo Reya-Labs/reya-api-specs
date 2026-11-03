@@ -396,9 +396,14 @@
           "example": "43000.00"
         },
         "avgEntryFundingValue": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Average of funding values at the entry times of currently open exposure, which serves as a baseline from which to compute the accrued funding in the position: units x (fundingValue - avgEntryFundingValue)",
-          "example": "100.25"
+          "description": "Deprecated: for the funding on a position, use fundingSinceOpen or fundingSinceChange in GET /wallet/{address}/positionRisk. This is the average market funding value at which the open size was entered. Funding worked out from it does not in general match what the position paid or received.",
+          "deprecated": true,
+          "example": "100.25",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "lastTradeSequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
