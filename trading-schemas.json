@@ -3002,9 +3002,9 @@
         },
         "volume30d": {
           "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Deprecated: the same value as volume, kept so existing clients still parse this object, and to be removed in a future release. Use volume and lookbackWindowSeconds",
+          "description": "Deprecated: the 30-day volume level this tier had on the previous fee tier ladder (0 for tiers it did not have), kept unchanged for existing clients and to be removed in a future release. Tiers are now earned on volume over lookbackWindowSeconds; use volume",
           "deprecated": true,
-          "example": "2000000"
+          "example": "10000.0"
         },
         "tierType": {
           "$ref": "#/definitions/TierType"
