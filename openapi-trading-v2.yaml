@@ -587,48 +587,26 @@ paths:
       summary: Get wallet funding payments
       description: |
         Returns the funding each of the wallet's perpetual positions paid or received, one entry
-        per account, market and UTC hour, newest first.
+        per account, symbol and UTC hour, newest first. Funding on Reya accrues continuously
+        rather than at fixed times, and each entry is the total for the hour
+        `[timestamp, timestamp + 1 hour)`.
 
-        **How Reya funding works.** Funding is not paid at fixed times. A market's funding
-        accrues at every funding-rate update, about every 5 seconds, on the size each position
-        holds then, and is settled into the position's realized PnL whenever its size changes
-        (a fill, a liquidation or an ADL unwind). An entry sums both for one hour,
-        `[timestamp, timestamp + 1 hour)`, and the hours between two size changes add up to
-        the funding settled at the second.
-
-        - An hour has an entry when the position had a size at its end or paid or received
-          funding in it. `qty` and `side` are the position at the end of the hour; `qty` is 0
-          when it closed during the hour, and `side` is then the side it held. A position
-          fully auto-deleveraged has no entries until it trades again.
-        - Normally each entry is exactly that hour's funding. Three cases shift funding
-          between neighbouring hours, never changing the total: an execution recorded a few
-          minutes late is counted in the hour it was recorded in; if the market's funding
-          snapshot for the end of an hour is late, the hour closes on the newest one and the
-          rest moves into the next hour; and if a market has no snapshot at all at the end of
-          an hour, that hour has no entry and the next entry covers both.
-        - For an hour without a size change, `payment` is `-qty × fundingPerUnit` for a long
-          and `qty × fundingPerUnit` for a short, `fundingPerUnit` being the hour's entry in
-          GET /fundingRateHistory/{symbol}/1h, except across an auto-deleveraging event. When
-          the size changed during the hour, each part of the hour is charged on the size held
-          then.
-        - The hour in progress is not listed: an hour's entry appears a few minutes after it
-          ends. Funding accrued since is included in `fundingSinceChange` and
-          `fundingSinceOpen` of GET /wallet/{address}/positionRisk, which also stream live.
-        - Funding is already in the account balance (`realBalance`) and in `collateralValue`
-          and `marginBalance`: entries explain it and are not added to it.
+        - An hour has an entry when the position was open at its end or paid or received
+          funding during it. `qty` and `side` are the position at the end of the hour; `qty`
+          is 0 if it closed during the hour.
+        - The current hour is not listed; its entry appears a few minutes after the hour ends.
+          For funding on open positions up to now, see `fundingSinceOpen` in
+          GET /wallet/{address}/positionRisk.
+        - Funding is already in the account balance: do not add these entries to it.
         - Hours before funding payments were first recorded are not listed.
 
-        All of the wallet's accounts are included; pass `accountId` to select one account. An
+        All of the wallet's accounts are included; pass `accountId` to select one. An
         `accountId` the wallet does not own returns an empty list. A wallet with no accounts
-        returns 400 `NO_ACCOUNTS_FOUND_ERROR`. An unknown or spot `symbol` returns 400
-        `SYMBOL_NOT_FOUND_ERROR`; retired markets remain queryable.
+        returns 400 `NO_ACCOUNTS_FOUND_ERROR`, and an unknown or spot `symbol` returns 400
+        `SYMBOL_NOT_FOUND_ERROR`.
 
-        **Pagination**
-
-        Results are ordered newest first by `timestamp`; entries of the same hour come in a
-        fixed order (by account, then market). Use the `cursor` parameter to traverse entries
-        sharing a timestamp without repeating or skipping them. `startTime` and `endTime`
-        bound `timestamp`, the start of the hour.
+        Use the `cursor` parameter to advance pages without repeating or skipping entries.
+        `startTime` and `endTime` bound `timestamp`.
       operationId: getWalletFundingPayments
       tags:
         - Wallet Data

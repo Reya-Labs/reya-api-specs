@@ -796,7 +796,7 @@
           ]
         },
         "fundingSinceChange": {
-          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL unwind), in rUSD; positive means the position received funding. The contract settles a position's accrued funding into its realized PnL at each such change, so this is the funding not yet settled on-chain, and it resets to zero at the next change. It is already included in collateralValue and marginBalance: do not add it to them. Funding settled at this position's earlier changes is in fundingSinceOpen; funding of earlier positions is in GET /wallet/{address}/fundingPayments and the account's balance.",
+          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL), in rUSD; positive means the position received funding. Resets to zero at the next change. Already included in collateralValue and marginBalance: do not add it to them.",
           "example": "-1.25",
           "allOf": [
             {
@@ -805,7 +805,7 @@
           ]
         },
         "fundingSinceOpen": {
-          "description": "Funding on the position since it opened, in rUSD; positive means the position received funding. A position opens from flat, or by a flip to the other side; increases and partial closes keep the figure, including the funding earned on size that was later closed. It is the funding settled into the position's realized PnL at each size change since it opened (not the funding settled at the execution that opened or flipped it, which was the previous position's), plus fundingSinceChange, so it includes fundingSinceChange and moves with every funding update. The hourly entries of GET /wallet/{address}/fundingPayments add up to it only from the first full hour after the position opened. It is already included in collateralValue and marginBalance: do not add it to them.",
+          "description": "Funding on the position since it opened, in rUSD; positive means the position received funding. A position opens from flat or when it flips to the other side; increases and partial closes keep the running total. Includes fundingSinceChange and updates live. Already included in collateralValue and marginBalance: do not add it to them.",
           "example": "-6.84",
           "allOf": [
             {
@@ -1028,7 +1028,7 @@
           "example": "42"
         },
         "takerClosedPnl": {
-          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price, and exactly the change the execution made to the position's realized PnL on chain. 0 when the execution opens or extends a position; on a flip, the PnL of the part closed. Fees are not included (see takerFee), and neither is funding (see GET /wallet/{address}/fundingPayments). An auto-deleveraging that reduced the position through its side's base multiplier, rather than through an execution, is settled into realized PnL at the position's next execution and is in neither figure. On a self-trade (taker and maker the same account), takerClosedPnl and makerClosedPnl each carry the account's combined result: count it once. Absent on executions before 24 December 2025, whose recorded state before the execution is not brought up to it.",
+          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price. 0 when the execution opens or extends a position; on a flip, the PnL of the part closed. Excludes fees (see takerFee) and funding (see GET /wallet/{address}/fundingPayments). On a self-trade, takerClosedPnl and makerClosedPnl both carry the account's combined result: count it once. Absent on executions before 24 December 2025.",
           "example": "12.50",
           "allOf": [
             {
@@ -2821,7 +2821,7 @@
           ]
         },
         "fundingRate": {
-          "description": "The market's funding rate at the end of the hour, from the last funding snapshot before it; normally the rate GET /fundingRateHistory/{symbol}/1h reports for the same hour. An hourly rate as a percentage, in the same units as MarketSummary.fundingRate. Omitted when none was recorded.",
+          "description": "The market's hourly funding rate at the end of the hour, as a percentage, in the same units as MarketSummary.fundingRate. Omitted when none was recorded.",
           "example": "0.0013",
           "allOf": [
             {
