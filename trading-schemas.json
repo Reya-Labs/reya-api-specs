@@ -1027,26 +1027,8 @@
           "description": "Stable fill identifier. Use it to correlate the execution with the fill range reported by order responses and order updates.",
           "example": "42"
         },
-        "takerClosedPnl": {
-          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price. 0 when the execution opens or extends a position; on a flip, the PnL of the part closed. Excludes fees (see takerFee) and funding (see GET /wallet/{address}/fundingPayments). On a self-trade, takerClosedPnl and makerClosedPnl both carry the account's combined result: count it once. Absent on executions before 24 December 2025.",
-          "example": "12.50",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
-        },
-        "makerClosedPnl": {
-          "description": "As takerClosedPnl, for the maker's position. Absent when the execution has no maker (ADL and MARKET_CLOSE executions) and on executions before 24 December 2025.",
-          "example": "-12.50",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
-        },
         "takerRealizedPnl": {
-          "description": "Deprecated: use takerClosedPnl, and GET /wallet/{address}/fundingPayments for funding. takerPriceVariationPnl + takerFundingPnl, in rUSD. Absent for position-extending executions.",
+          "description": "Deprecated: use takerPriceVariationPnl, and GET /wallet/{address}/fundingPayments for funding. takerPriceVariationPnl + takerFundingPnl, in rUSD. Absent for position-extending executions.",
           "deprecated": true,
           "example": "12.50",
           "allOf": [
@@ -1056,7 +1038,7 @@
           ]
         },
         "makerRealizedPnl": {
-          "description": "Deprecated: use makerClosedPnl, and GET /wallet/{address}/fundingPayments for funding. makerPriceVariationPnl + makerFundingPnl, in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "description": "Deprecated: use makerPriceVariationPnl, and GET /wallet/{address}/fundingPayments for funding. makerPriceVariationPnl + makerFundingPnl, in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "deprecated": true,
           "example": "-12.50",
           "allOf": [
@@ -1066,24 +1048,14 @@
           ]
         },
         "takerPriceVariationPnl": {
-          "description": "Deprecated: use takerClosedPnl, the exact on-chain figure. Taker PnL from price movement in rUSD. Absent for position-extending executions.",
-          "deprecated": true,
-          "example": "15.00",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price; on a flip, the PnL of the part closed. Excludes fees (see takerFee) and funding (see GET /wallet/{address}/fundingPayments). Absent for position-extending executions.",
+          "example": "15.00"
         },
         "makerPriceVariationPnl": {
-          "description": "Deprecated: use makerClosedPnl, the exact on-chain figure. Maker PnL from price movement in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
-          "deprecated": true,
-          "example": "-15.00",
-          "allOf": [
-            {
-              "$ref": "#/definitions/SignedDecimal"
-            }
-          ]
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "As takerPriceVariationPnl, for the maker's position. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "example": "-15.00"
         },
         "takerFundingPnl": {
           "description": "Deprecated: funding is reported per hour by GET /wallet/{address}/fundingPayments. This figure is the closed size's funding since the position's average entry funding value, not funding that was paid at this execution. In rUSD. Absent for position-extending executions.",
