@@ -396,9 +396,14 @@
           "example": "43000.00"
         },
         "avgEntryFundingValue": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Average of funding values at the entry times of currently open exposure, which serves as a baseline from which to compute the accrued funding in the position: units x (fundingValue - avgEntryFundingValue)",
-          "example": "100.25"
+          "description": "Deprecated: for the funding on a position, use fundingSinceOpen or fundingSinceChange in GET /wallet/{address}/positionRisk. This is the average market funding value at which the open size was entered. Funding worked out from it does not in general match what the position paid or received.",
+          "deprecated": true,
+          "example": "100.25",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "lastTradeSequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -727,6 +732,7 @@
         "notional",
         "unrealizedPnl",
         "fundingSinceChange",
+        "fundingSinceOpen",
         "liquidationMarginRequirement",
         "liquidationPrice",
         "hasCorrelatedCollateral",
@@ -795,8 +801,17 @@
           ]
         },
         "fundingSinceChange": {
-          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL unwind), in rUSD; positive means the position received funding. The contract settles a position's accrued funding into its realized PnL at each such change, so this is the funding not yet settled on-chain, and it resets to zero at the next change. It is already included in collateralValue and marginBalance: do not add it to them. Funding settled at earlier changes is in the account balance and is not reported per position.",
+          "description": "Funding on the position since its size last changed (a fill, a liquidation or an ADL), in rUSD; positive means the position received funding. Resets to zero at the next change. Already included in collateralValue and marginBalance: do not add it to them.",
           "example": "-1.25",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "fundingSinceOpen": {
+          "description": "Funding on the position since it opened, in rUSD; positive means the position received funding. A position opens from flat or when it flips to the other side; increases and partial closes keep the running total. Includes fundingSinceChange and updates live. Already included in collateralValue and marginBalance: do not add it to them.",
+          "example": "-6.84",
           "allOf": [
             {
               "$ref": "#/definitions/SignedDecimal"
@@ -980,14 +995,24 @@
           "example": "-0.10"
         },
         "takerOpeningFee": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening fee portion of the taker fee in rUSD. Absent for position-extending executions.",
-          "example": "0.25"
+          "description": "Deprecated: an estimate, takerFee scaled by the position's entry price over the execution price, not a fee that was charged. Absent for position-extending executions.",
+          "deprecated": true,
+          "example": "0.25",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerOpeningFee": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening portion of `makerFee`, in rUSD. Omitted when `makerFee` is absent and on position-extending executions.",
-          "example": "-0.05"
+          "description": "Deprecated: an estimate, `makerFee` scaled by the position's entry price over the execution price, not a fee that was charged. Omitted when `makerFee` is absent and on position-extending executions.",
+          "deprecated": true,
+          "example": "-0.05",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "type": {
           "$ref": "#/definitions/ExecutionType"
@@ -1008,34 +1033,54 @@
           "example": "42"
         },
         "takerRealizedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized taker PnL from this execution in rUSD (takerPriceVariationPnl + takerFundingPnl). Absent for position-extending executions.",
-          "example": "12.50"
+          "description": "Deprecated: use takerPriceVariationPnl, and GET /wallet/{address}/fundingPayments for funding. takerPriceVariationPnl + takerFundingPnl, in rUSD. Absent for position-extending executions.",
+          "deprecated": true,
+          "example": "12.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerRealizedPnl": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Realized maker PnL from this execution in rUSD (makerPriceVariationPnl + makerFundingPnl). Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
-          "example": "-12.50"
+          "description": "Deprecated: use makerPriceVariationPnl, and GET /wallet/{address}/fundingPayments for funding. makerPriceVariationPnl + makerFundingPnl, in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "deprecated": true,
+          "example": "-12.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "takerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Taker PnL component from price movement in rUSD. Absent for position-extending executions.",
+          "description": "Price PnL the taker's position realized at this execution, in rUSD; positive is a profit. It is the closed size × the move from the position's entry price to the execution price; on a flip, the PnL of the part closed. Excludes fees (see takerFee) and funding (see GET /wallet/{address}/fundingPayments). Absent for position-extending executions.",
           "example": "15.00"
         },
         "makerPriceVariationPnl": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Maker PnL component from price movement in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "description": "As takerPriceVariationPnl, for the maker's position. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
           "example": "-15.00"
         },
         "takerFundingPnl": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Taker PnL component from funding payments in rUSD. Absent for position-extending executions.",
-          "example": "-2.50"
+          "description": "Deprecated: funding is reported per hour by GET /wallet/{address}/fundingPayments. This figure is the closed size's funding since the position's average entry funding value, not funding that was paid at this execution. In rUSD. Absent for position-extending executions.",
+          "deprecated": true,
+          "example": "-2.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         },
         "makerFundingPnl": {
-          "$ref": "#/definitions/SignedDecimal",
-          "description": "Maker PnL component from funding payments in rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
-          "example": "2.50"
+          "description": "Deprecated: funding is reported per hour by GET /wallet/{address}/fundingPayments. This figure is the closed size's funding since the position's average entry funding value, not funding that was paid at this execution. In rUSD. Absent when counterparty state is unavailable, the execution is position-extending, or the execution is ADL or MARKET_CLOSE.",
+          "deprecated": true,
+          "example": "2.50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
         }
       },
       "additionalProperties": true
@@ -2427,6 +2472,85 @@
       },
       "additionalProperties": true
     },
+    "Fill": {
+      "title": "Fill",
+      "type": "object",
+      "description": "A single matching-engine fill, published when the fill is matched, usually before it settles on-chain. The shape is the same whether the wallet's account was the maker or the taker. A fill is unconfirmed: the settled executions are the source of truth for the wallet's trades. The fill's settled execution, and any execution bust that reverses it, carry the same `fillId`, and either can arrive before the fill. The taker fee, when present, is an estimate; the exact fee and realized PnL are reported on the settled execution.",
+      "required": [
+        "exchangeId",
+        "symbol",
+        "fillId",
+        "takerAccountId",
+        "makerAccountId",
+        "takerOrderId",
+        "makerOrderId",
+        "side",
+        "qty",
+        "price",
+        "timestamp"
+      ],
+      "properties": {
+        "exchangeId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Exchange ID of the taker order, as on the settled execution. The maker order's exchange ID can differ.",
+          "example": 1
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Market symbol. Spot symbols end in RUSD (e.g. ETHRUSD); perp symbols end in RUSDPERP (e.g. BTCRUSDPERP). Clients can use the suffix to distinguish spot vs perp."
+        },
+        "fillId": {
+          "type": "string",
+          "description": "Stable fill identifier. The settled perpExecutions or spotExecutions row and any executionBusts row for this fill carry the same `fillId`, and it falls inside the `[firstFillId, firstFillId + fillCount - 1]` range of the orderChanges updates that reported the fill.",
+          "example": "7205759403792794624"
+        },
+        "takerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Taker account ID",
+          "example": 12345
+        },
+        "makerAccountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Maker account ID (counterparty)",
+          "example": 67890
+        },
+        "takerOrderId": {
+          "type": "string",
+          "description": "Order ID for the taker",
+          "example": "63552420354981888"
+        },
+        "makerOrderId": {
+          "type": "string",
+          "description": "Order ID for the maker",
+          "example": "63552420037263360"
+        },
+        "side": {
+          "$ref": "#/definitions/Side",
+          "description": "Fill side from the taker perspective. The maker traded the opposite side."
+        },
+        "qty": {
+          "$ref": "#/definitions/Qty",
+          "description": "Filled base quantity",
+          "example": "1.0"
+        },
+        "price": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Fill price, excluding fees. Always the maker order's limit price.",
+          "example": "43000.00"
+        },
+        "takerFee": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Estimated gross taker fee in rUSD, with the meaning of `takerFee` on the settled execution: the taker's fee-tier rate × `qty` × the latest mark price when the fill was published. The settled `takerFee` can differ: settlement charges the mark price at settlement, and a recent fee-tier change or new account may not be reflected yet. The settled execution carries the exact amount and its breakdown. Makers pay no fee. Always \"0\" on spot fills. Omitted when it cannot be estimated.",
+          "example": "1.2003"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Timestamp (milliseconds) of the taker order update that reported the fill's matching round: the `lastUpdateAt` of that orderChanges update. Fills from the same matching round share it.",
+          "example": 1747927089946
+        }
+      },
+      "additionalProperties": true
+    },
     "AssetOraclePrice": {
       "title": "AssetOraclePrice",
       "type": "object",
@@ -2688,6 +2812,99 @@
           "items": {
             "$ref": "#/definitions/FundingRateSample"
           }
+        }
+      },
+      "additionalProperties": true
+    },
+    "FundingPayment": {
+      "title": "FundingPayment",
+      "type": "object",
+      "description": "Funding one perpetual position paid or received in one UTC hour. See GET /wallet/{address}/fundingPayments.",
+      "required": [
+        "accountId",
+        "symbol",
+        "timestamp",
+        "side",
+        "qty",
+        "payment"
+      ],
+      "properties": {
+        "accountId": {
+          "description": "Perpetual margin account ID.",
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "timestamp": {
+          "description": "Start of the hour (milliseconds). The entry covers [timestamp, timestamp + 1 hour).",
+          "example": 1793602800000,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "side": {
+          "description": "Side of the position at the end of the hour, or the side it last held if it closed during the hour.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Side"
+            }
+          ]
+        },
+        "qty": {
+          "description": "Position size at the end of the hour, after any auto-deleveraging; 0 if it closed during the hour.",
+          "example": "10",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Qty"
+            }
+          ]
+        },
+        "payment": {
+          "description": "Funding the position received (positive) or paid (negative) in the hour, in rUSD. It is already in the account balance: do not add it to realBalance, collateralValue or marginBalance.",
+          "example": "-0.38",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        },
+        "fundingRate": {
+          "description": "The market's hourly funding rate at the end of the hour, as a percentage, in the same units as MarketSummary.fundingRate. Omitted when none was recorded.",
+          "example": "0.0013",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SignedDecimal"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "FundingPaymentList": {
+      "title": "FundingPaymentList",
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "description": "Funding payments, newest first.",
+          "items": {
+            "$ref": "#/definitions/FundingPayment"
+          }
+        },
+        "meta": {
+          "$ref": "#/definitions/PaginationMeta"
         }
       },
       "additionalProperties": true
@@ -3208,7 +3425,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required for every modification; a reused nonce is rejected with `INVALID_NONCE_ERROR`.",
           "example": "1234567890"
         },
         "signerWallet": {
@@ -3409,7 +3626,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; a reused nonce is rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -3470,7 +3687,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; replayed nonces are rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required per request; a reused nonce is rejected with `INVALID_NONCE_ERROR`. See the EIP-712 signing reference in the Reya docs (https://docs.reya.xyz/developers/readme/signatures-and-nonces).",
           "example": "1234567890"
         },
         "deadline": {
@@ -3527,7 +3744,7 @@
         },
         "nonce": {
           "type": "string",
-          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; replayed nonces are rejected with `INVALID_NONCE_ERROR`.",
+          "description": "Monotonically increasing per-signer nonce. A fresh nonce is required on every arm/refresh/disarm call; a reused nonce is rejected with `INVALID_NONCE_ERROR`.",
           "example": "1234567890"
         },
         "signerWallet": {

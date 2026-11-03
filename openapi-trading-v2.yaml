@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.8
+  version: 3.7.9
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -454,7 +454,8 @@ paths:
         about every 5 seconds and accrues continuously against the mark price; a position's
         share is folded into its realized PnL whenever it changes. So there are no settlement
         records to list; instead each entry summarises one `resolution` interval, aligned to UTC
-        multiples of the resolution, with `timestamp` as the interval start.
+        multiples of the resolution, with `timestamp` as the interval start. A wallet's own
+        funding, per position and hour, is in GET /wallet/{address}/fundingPayments.
 
         - `fundingRate`: the last rate sampled in the interval, up to `endTime`. Rates are
           sampled about once a minute, so this is a point-in-time snapshot, not an average.
@@ -581,6 +582,54 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/fundingPayments:
+    get:
+      summary: Get wallet funding payments
+      description: |
+        Returns the funding each of the wallet's perpetual positions paid or received, one entry
+        per account, symbol and UTC hour, newest first. Funding on Reya accrues continuously
+        rather than at fixed times, and each entry is the total for the hour
+        `[timestamp, timestamp + 1 hour)`.
+
+        - An hour has an entry when the position was open at its end or paid or received
+          funding during it. `qty` and `side` are the position at the end of the hour; `qty`
+          is 0 if it closed during the hour.
+        - The current hour is not listed; its entry appears a few minutes after the hour ends.
+          For funding on open positions up to now, see `fundingSinceOpen` in
+          GET /wallet/{address}/positionRisk.
+        - Funding is already in the account balance: do not add these entries to it.
+        - Hours before funding payments were first recorded are not listed.
+
+        All of the wallet's accounts are included; pass `accountId` to select one. An
+        `accountId` the wallet does not own returns an empty list. A wallet with no accounts
+        returns 400 `NO_ACCOUNTS_FOUND_ERROR`, and an unknown or spot `symbol` returns 400
+        `SYMBOL_NOT_FOUND_ERROR`.
+
+        Use the `cursor` parameter to advance pages without repeating or skipping entries.
+        `startTime` and `endTime` bound `timestamp`.
+      operationId: getWalletFundingPayments
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/AccountIdFilterParam'
+        - $ref: '#/components/parameters/SymbolFilterParam'
+        - $ref: '#/components/parameters/StartTimeParam'
+        - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/FundingPaymentsLimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: Page of funding payments, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundingPaymentList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /wallet/{address}/spotExecutions:
     get:
       summary: Get wallet spot executions
@@ -694,8 +743,8 @@ paths:
       summary: Get perpetual position risk
       description: |
         Returns the wallet's open perpetual positions with mark price, notional, unrealized
-        PnL, funding since the position's size last changed, liquidation margin requirement and
-        an estimated liquidation price, ordered by account ID, then symbol. Accounts without positions contribute no rows. Pass
+        PnL, funding since the position opened and since its size last changed, liquidation
+        margin requirement and an estimated liquidation price, ordered by account ID, then symbol. Accounts without positions contribute no rows. Pass
         `accountId` to select one account; an `accountId` the wallet does not own returns an
         empty list. A wallet with no accounts returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
         `lastTradeSequenceNumber` is the last execution each valued position includes, so a
@@ -1209,6 +1258,17 @@ components:
         minimum: 1
         maximum: 9007199254740991
         example: 12345
+    SymbolFilterParam:
+      name: symbol
+      in: query
+      required: false
+      description: >-
+        Return only this perpetual market's entries. Unknown and spot symbols return
+        `SYMBOL_NOT_FOUND_ERROR`; retired markets remain queryable.
+      schema:
+        $ref: './trading-schemas.json#/definitions/Symbol'
+        example: BTCRUSDPERP
+
     SymbolParam:
       name: symbol
       in: path
@@ -1340,6 +1400,20 @@ components:
         enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
         example: '1h'
 
+    FundingPaymentsLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: >-
+        Maximum number of entries per page. The default is 100 and the maximum is
+        1,000; larger values are clamped to 1,000.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
+        example: 100
+
     FundingHistoryLimitParam:
       name: limit
       in: query
@@ -1449,6 +1523,12 @@ components:
 
     FundingRateHistoryList:
       $ref: './trading-schemas.json#/definitions/FundingRateHistoryList'
+
+    FundingPayment:
+      $ref: './trading-schemas.json#/definitions/FundingPayment'
+
+    FundingPaymentList:
+      $ref: './trading-schemas.json#/definitions/FundingPaymentList'
 
     CreateOrderRequest:
       $ref: './trading-schemas.json#/definitions/CreateOrderRequest'
