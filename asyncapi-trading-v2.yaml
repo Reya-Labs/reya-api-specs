@@ -19,7 +19,9 @@ info:
     the execution channels and corresponding REST endpoints for individual fills.
 
     Asset oracle price updates may omit intermediate ticks when a client falls behind, while
-    delivering the latest value per asset.
+    delivering the latest value per asset. Candle updates (`/v2/candles/{symbol}/{resolution}`)
+    likewise deliver the latest candles and may omit intermediate values, including a candle's
+    final value when the next one starts; GET /candleHistory/{symbol}/{resolution} serves it.
 
     ## Rate and connection limits
 
@@ -210,6 +212,41 @@ channels:
     messages:
       marketSpotExecutionUpdate:
         $ref: '#/components/messages/MarketSpotExecutionUpdate'
+
+  marketCandles:
+    address: /v2/candles/{symbol}/{resolution}
+    description: |
+      A market's newest candle at one resolution, as it changes.
+
+      The candles are the `merged` candles of GET /candleHistory/{symbol}/{resolution}:
+      the OHLC of the interval's match fills, else of the mark price, each opening at the
+      previous candle's close. They are built from the same fills and once-a-second mark
+      samples as the stored candles, so reloading through REST returns what this channel
+      sent.
+
+      - Subscribing delivers `contents.data` with the newest candle, normally the one still
+        forming. It is empty when the market has no candle yet or live candles are
+        unavailable.
+      - Each `channel_data` frame carries one or more candles in ascending `t`, never older
+        than the newest one sent before on this subscription. Replace the candle that has
+        the same `t`; append a newer one. When an interval ends, the ended candle's final
+        value is sent before the first value of the next.
+      - Updates follow fills and the mark price, about once a second while the price moves.
+      - A fill indexed late can still change a candle after its interval ended. The channel
+        does not resend older candles; GET /candleHistory/{symbol}/{resolution} serves the
+        corrected value.
+    parameters:
+      symbol:
+        description: Trading symbol (e.g., BTCRUSDPERP, WETHRUSD)
+        location: $message.payload#/symbol
+      resolution:
+        description: Candle resolution
+        enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
+    messages:
+      marketCandlesSubscribed:
+        $ref: '#/components/messages/MarketCandlesSubscribed'
+      marketCandleUpdate:
+        $ref: '#/components/messages/MarketCandleUpdate'
 
   walletPositions:
     address: /v2/wallet/{address}/positions
@@ -555,6 +592,15 @@ operations:
       - $ref: '#/channels/marketDepth/messages/marketDepthUpdate'
     summary: Receive a bounded L2 depth snapshot and subsequent view updates for a specific market
 
+  receiveMarketCandles:
+    action: receive
+    channel:
+      $ref: '#/channels/marketCandles'
+    messages:
+      - $ref: '#/channels/marketCandles/messages/marketCandlesSubscribed'
+      - $ref: '#/channels/marketCandles/messages/marketCandleUpdate'
+    summary: Receive a market's newest candle at one resolution and its updates
+
   receiveMarketSpotExecutions:
     action: receive
     channel:
@@ -750,6 +796,22 @@ components:
         bounded `DepthSnapshot` payload containing at most 100 levels per side.
       payload:
         $ref: '#/components/schemas/MarketDepthSubscribedPayload'
+
+    MarketCandleUpdate:
+      name: marketCandleUpdate
+      title: Market Candle Update
+      summary: A market's newest candles at one resolution, as they change
+      payload:
+        $ref: '#/components/schemas/MarketCandleUpdatePayload'
+
+    MarketCandlesSubscribed:
+      name: subscribed
+      title: Market Candles Subscribed
+      summary: |
+        Initial `subscribed` confirmation for the candles channel. `contents` carries
+        the newest candle, or none.
+      payload:
+        $ref: '#/components/schemas/MarketCandlesSubscribedPayload'
 
     MarketSpotExecutionUpdate:
       name: marketSpotExecutionUpdate
@@ -985,6 +1047,11 @@ components:
       type: string
       pattern: '^/v2/market/[A-Za-z0-9]+/depth$'
       description: Channel pattern for market depth snapshots
+
+    MarketCandlesChannelPattern:
+      type: string
+      pattern: '^/v2/candles/[A-Za-z0-9]+/(1m|5m|15m|30m|1h|4h|1d)$'
+      description: Channel pattern for a market's candles at one resolution
 
     # Compatibility exports for existing SDK consumers. Wire envelopes below
     # use the exact snapshot/update variants, while these aliases keep the
@@ -1247,6 +1314,55 @@ components:
           $ref: '#/components/schemas/MarketDepthChannelPattern'
         data:
           $ref: './trading-schemas.json#/definitions/DepthUpdate'
+
+    MarketCandlesSnapshot:
+      type: object
+      title: MarketCandlesSnapshot
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          title: MarketCandlesSnapshotList
+          description: The newest candle, or empty
+          maxItems: 1
+          items:
+            $ref: './trading-schemas.json#/definitions/Candle'
+
+    MarketCandlesSubscribedPayload:
+      type: object
+      title: MarketCandlesSubscribedPayload
+      additionalProperties: false
+      required:
+        - type
+        - channel
+        - contents
+      properties:
+        type:
+          $ref: '#/components/schemas/SubscribedMessageType'
+        channel:
+          $ref: '#/components/schemas/MarketCandlesChannelPattern'
+        contents:
+          $ref: '#/components/schemas/MarketCandlesSnapshot'
+
+    MarketCandleUpdateBody:
+      type: object
+      title: MarketCandleUpdateBody
+      additionalProperties: false
+      required:
+        - channel
+        - data
+      properties:
+        channel:
+          $ref: '#/components/schemas/MarketCandlesChannelPattern'
+        data:
+          type: array
+          title: CandleList
+          description: Changed candles, ascending by `t`
+          minItems: 1
+          items:
+            $ref: './trading-schemas.json#/definitions/Candle'
 
     MarketSpotExecutionUpdateBody:
       type: object
@@ -1527,6 +1643,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseUpdateEnvelope'
         - $ref: '#/components/schemas/MarketDepthUpdateBody'
+
+    MarketCandleUpdatePayload:
+      title: MarketCandleUpdatePayload
+      allOf:
+        - $ref: '#/components/schemas/BaseUpdateEnvelope'
+        - $ref: '#/components/schemas/MarketCandleUpdateBody'
 
     MarketSpotExecutionUpdatePayload:
       title: MarketSpotExecutionUpdatePayload
