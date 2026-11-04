@@ -382,6 +382,7 @@ for (const reason of [
   'PROTECTIVE_SELF_TRADE_SWEEP',
   'POSITION_CLOSED',
   'RISK_REJECTED',
+  'PARTIAL_FILL',
 ]) {
   assert.ok(
     tradingSchemas.definitions.CancelReason.enum.includes(reason),
