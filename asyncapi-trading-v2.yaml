@@ -231,7 +231,8 @@ channels:
         candle.
       - Updates follow fills and the mark price, about once a second while the price moves.
         A new candle is sent about two seconds after its interval starts, after the ended
-        candle's value at that time.
+        candle's value at that time. Updates pause while fills are being indexed late; REST
+        then serves the candles stored so far.
       - An ended candle can still change after that, from a fill indexed late or an
         on-chain mark stored later. The channel does not resend it; REST serves the final
         value.
