@@ -1810,6 +1810,12 @@ tags:
       - `RISK_REJECTED`: the proposed protective child failed pre-trade risk checks. Both
         protective legs are cancelled with `triggered: false`; no child is created and
         protection is not automatically retried or re-armed.
+      - `PARTIAL_FILL`: a crossing create or modify reached the per-order matching limit
+        before it finished. Completed fills are kept and the remaining quantity is
+        cancelled for every time in force, IOC included, even when nothing filled. Submit
+        the remainder again if needed. A modify cancels the whole order. Fired stop-loss and
+        take-profit children are never cancelled for this reason. Appears on create/modify
+        responses and `walletOrderChanges`.
 
       A GTT stop or its resting child can be cancelled with `GTT_EXPIRED` before the
       signed `expiresAfter` to allow settlement. Explicit `cancelAll` includes fired
