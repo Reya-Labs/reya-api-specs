@@ -2982,7 +2982,7 @@
     "Candle": {
       "title": "Candle",
       "type": "object",
-      "description": "One candle, merged from trades and the mark price as GET /candleHistory/{symbol}/{resolution} serves it with priceSource=merged.",
+      "description": "One candle as GET /candleHistory/{symbol}/{resolution} serves it with priceSource=merged.",
       "required": ["t", "o", "h", "l", "c", "v", "n"],
       "properties": {
         "t": {
@@ -2992,7 +2992,7 @@
         },
         "o": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "Opening price: the previous candle's close",
+          "description": "Opening price: the previous candle's close (a market's first candle: its first fill)",
           "example": "2560.118"
         },
         "h": {
@@ -3021,7 +3021,7 @@
           "example": 3
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "FeeTierParameters": {
       "title": "FeeTierParameters",
