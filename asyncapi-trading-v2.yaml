@@ -230,8 +230,8 @@ channels:
         one. A frame can arrive before the `subscribed` reply, which can then hold an older
         candle.
       - Updates follow fills and the mark price, about once a second while the price moves.
-        A new candle is sent a few seconds after its interval starts, once the ended
-        interval's fills are stored, after the ended candle's value at that time.
+        A new candle is sent about two seconds after its interval starts, after the ended
+        candle's value at that time.
       - An ended candle can still change after that, from a fill indexed late or an
         on-chain mark stored later. The channel does not resend it; REST serves the final
         value.
