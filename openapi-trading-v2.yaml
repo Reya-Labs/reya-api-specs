@@ -423,7 +423,36 @@ paths:
   /candleHistory/{symbol}/{resolution}:
     get:
       summary: Get historical candles
-      description: Returns up to 200 candles for a given market, sorted by time in descending order, and ending at the specified end time.
+      description: |
+        Returns up to 200 of a market's candles, oldest first, ending with the
+        candle that contains `endTime`. Candle times are UTC multiples of the
+        resolution, in seconds.
+
+        **What a candle is built from (`priceSource`):**
+
+        - `merged` (default): the candle the Reya app charts. In an interval with
+          match fills, their OHLC. In an interval without fills, the OHLC of the
+          mark price, sampled once a second (a perp's matching-engine mark; a spot
+          market's base asset oracle price). With neither, flat at the previous
+          close. Every candle opens at the previous candle's close and its high and
+          low include that open, so the series has no gaps.
+        - `trade`: standard trade candles. The OHLC of the interval's match fills;
+          in an interval without fills, flat at the last fill's price with zero
+          volume. Liquidations, auto-deleveraging and market closes are not match
+          fills and are not included.
+        - `mark`: the mark price alone. An interval without a mark sample is left
+          out, and a spot market without an oracle price has no mark candles.
+
+        `v` (base volume) and `n` (trade count) count the interval's match fills
+        in every mode.
+
+        A market's candles start at its first match fill on the order book. The
+        newest candle may still be forming and changes until its interval ends; to
+        follow it, subscribe to `/v2/candles/{symbol}/{resolution}` on the WebSocket
+        API, which pushes the same `merged` candles.
+
+        The `merged` default differs from the REST candles of Binance or
+        Hyperliquid, which are trade candles: pass `priceSource=trade` for those.
       operationId: getCandles
       tags:
         - Market Data
@@ -431,6 +460,7 @@ paths:
         - $ref: '#/components/parameters/SymbolParam'
         - $ref: '#/components/parameters/ResolutionParam'
         - $ref: '#/components/parameters/EndTimeParam'
+        - $ref: '#/components/parameters/CandlePriceSourceParam'
       responses:
         '200':
           description: Historical candle data
@@ -1436,6 +1466,19 @@ components:
         type: string
         enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d']
         example: '1m'
+
+    CandlePriceSourceParam:
+      name: priceSource
+      in: query
+      required: false
+      description: >-
+        Which prices the candles are built from: `merged` (trades, else the mark
+        price), `trade` or `mark`. See GET /candleHistory/{symbol}/{resolution}.
+      schema:
+        type: string
+        enum: ['merged', 'trade', 'mark']
+        default: 'merged'
+        example: 'trade'
 
   schemas:
     AccountSummary:
