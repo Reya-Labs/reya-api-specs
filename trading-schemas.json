@@ -2960,6 +2960,66 @@
           },
           "description": "Array of closing prices",
           "example": ["2555.387", "2560.118", "2560.439"]
+        },
+        "v": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnsignedDecimal"
+          },
+          "description": "Array of base volumes: the summed size of the interval's match fills, in the base asset. 0 in an interval without fills.",
+          "example": ["12.5", "0", "3.2"]
+        },
+        "n": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnsignedInteger"
+          },
+          "description": "Array of trade counts: the number of match fills in the interval.",
+          "example": [14, 0, 3]
+        }
+      },
+      "additionalProperties": true
+    },
+    "Candle": {
+      "title": "Candle",
+      "type": "object",
+      "description": "One candle as GET /candleHistory/{symbol}/{resolution} serves it with priceSource=merged.",
+      "required": ["t", "o", "h", "l", "c", "v", "n"],
+      "properties": {
+        "t": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Candle start, Unix seconds, aligned to the resolution in UTC",
+          "example": 1747804260
+        },
+        "o": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Opening price: the previous candle's close (a market's first candle: its first fill)",
+          "example": "2560.118"
+        },
+        "h": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "High price",
+          "example": "2560.729"
+        },
+        "l": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Low price",
+          "example": "2559.368"
+        },
+        "c": {
+          "$ref": "#/definitions/SignedDecimal",
+          "description": "Closing price; the latest price while the candle is still forming",
+          "example": "2560.439"
+        },
+        "v": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Base volume of the candle's match fills, in the base asset",
+          "example": "3.2"
+        },
+        "n": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Number of match fills in the candle",
+          "example": 3
         }
       },
       "additionalProperties": true
