@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.11
+  version: 3.7.12
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -1095,6 +1095,12 @@ paths:
         - A post-only modification that would cross returns `POST_ONLY_WOULD_CROSS_ERROR`
           and leaves the order unchanged. A non-post-only crossing modification can
           execute immediately; the response reports `execQty` and `status`.
+        - An order or modification that would take liquidity can be briefly delayed before
+          it reaches the book. While a modification of an order is delayed, another
+          modification of the same order returns `MODIFY_ALREADY_HELD_ERROR`; wait for the
+          first response, then resend. Likewise, modify an order only after its create has
+          been answered: a modification that arrives while the create is still delayed
+          returns `ORDER_NOT_FOUND_ERROR`.
         - Per-fill details are delivered on the execution and order-change streams.
 
         A crossing modification reports `OPEN` if a partially filled remainder rests, or `FILLED`
@@ -1617,6 +1623,10 @@ components:
           be re-signed at unchanged prices.
         - `MODIFY_QTY_BELOW_FILLED_ERROR`: the modified total quantity must exceed the
           quantity already filled.
+        - `MODIFY_ALREADY_HELD_ERROR`: an earlier modification of the same order would take
+          liquidity and is still being delayed before it reaches the book. Nothing was changed
+          and the request's nonce was not used. Wait for the earlier modification's response,
+          then send this one again.
         - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately. Choose a
           non-crossing price or change the post-only intent and re-sign.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific

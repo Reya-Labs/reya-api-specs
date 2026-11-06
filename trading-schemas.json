@@ -97,7 +97,8 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR",
+        "MODIFY_ALREADY_HELD_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance. For an HTTP 503 on a read endpoint, retry the same request after backing off; no signature, nonce or clientOrderId is involved."
     },
