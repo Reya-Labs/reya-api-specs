@@ -172,7 +172,8 @@
         "RISK_CANCELLED",
         "RISK_REJECTED",
         "OCO_SIBLING_FIRED",
-        "POSITION_CLOSED"
+        "POSITION_CLOSED",
+        "PARTIAL_FILL"
       ],
       "description": "Machine-readable cancellation reason. Present only on CANCELLED orders and may be omitted when unavailable. See Cancellation reasons in the REST API Order Entry section for per-code meanings and handling."
     },

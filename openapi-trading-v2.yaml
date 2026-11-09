@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.11
+  version: 3.7.13
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -1863,6 +1863,9 @@ tags:
       - `RISK_REJECTED`: the proposed protective child failed pre-trade risk checks. Both
         protective legs are cancelled with `triggered: false`; no child is created and
         protection is not automatically retried or re-armed.
+      - `PARTIAL_FILL`: the unfilled quantity was cancelled. Check `cumQty` for the
+        quantity filled, which can be zero. You can place a new order for the remaining
+        quantity.
 
       A GTT stop or its resting child can be cancelled with `GTT_EXPIRED` before the
       signed `expiresAfter` to allow settlement. Explicit `cancelAll` includes fired
