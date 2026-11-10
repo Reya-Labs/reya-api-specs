@@ -227,8 +227,8 @@ channels:
         unavailable.
       - Each `channel_data` frame carries one or more candles in ascending `t`. Apply each
         by `t`: replace the candle with the same `t`, append a newer one, ignore an older
-        one. A frame can arrive before the `subscribed` reply, which can then hold an older
-        candle.
+        one. A frame can arrive before the `subscribed` reply; the reply's candle is never
+        older than one sent before it.
       - Updates follow fills and the mark price, about once a second while the price moves.
         A new candle is sent about two seconds after its interval starts, after the ended
         candle's value at that time. Updates pause while fills are being indexed late; REST

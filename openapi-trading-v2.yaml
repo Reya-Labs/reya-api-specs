@@ -1484,6 +1484,8 @@ components:
       description: >-
         Which prices the candles are built from: `merged` (trades, else the mark
         price), `trade` or `mark`. See GET /candleHistory/{symbol}/{resolution}.
+        A source the server does not serve is rejected with a 400, never answered
+        with other prices.
       schema:
         type: string
         enum: ['merged', 'trade', 'mark']
