@@ -429,7 +429,9 @@ paths:
         contains it, or with the newest candle built so far. `endTime` is in
         milliseconds; candle times `t` are in seconds, UTC multiples of the resolution.
         To page back, pass `endTime = (t[0] - 1) * 1000`. With `priceSource=mark` a page
-        can hold fewer than 200 candles while older ones exist.
+        covers the 200 intervals that end with the one containing `endTime`, so it can
+        hold fewer candles, or none, while older ones exist; past an empty page, move
+        `endTime` back 200 intervals.
 
         **What a candle is built from.** A 1-minute candle is built from the minute's
         match fills, by block time, and its mark price: the OHLC of the mark sampled once
