@@ -1012,8 +1012,9 @@ paths:
         position, so displayed remaining quantity can exceed what can execute. A zero reducible
         quantity when it attempts to fill cancels the remainder with `POSITION_CLOSED`; closing the
         position by another route does not immediately remove the child. A fired child is cancel-only:
-        `modifyOrder` is refused. Ordinary self-trade prevention applies to the account's new crossing
-        orders. Explicit `cancelAll` includes the child; cancel-all-after leaves it in place.
+        `modifyOrder` is refused. Self-trade prevention treats a resting child like any other resting
+        order: an order from the same account that reaches it cancels it with `SELF_TRADE_PREVENTION`.
+        Explicit `cancelAll` includes the child; cancel-all-after leaves it in place.
 
         Stops and their children only reduce positions, even though their signed `reduceOnly`
         field is `false`. They cannot open a new position.
@@ -1095,12 +1096,18 @@ paths:
         - A post-only modification that would cross returns `POST_ONLY_WOULD_CROSS_ERROR`
           and leaves the order unchanged. A non-post-only crossing modification can
           execute immediately; the response reports `execQty` and `status`.
+        - An order or modification that would take liquidity can be briefly delayed before
+          it reaches the book. While a modification of an order is delayed, another
+          modification of the same order returns `MODIFY_ALREADY_HELD_ERROR`; wait for the
+          first response, then resend. Likewise, modify an order only after its create has
+          been answered: a modification that arrives while the create is still delayed
+          returns `ORDER_NOT_FOUND_ERROR`.
         - Per-fill details are delivered on the execution and order-change streams.
 
         A crossing modification reports `OPEN` if a partially filled remainder rests, or `FILLED`
-        if fully executed. If it would self-trade against the account's resting liquidity, the
-        incoming modified order is cancelled with `SELF_TRADE_PREVENTION`; any completed fills
-        remain recorded. See `POST /v2/createOrder`, Responses and fill correlation, to associate
+        if fully executed. If it reaches the account's own resting orders, those resting orders are
+        cancelled with `SELF_TRADE_PREVENTION` and the modified order goes on matching; it is never
+        cancelled for that. See `POST /v2/createOrder`, Responses and fill correlation, to associate
         response fill IDs with streamed executions.
       operationId: modifyOrder
       tags:
@@ -1617,6 +1624,10 @@ components:
           be re-signed at unchanged prices.
         - `MODIFY_QTY_BELOW_FILLED_ERROR`: the modified total quantity must exceed the
           quantity already filled.
+        - `MODIFY_ALREADY_HELD_ERROR`: an earlier modification of the same order would take
+          liquidity and is still being delayed before it reaches the book. Nothing was changed
+          and the request's nonce was not used. Wait for the earlier modification's response,
+          then send this one again.
         - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately. Choose a
           non-crossing price or change the post-only intent and re-sign.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
@@ -1783,10 +1794,11 @@ tags:
       - `USER_CANCEL`, `MASS_CANCEL`, `CANCEL_ALL_AFTER`, `GTT_EXPIRED`: cancellation by a
         single cancel, bulk cancel, expired cancel-all-after countdown, or GTT expiry.
         These appear on `walletOrderChanges`.
-      - `SELF_TRADE_PREVENTION`: an order would trade against the account's own resting
-        order. Only the incoming order is cancelled; the resting order stays in place.
-        This can appear on create/modify responses or a crossing modification's
-        order-change event. Any fills already completed remain recorded.
+      - `SELF_TRADE_PREVENTION`: an incoming order reached a resting order of the same
+        account. The resting order is cancelled with this reason; the incoming order is
+        not cancelled and goes on to match what is behind it. Only resting orders the
+        incoming order actually reaches are cancelled. Delivered on `walletOrderChanges`
+        for the resting order, with any previous fills preserved.
       - `FEED_RESET`: rebuild the local order view from the following order events or `GET
         /v2/wallet/{address}/openOrders`. This notification does not mean the orders were
         cancelled on the exchange.
@@ -1800,8 +1812,8 @@ tags:
         automatically re-armed.
       - `PROTECTIVE_SELF_TRADE_SWEEP`: a resting maker order was cancelled to allow a
         protective stop to execute without self-trading. This reason appears on the
-        maker's cancellation, unlike `SELF_TRADE_PREVENTION`, which cancels the incoming
-        order.
+        maker's cancellation, as `SELF_TRADE_PREVENTION` does when an ordinary incoming
+        order reaches the account's own resting order.
       - `POSITION_CLOSED`: no tradeable quantity remains to reduce. If the position has
         closed, reversed, or fallen below one lot before a stop fires, both protective
         legs are cancelled with `triggered: false` and no child is created. A fired
