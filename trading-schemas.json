@@ -97,7 +97,8 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR",
+        "MODIFY_ALREADY_HELD_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance. For an HTTP 503 on a read endpoint, retry the same request after backing off; no signature, nonce or clientOrderId is involved."
     },
@@ -3343,7 +3344,7 @@
         },
         "cancelReason": {
           "$ref": "#/definitions/CancelReason",
-          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`, and a self-crossing IOC with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`. An incoming order is never cancelled with `SELF_TRADE_PREVENTION`: that reason is delivered on the account's own resting order it reached. Omitted entirely otherwise."
         },
         "cancelReasonMessage": {
           "type": "string",
@@ -3600,7 +3601,7 @@
         },
         "cancelReason": {
           "$ref": "#/definitions/CancelReason",
-          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED` — for a self-crossing non-post-only modify this is `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED`. A modify that reaches the account's own resting orders is not cancelled: those resting orders are, with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
         },
         "cancelReasonMessage": {
           "type": "string",
