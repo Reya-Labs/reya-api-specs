@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Order Entry WebSocket API v2
-  version: 3.7.13
+  version: 3.7.14
   description: |
     Order-entry WebSocket API for placing, modifying, and cancelling orders and managing
     cancel-on-disconnect. Operations use the same request bodies and signing model as REST
@@ -19,6 +19,13 @@ info:
     application-level `{type:"ping", id?}` probes receive `{type:"pong", id?}` responses.
     A disconnect does not cancel orders. An unanswered request may have been accepted;
     reconnect and reconcile order state and executions before resubmitting it.
+
+    Before a server restart the server may send a `disconnectNotice` message. Requests are
+    still processed for `closeInMs` after it; after that they are rejected with
+    `SERVER_SHUTTING_DOWN`, and the connection is closed with code `1001` once requests in
+    flight have finished or a short wait has passed. Open a new connection and move order
+    traffic to it before then; reconcile any request left unanswered at the close.
+    The server can add message types: ignore any `type` you don't recognise.
 
     **Cancel-on-disconnect.** A WebSocket close does not cancel orders or fire an armed
     countdown. Use `cancelAllAfter` for timed cancellation and refresh it explicitly; pings
@@ -89,7 +96,7 @@ defaultContentType: application/json
 channels:
   operations:
     description: |
-      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `modifyOrder`, `cancelOrder`, `cancelAll`, `cancelAllAfter`), an optional client-initiated `ping` probe (server replies with `pong`), and a server-side `error` envelope for framing-layer failures.
+      Single channel carrying all order-entry operations and connection control. Messages are id-correlated request/response pairs (`createOrder`, `modifyOrder`, `cancelOrder`, `cancelAll`, `cancelAllAfter`), an optional client-initiated `ping` probe (server replies with `pong`), a server-side `error` envelope for framing-layer failures, and a server-initiated `disconnectNotice` before a planned close.
     address: null
     messages:
       createOrderRequestMessage:
@@ -118,6 +125,8 @@ channels:
         $ref: '#/components/messages/PongMessage'
       errorMessage:
         $ref: '#/components/messages/ErrorMessage'
+      disconnectNoticeMessage:
+        $ref: '#/components/messages/DisconnectNoticeMessage'
     bindings:
       ws: {}
 
@@ -236,6 +245,19 @@ operations:
       in-flight `id`, or another connection-level request error. The connection stays open.
       Operation-specific rejections, including account rate limits, instead use the corresponding
       `*ResponseMessage` with `{ ok: false, error }`, correlated by request `id`.
+
+  receiveDisconnectNotice:
+    action: receive
+    channel:
+      $ref: '#/channels/operations'
+    messages:
+      - $ref: '#/channels/operations/messages/disconnectNoticeMessage'
+    summary: Receive notice of a planned disconnect
+    description: |
+      Sent once per connection before a server restart. Requests are still processed for
+      `closeInMs` after this message; after that the server rejects new requests with
+      `SERVER_SHUTTING_DOWN` and closes the connection with code `1001` once requests in flight
+      have finished or a short wait has passed. It is not a reply, so it carries no `id`.
 components:
   correlationIds:
     requestId:
@@ -360,6 +382,13 @@ components:
       payload:
         $ref: '#/components/schemas/ErrorMessagePayload'
 
+    DisconnectNoticeMessage:
+      name: disconnectNotice
+      title: Disconnect Notice Message
+      summary: Notice that the server will stop taking requests on this connection soon
+      payload:
+        $ref: '#/components/schemas/DisconnectNoticeMessagePayload'
+
   schemas:
     CreateOrderMessageType:
       type: string
@@ -408,6 +437,12 @@ components:
       enum:
         - error
       description: Message type for top-level error envelopes
+
+    DisconnectNoticeMessageType:
+      type: string
+      enum:
+        - disconnectNotice
+      description: Message type for disconnect notices
 
     CreateOrderRequestMessagePayload:
       type: object
@@ -654,6 +689,34 @@ components:
           type: string
           description: Optional correlation identifier echoed in the corresponding pong.
           example: "ping-001"
+
+    DisconnectNoticeMessagePayload:
+      type: object
+      title: DisconnectNoticeMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - reason
+        - closeInMs
+        - timestamp
+      properties:
+        type:
+          $ref: '#/components/schemas/DisconnectNoticeMessageType'
+        reason:
+          type: string
+          enum:
+            - SERVER_RESTART
+          description: Why the connection will be closed.
+          example: SERVER_RESTART
+        closeInMs:
+          type: integer
+          minimum: 1
+          description: How long requests are still processed, in milliseconds after this message.
+          example: 15000
+        timestamp:
+          type: integer
+          description: When the server sent the notice, in milliseconds since the Unix epoch.
+          example: 1747927089946
 
     PongMessagePayload:
       type: object

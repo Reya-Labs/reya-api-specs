@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.7.13
+  version: 3.7.14
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -17,6 +17,12 @@ info:
     Resubscribing returns a fresh snapshot of the channel's documented view. Updates from the
     disconnection window are not resent. Reconcile current state from the snapshot and use
     the execution channels and corresponding REST endpoints for individual fills.
+
+    Before a planned close (a server restart, or the connection reaching its maximum age) the
+    server may send a `disconnectNotice` message. The connection is then closed with code `1012`
+    no sooner than `closeInMs` after the notice. Use that time to open a new connection and
+    resubscribe. Unplanned closes, such as `1013` or `4029`, are not preceded by a notice.
+    The server can add message types: ignore any `type` you don't recognise.
 
     Asset oracle price updates may omit intermediate ticks when a client falls behind, while
     delivering the latest value per asset. Candle updates (`/v2/candles/{symbol}/{resolution}`)
@@ -96,6 +102,8 @@ channels:
         $ref: '#/components/messages/UnsubscribedMessage'
       errorMessage:
         $ref: '#/components/messages/ErrorMessage'
+      disconnectNoticeMessage:
+        $ref: '#/components/messages/DisconnectNoticeMessage'
     bindings:
       ws: {}
 
@@ -547,6 +555,19 @@ operations:
       - $ref: '#/channels/control/messages/errorMessage'
     summary: Receive error messages
 
+  receiveDisconnectNotice:
+    action: receive
+    channel:
+      $ref: '#/channels/control'
+    messages:
+      - $ref: '#/channels/control/messages/disconnectNoticeMessage'
+    summary: Receive notice of a planned disconnect
+    description: |
+      Sent once per connection before a planned close: a server restart (`SERVER_RESTART`) or the
+      connection reaching its maximum age (`MAX_CONNECTION_AGE`). The server closes the connection
+      with code `1012` no sooner than `closeInMs` after this message. Open a new connection and
+      resubscribe before then. The message has no `channel` field.
+
   receivePerpMarketsSummary:
     action: receive
     channel:
@@ -954,6 +975,13 @@ components:
       payload:
         $ref: '#/components/schemas/ErrorMessagePayload'
 
+    DisconnectNoticeMessage:
+      name: disconnectNotice
+      title: Disconnect Notice Message
+      summary: Notice that the server will close this connection soon
+      payload:
+        $ref: '#/components/schemas/DisconnectNoticeMessagePayload'
+
   parameters:
     Symbol:
       description: Trading symbol (e.g., BTCRUSDPERP, ETHRUSD)
@@ -982,6 +1010,12 @@ components:
       enum:
         - pong
       description: Message type for pong messages
+
+    DisconnectNoticeMessageType:
+      type: string
+      enum:
+        - disconnectNotice
+      description: Message type for disconnect notices
 
     SubscribeMessageType:
       type: string
@@ -1762,6 +1796,35 @@ components:
           example: 1747927089946
       required:
         - type
+
+    DisconnectNoticeMessagePayload:
+      type: object
+      title: DisconnectNoticeMessagePayload
+      additionalProperties: false
+      required:
+        - type
+        - reason
+        - closeInMs
+        - timestamp
+      properties:
+        type:
+          $ref: '#/components/schemas/DisconnectNoticeMessageType'
+        reason:
+          type: string
+          enum:
+            - SERVER_RESTART
+            - MAX_CONNECTION_AGE
+          description: Why the connection will be closed.
+          example: SERVER_RESTART
+        closeInMs:
+          type: integer
+          minimum: 1
+          description: The earliest the server closes the connection, in milliseconds after this message.
+          example: 15000
+        timestamp:
+          type: integer
+          description: When the server sent the notice, in milliseconds since the Unix epoch.
+          example: 1747927089946
 
     PongMessagePayload:
       type: object
