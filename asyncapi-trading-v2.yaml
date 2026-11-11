@@ -21,7 +21,8 @@ info:
     Before a planned close (a server restart, or the connection reaching its maximum age) the
     server may send a `disconnectNotice` message. The connection is then closed with code `1012`
     no sooner than `closeInMs` after the notice. Use that time to open a new connection and
-    resubscribe. Unplanned closes, such as `1013` or `4029`, are not preceded by a notice.
+    resubscribe. Unplanned closes are not preceded by a notice: `1013`, `4029`, and a `1012`
+    from a feed resync or an emergency restart.
     The server can add message types: ignore any `type` you don't recognise.
 
     Asset oracle price updates may omit intermediate ticks when a client falls behind, while
