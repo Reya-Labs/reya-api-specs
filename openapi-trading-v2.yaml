@@ -1343,6 +1343,10 @@ paths:
 
         The revoke comes first, so no key is granted without a stored way to remove it.
 
+        The owner must own a Reya account (`TRADING_KEY_OTHER_ERROR` otherwise) and can
+        register at most 20 new keys in 24 hours (`RATE_LIMITED_ERROR`, with
+        `retryAfterMs`). Registering the same active key again does not count.
+
         **Slots**
 
         An owner has four slots, one per browser. The key takes the slot the request names,
