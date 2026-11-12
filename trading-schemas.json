@@ -3689,6 +3689,72 @@
       ],
       "description": "Core account permission. `TRANSFER` allows transfers out of the account to other accounts of the same owner; `WITHDRAW` allows withdrawals; `DUTCH_LIQUIDATION` allows taking Dutch liquidations with the account; `ADMIN` includes every permission. POST /v2/setAccountPermission grants only `TRANSFER` and revokes any of them."
     },
+    "AccountPermissionGrant": {
+      "title": "AccountPermissionGrant",
+      "type": "object",
+      "required": [
+        "accountId",
+        "permissions"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the permissions apply to.",
+          "example": 12345
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Core permissions the wallet holds on this account.",
+          "items": {
+            "$ref": "#/definitions/AccountPermission"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWallet": {
+      "title": "ApiWallet",
+      "type": "object",
+      "description": "A wallet that can act for an owner. See GET /v2/wallet/{address}/apiWallets.",
+      "required": [
+        "address",
+        "trading",
+        "accountPermissions"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "trading": {
+          "type": "boolean",
+          "description": "Whether the wallet can sign orders for all of the owner's accounts (POST /v2/setTradingPermission)."
+        },
+        "accountPermissions": {
+          "type": "array",
+          "description": "Core permissions held on the owner's accounts; empty when the wallet only trades.",
+          "items": {
+            "$ref": "#/definitions/AccountPermissionGrant"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWalletList": {
+      "title": "ApiWalletList",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ApiWallet"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     "SetTradingPermissionRequest": {
       "title": "SetTradingPermissionRequest",
       "type": "object",
