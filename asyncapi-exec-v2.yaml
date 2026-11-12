@@ -24,7 +24,8 @@ info:
     still processed for `closeInMs` after it; after that they are rejected with
     `SERVER_SHUTTING_DOWN`, and the connection is closed with code `1001` once requests in
     flight have finished or a short wait has passed. Open a new connection and move order
-    traffic to it before then; reconcile any request left unanswered at the close.
+    traffic to it before then; reconcile any request left unanswered at the close. A server
+    fault can start the `SERVER_SHUTTING_DOWN` rejections before `closeInMs` has passed.
     The server can add message types: ignore any `type` you don't recognise.
 
     **Cancel-on-disconnect.** A WebSocket close does not cancel orders or fire an armed
@@ -254,8 +255,8 @@ operations:
       - $ref: '#/channels/operations/messages/disconnectNoticeMessage'
     summary: Receive notice of a planned disconnect
     description: |
-      Sent once per connection before a server restart. Requests are still processed for
-      `closeInMs` after this message; after that the server rejects new requests with
+      Sent at most once per connection before a server restart. Requests are normally still
+      processed for `closeInMs` after this message; after that the server rejects new requests with
       `SERVER_SHUTTING_DOWN` and closes the connection with code `1001` once requests in flight
       have finished or a short wait has passed. It is not a reply, so it carries no `id`.
 components:
@@ -711,7 +712,7 @@ components:
         closeInMs:
           type: integer
           minimum: 1
-          description: How long requests are still processed, in milliseconds after this message.
+          description: How long requests are normally still processed, in milliseconds after the server sent this message (`timestamp`), not after you receive it. Allow for network delay.
           example: 15000
         timestamp:
           type: integer

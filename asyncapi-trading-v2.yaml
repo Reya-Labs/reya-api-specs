@@ -21,8 +21,11 @@ info:
     Before a planned close (a server restart, or the connection reaching its maximum age) the
     server may send a `disconnectNotice` message. The connection is then closed with code `1012`
     no sooner than `closeInMs` after the notice. Use that time to open a new connection and
-    resubscribe. Unplanned closes are not preceded by a notice: `1013`, `4029`, and a `1012`
-    from a feed resync or an emergency restart.
+    resubscribe. While both connections are open, the same wallet fill can arrive on each:
+    deduplicate fills by `fillId`. Unplanned closes are not preceded by a notice: `1013`,
+    `4029`, and a `1012` from a feed resync or an emergency restart. An unplanned close can
+    still come during the notice period, before the planned one: key recovery on the close code
+    you receive.
     The server can add message types: ignore any `type` you don't recognise.
 
     Asset oracle price updates may omit intermediate ticks when a client falls behind, while
@@ -564,10 +567,10 @@ operations:
       - $ref: '#/channels/control/messages/disconnectNoticeMessage'
     summary: Receive notice of a planned disconnect
     description: |
-      Sent once per connection before a planned close: a server restart (`SERVER_RESTART`) or the
-      connection reaching its maximum age (`MAX_CONNECTION_AGE`). The server closes the connection
-      with code `1012` no sooner than `closeInMs` after this message. Open a new connection and
-      resubscribe before then. The message has no `channel` field.
+      Sent at most once per connection before a planned close: a server restart
+      (`SERVER_RESTART`) or the connection reaching its maximum age (`MAX_CONNECTION_AGE`). The
+      server closes the connection with code `1012` no sooner than `closeInMs` after this message.
+      Open a new connection and resubscribe before then. The message has no `channel` field.
 
   receivePerpMarketsSummary:
     action: receive
@@ -1820,7 +1823,7 @@ components:
         closeInMs:
           type: integer
           minimum: 1
-          description: The earliest the server closes the connection, in milliseconds after this message.
+          description: The earliest the server closes the connection, in milliseconds after it sent this message (`timestamp`), not after you receive it. Allow for network delay.
           example: 15000
         timestamp:
           type: integer
