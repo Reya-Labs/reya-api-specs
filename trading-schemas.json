@@ -3947,7 +3947,9 @@
         "ownerWallet",
         "tradingKey",
         "revokeDeadline",
-        "revokeSignature"
+        "revokeSignature",
+        "keyDeadline",
+        "keySignature"
       ],
       "properties": {
         "ownerWallet": {
@@ -3973,6 +3975,16 @@
         "revokeSignature": {
           "type": "string",
           "description": "The owner's EIP-712 `ManagePermissionBySig(uint256 verifyingChainId,address owner,address target,bool permissionState,uint256 deadline)` signature with `target` = `tradingKey`, `permissionState` = false and `deadline` = `revokeDeadline`, under the OrdersGateway domain. Stored server-side and never returned.",
+          "example": "0x1234..."
+        },
+        "keyDeadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Deadline of `keySignature`, at most 60 seconds ahead.",
+          "example": 1676923200
+        },
+        "keySignature": {
+          "type": "string",
+          "description": "EIP-712 signature by `tradingKey` over `RegisterTradingKey(uint64 verifyingChainId,uint64 deadline,address owner,address tradingKey)` with `deadline` = `keyDeadline`, under the same domain as order signatures. Proves the browser holds the key, so no one can register, and so retire, a key that is not theirs.",
           "example": "0x1234..."
         }
       },

@@ -1336,7 +1336,8 @@ paths:
         1. The app generates a random key in the browser.
         2. The owner signs a revoke of that key (`ManagePermissionBySig` with
            `permissionState` false) with a deadline at least 365 days ahead, and the app
-           sends it here. Reya stores it and never returns it.
+           sends it here with the key's own signature of the request (`keySignature`, no
+           wallet prompt). Reya stores the revoke and never returns it.
         3. The owner signs a grant of the key (`permissionState` true, a short deadline),
            relayed on-chain as for any API wallet.
 
@@ -1350,7 +1351,8 @@ paths:
 
         **Retired keys**
 
-        Requests signed by a retired key are rejected with `TRADING_KEY_RETIRED_ERROR`. Its
+        Requests signed by a retired key are rejected with `TRADING_KEY_RETIRED_ERROR`, and a
+        retired key is never registered again, even once revoked. Its
         resting orders, armed stops and running strategies keep working; Reya submits its
         stored revoke once it has none left and no fill waiting to settle. Any key of the
         account can still modify or cancel those orders.
