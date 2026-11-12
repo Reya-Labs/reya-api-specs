@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.7.14
+  version: 3.7.15
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -1021,6 +1021,14 @@ components:
         - disconnectNotice
       description: Message type for disconnect notices
 
+    DisconnectNoticeReason:
+      type: string
+      enum:
+        - SERVER_RESTART
+        - MAX_CONNECTION_AGE
+      description: Why the connection will be closed.
+      example: SERVER_RESTART
+
     SubscribeMessageType:
       type: string
       enum:
@@ -1814,12 +1822,7 @@ components:
         type:
           $ref: '#/components/schemas/DisconnectNoticeMessageType'
         reason:
-          type: string
-          enum:
-            - SERVER_RESTART
-            - MAX_CONNECTION_AGE
-          description: Why the connection will be closed.
-          example: SERVER_RESTART
+          $ref: '#/components/schemas/DisconnectNoticeReason'
         closeInMs:
           type: integer
           minimum: 1
