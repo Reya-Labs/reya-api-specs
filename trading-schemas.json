@@ -97,7 +97,9 @@
         "OPEN_ORDER_NOTIONAL_EXCEEDED_ERROR",
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
-        "ACCOUNT_SUSPENDED_ERROR"
+        "ACCOUNT_SUSPENDED_ERROR",
+        "TRADING_KEY_RETIRED_ERROR",
+        "TRADING_KEY_OTHER_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance. For an HTTP 503 on a read endpoint, retry the same request after backing off; no signature, nonce or clientOrderId is involved."
     },
@@ -3491,7 +3493,7 @@
         },
         "signerWallet": {
           "$ref": "#/definitions/Address",
-          "description": "Address of the signer that produced the EIP-712 signature. Not modifiable; must match the resting order's signer."
+          "description": "Address of the signer that produced the EIP-712 signature: the account's owner or any key it allows to trade. A modify by another key moves the order to that key (its signature, nonce and client order ID namespace). Another key's order is addressed by `orderId`, since a `clientOrderId` is unique per signer."
         },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -3842,6 +3844,177 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Advisory Unix timestamp in milliseconds at which the countdown will fire unless refreshed or disarmed. The countdown starts when the request is accepted, using the requested `timeoutMs`. Use this timestamp for display and schedule refreshes well before expiry. Omitted when `timeoutMs` is `0`.",
           "example": 1747927119946
+        }
+      },
+      "additionalProperties": true
+    },
+    "TradingKeyStatus": {
+      "title": "TradingKeyStatus",
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "RETIRED",
+        "REVOKED"
+      ],
+      "description": "Lifecycle of a registered trading key. `ACTIVE`: holds a slot and may sign once granted. `RETIRED`: logged out or displaced from its slot; requests it signs are rejected with `TRADING_KEY_RETIRED_ERROR`, while orders and strategies it already placed keep running until its stored revoke is submitted. `REVOKED`: its trading permission was revoked on-chain."
+    },
+    "RegisterTradingKeyRequest": {
+      "title": "RegisterTradingKeyRequest",
+      "description": "Register a trading key held by a browser for one-click trading, together with the owner's pre-signed revoke of that key. See POST /v2/tradingKeys.",
+      "type": "object",
+      "required": [
+        "ownerWallet",
+        "tradingKey",
+        "revokeDeadline",
+        "revokeSignature"
+      ],
+      "properties": {
+        "ownerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "The account owner's wallet, which signed `revokeSignature`."
+        },
+        "tradingKey": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the trading key being registered. Must differ from `ownerWallet`."
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "The slot this browser held before, if it remembers one. Omit on a browser's first registration. The response gives the slot assigned.",
+          "example": 0
+        },
+        "revokeDeadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Deadline signed into the revoke; at least 365 days ahead.",
+          "example": 1810000000
+        },
+        "revokeSignature": {
+          "type": "string",
+          "description": "The owner's EIP-712 `ManagePermissionBySig(uint256 verifyingChainId,address owner,address target,bool permissionState,uint256 deadline)` signature with `target` = `tradingKey`, `permissionState` = false and `deadline` = `revokeDeadline`, under the OrdersGateway domain. Stored server-side and never returned.",
+          "example": "0x1234..."
+        }
+      },
+      "additionalProperties": true
+    },
+    "RegisterTradingKeyResponse": {
+      "title": "RegisterTradingKeyResponse",
+      "type": "object",
+      "required": [
+        "tradingKey",
+        "slot",
+        "retiredTradingKeys"
+      ],
+      "properties": {
+        "tradingKey": {
+          "$ref": "#/definitions/Address",
+          "description": "The registered key, echoed from the request."
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "The slot assigned. Store it in the browser and send it as `slot` next time.",
+          "example": 0
+        },
+        "retiredTradingKeys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Address"
+          },
+          "description": "Keys this registration displaced from the slot, now `RETIRED`."
+        }
+      },
+      "additionalProperties": true
+    },
+    "RetireTradingKeyRequest": {
+      "title": "RetireTradingKeyRequest",
+      "description": "Retire a trading key, signed by that key: on log-out. See POST /v2/tradingKeys/retire.",
+      "type": "object",
+      "required": [
+        "ownerWallet",
+        "tradingKey",
+        "deadline",
+        "signature"
+      ],
+      "properties": {
+        "ownerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "The owner the key was registered for."
+        },
+        "tradingKey": {
+          "$ref": "#/definitions/Address",
+          "description": "The key to retire; it signs this request."
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Signature-validity deadline, at most 60 seconds ahead.",
+          "example": 1676923200
+        },
+        "signature": {
+          "type": "string",
+          "description": "EIP-712 signature by `tradingKey` over `RetireTradingKey(uint64 verifyingChainId,uint64 deadline,address owner,address tradingKey)`, under the same domain as order signatures.",
+          "example": "0x1234..."
+        }
+      },
+      "additionalProperties": true
+    },
+    "RetireTradingKeyResponse": {
+      "title": "RetireTradingKeyResponse",
+      "type": "object",
+      "required": [
+        "tradingKey",
+        "status"
+      ],
+      "properties": {
+        "tradingKey": {
+          "$ref": "#/definitions/Address",
+          "description": "The key, echoed from the request."
+        },
+        "status": {
+          "$ref": "#/definitions/TradingKeyStatus",
+          "description": "`RETIRED`, or `REVOKED` if it was already revoked. Retiring a retired key succeeds again."
+        }
+      },
+      "additionalProperties": true
+    },
+    "TradingKey": {
+      "title": "TradingKey",
+      "type": "object",
+      "required": [
+        "tradingKey",
+        "status",
+        "registeredAt"
+      ],
+      "properties": {
+        "tradingKey": {
+          "$ref": "#/definitions/Address",
+          "description": "The key's address."
+        },
+        "status": {
+          "$ref": "#/definitions/TradingKeyStatus"
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "The slot an `ACTIVE` key holds. Omitted otherwise."
+        },
+        "registeredAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix milliseconds."
+        },
+        "lastUsedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix milliseconds of the last accepted request it signed. Omitted if none."
+        },
+        "retiredAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix milliseconds. Present once `RETIRED` or `REVOKED`."
+        },
+        "revokedAt": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix milliseconds. Present once `REVOKED`."
         }
       },
       "additionalProperties": true

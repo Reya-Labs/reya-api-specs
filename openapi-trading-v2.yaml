@@ -1288,6 +1288,113 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /wallet/{address}/tradingKeys:
+    get:
+      summary: Get a wallet's trading keys
+      description: |
+        Trading keys registered for one-click trading under this owner wallet, newest first:
+        the active ones (at most one per slot, four slots) and those retired or revoked. Use
+        it for a devices list. See `POST /v2/tradingKeys` for the lifecycle.
+      operationId: getWalletTradingKeys
+      tags:
+        - Trading Keys
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+      responses:
+        '200':
+          description: The wallet's trading keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TradingKey'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tradingKeys:
+    post:
+      summary: Register a trading key
+      description: |
+        Register a trading key a browser holds for one-click trading. The key signs orders
+        locally once the owner has granted it trading permission.
+
+        **Enabling one-click trading**
+
+        1. The app generates a random key in the browser.
+        2. The owner signs a revoke of that key (`ManagePermissionBySig` with
+           `permissionState` false) with a deadline at least 365 days ahead, and the app
+           sends it here. Reya stores it and never returns it.
+        3. The owner signs a grant of the key (`permissionState` true, a short deadline),
+           relayed on-chain as for any API wallet.
+
+        The revoke comes first, so no key is granted without a stored way to remove it.
+
+        **Slots**
+
+        An owner has four slots, one per browser. The key takes the slot the request names,
+        else an empty one, else the one used least recently. A key it displaces becomes
+        `RETIRED` and is listed in `retiredTradingKeys`.
+
+        **Retired keys**
+
+        Requests signed by a retired key are rejected with `TRADING_KEY_RETIRED_ERROR`. Its
+        resting orders, armed stops and running strategies keep working; Reya submits its
+        stored revoke once it has none left and no fill waiting to settle. Any key of the
+        account can still modify or cancel those orders.
+      operationId: registerTradingKey
+      tags:
+        - Trading Keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterTradingKeyRequest'
+      responses:
+        '200':
+          description: The registered key and its slot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterTradingKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tradingKeys/retire:
+    post:
+      summary: Retire a trading key
+      description: |
+        Retire a trading key on log-out, signed by the key itself, so no wallet prompt is
+        needed. From then on requests it signs are rejected with
+        `TRADING_KEY_RETIRED_ERROR`; what it already placed keeps working until its stored
+        revoke is submitted (see `POST /v2/tradingKeys`). Retiring a retired key succeeds
+        again.
+      operationId: retireTradingKey
+      tags:
+        - Trading Keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetireTradingKeyRequest'
+      responses:
+        '200':
+          description: The key's status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetireTradingKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   parameters:
     AccountIdFilterParam:
@@ -1527,6 +1634,21 @@ components:
     WalletConfiguration:
       $ref: './trading-schemas.json#/definitions/WalletConfiguration'
 
+    TradingKey:
+      $ref: './trading-schemas.json#/definitions/TradingKey'
+
+    RegisterTradingKeyRequest:
+      $ref: './trading-schemas.json#/definitions/RegisterTradingKeyRequest'
+
+    RegisterTradingKeyResponse:
+      $ref: './trading-schemas.json#/definitions/RegisterTradingKeyResponse'
+
+    RetireTradingKeyRequest:
+      $ref: './trading-schemas.json#/definitions/RetireTradingKeyRequest'
+
+    RetireTradingKeyResponse:
+      $ref: './trading-schemas.json#/definitions/RetireTradingKeyResponse'
+
     MarketSummary:
       $ref: './trading-schemas.json#/definitions/MarketSummary'
 
@@ -1651,9 +1773,13 @@ components:
           range, or price/quantity is invalid for the market. Check price increments and
           quantity limits.
         - `UNAUTHORIZED_SIGNATURE_ERROR`: the signature is invalid or unauthorized.
-          `UNAUTHORIZED_ACCOUNT_ERROR`: the signer is not permitted to act on the target
-          order. For an armed protective stop, modify and cancel require the signer that
-          created it.
+          `UNAUTHORIZED_ACCOUNT_ERROR`: the signer is not permitted to trade the target
+          order's account. Any key the account allows may modify or cancel its orders,
+          protective stops included; a modify by another key moves the order to that key.
+        - `TRADING_KEY_RETIRED_ERROR`: the signing trading key was retired (logged out or
+          displaced from its slot). Sign with the browser's current key, or enable one-click
+          trading again. `TRADING_KEY_OTHER_ERROR`: registering or retiring a trading key
+          failed for another reason; see `message`.
         - `INVALID_NONCE_ERROR`: use a fresh, monotonically increasing nonce for the signer
           and re-sign.
         - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the signature's
@@ -1667,7 +1793,8 @@ components:
           the market, for example a `PREOPEN` one. Check the market's `status` before
           submitting again.
         - `DUPLICATE_CLIENT_ORDER_ID_ERROR`: the client ID belongs to a live order.
-          Reconcile that order before submitting another.
+          Reconcile that order before submitting another. On a modify by another key of the
+          account, that key already uses the order's client ID.
         - `ORDER_NOT_FOUND_ERROR`: the target order was not found. Refresh its state before
           retrying.
         - `EMPTY_MODIFY_ERROR`: a LIMIT modification makes no change. An armed trigger may
@@ -1875,3 +2002,7 @@ tags:
       signed `expiresAfter` to allow settlement. Explicit `cancelAll` includes fired
       children and reports `MASS_CANCEL`; cancel-all-after leaves armed protective stops
       and their fired children in place.
+  - name: Trading Keys
+    description: |
+      Keys a browser holds for one-click trading: register one with the owner's stored
+      revoke, retire it on log-out, and list a wallet's keys.
