@@ -1288,27 +1288,37 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /wallet/{address}/tradingKeys:
+  /wallet/{address}/apiWallets:
     get:
-      summary: Get a wallet's trading keys
+      summary: Get wallet API wallets and permissions
       description: |
-        Trading keys registered for one-click trading under this owner wallet, newest first:
-        the active ones (at most one per slot, four slots) and those retired or revoked. Use
-        it for a devices list. See `POST /v2/tradingKeys` for the lifecycle.
-      operationId: getWalletTradingKeys
+        Lists the wallets that can act for an owner wallet:
+
+        - API wallets that can sign orders for all of the owner's accounts (`trading`), granted
+          on-chain by the owner (`ManagePermissionBySig`).
+        - Wallets holding Core permissions on the owner's accounts (`accountPermissions`).
+          `ADMIN` includes every permission.
+
+        A browser trading key registered with `POST /v2/tradingKeys` carries `tradingKey`:
+        whether it is `ACTIVE` in a slot or `RETIRED`. A retired key stays listed while it
+        holds trading permission, until Reya submits its stored revoke; use this for a
+        devices list.
+
+        The owner itself is not listed. Trading permissions come from indexed chain events and
+        account permissions are read from the chain on each request; an account created in
+        the last few seconds may not be included yet.
+      operationId: getWalletApiWallets
       tags:
-        - Trading Keys
+        - Wallet Data
       parameters:
         - $ref: '#/components/parameters/AddressParam'
       responses:
         '200':
-          description: The wallet's trading keys
+          description: Wallets that can act for the owner
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TradingKey'
+                $ref: '#/components/schemas/ApiWalletList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -1634,8 +1644,11 @@ components:
     WalletConfiguration:
       $ref: './trading-schemas.json#/definitions/WalletConfiguration'
 
-    TradingKey:
-      $ref: './trading-schemas.json#/definitions/TradingKey'
+    ApiWallet:
+      $ref: './trading-schemas.json#/definitions/ApiWallet'
+
+    ApiWalletList:
+      $ref: './trading-schemas.json#/definitions/ApiWalletList'
 
     RegisterTradingKeyRequest:
       $ref: './trading-schemas.json#/definitions/RegisterTradingKeyRequest'
@@ -2005,4 +2018,5 @@ tags:
   - name: Trading Keys
     description: |
       Keys a browser holds for one-click trading: register one with the owner's stored
-      revoke, retire it on log-out, and list a wallet's keys.
+      revoke and retire it on log-out. `GET /v2/wallet/{address}/apiWallets` lists them,
+      with each one's status and slot.

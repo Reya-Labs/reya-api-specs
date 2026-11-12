@@ -3856,7 +3856,88 @@
         "RETIRED",
         "REVOKED"
       ],
-      "description": "Lifecycle of a registered trading key. `ACTIVE`: holds a slot and may sign once granted. `RETIRED`: logged out or displaced from its slot; requests it signs are rejected with `TRADING_KEY_RETIRED_ERROR`, while orders and strategies it already placed keep running until its stored revoke is submitted. `REVOKED`: its trading permission was revoked on-chain."
+      "description": "Lifecycle of a registered trading key. `ACTIVE`: holds a slot and may sign once granted. `RETIRED`: logged out or displaced from its slot; requests it signs are rejected with `TRADING_KEY_RETIRED_ERROR`, while orders and strategies it already placed keep running until its stored revoke is submitted. `REVOKED`: its trading permission was revoked on-chain, so GET /v2/wallet/{address}/apiWallets no longer lists it."
+    },
+    "AccountPermission": {
+      "title": "AccountPermission",
+      "type": "string",
+      "enum": [
+        "ADMIN",
+        "WITHDRAW",
+        "TRANSFER",
+        "DUTCH_LIQUIDATION"
+      ],
+      "description": "Core account permission. `TRANSFER` allows transfers out of the account to other accounts of the same owner; `WITHDRAW` allows withdrawals; `DUTCH_LIQUIDATION` allows taking Dutch liquidations with the account; `ADMIN` includes every permission. POST /v2/setAccountPermission grants only `TRANSFER` and revokes any of them."
+    },
+    "AccountPermissionGrant": {
+      "title": "AccountPermissionGrant",
+      "type": "object",
+      "required": [
+        "accountId",
+        "permissions"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account the permissions apply to.",
+          "example": 12345
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Core permissions the wallet holds on this account.",
+          "items": {
+            "$ref": "#/definitions/AccountPermission"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWallet": {
+      "title": "ApiWallet",
+      "type": "object",
+      "description": "A wallet that can act for an owner. See GET /v2/wallet/{address}/apiWallets.",
+      "required": [
+        "address",
+        "trading",
+        "accountPermissions"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "trading": {
+          "type": "boolean",
+          "description": "Whether the owner granted the wallet trading permission: it can sign orders for all of the owner's accounts."
+        },
+        "accountPermissions": {
+          "type": "array",
+          "description": "Core permissions held on the owner's accounts; empty when the wallet only trades.",
+          "items": {
+            "$ref": "#/definitions/AccountPermissionGrant"
+          }
+        },
+        "tradingKey": {
+          "$ref": "#/definitions/TradingKeyDetails",
+          "description": "Present when the wallet is a browser trading key registered with POST /v2/tradingKeys."
+        }
+      },
+      "additionalProperties": true
+    },
+    "ApiWalletList": {
+      "title": "ApiWalletList",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ApiWallet"
+          }
+        }
+      },
+      "additionalProperties": true
     },
     "RegisterTradingKeyRequest": {
       "title": "RegisterTradingKeyRequest",
@@ -3978,21 +4059,18 @@
       },
       "additionalProperties": true
     },
-    "TradingKey": {
-      "title": "TradingKey",
+    "TradingKeyDetails": {
+      "title": "TradingKeyDetails",
       "type": "object",
+      "description": "Details of an API wallet that is a browser trading key registered with POST /v2/tradingKeys.",
       "required": [
-        "tradingKey",
         "status",
         "registeredAt"
       ],
       "properties": {
-        "tradingKey": {
-          "$ref": "#/definitions/Address",
-          "description": "The key's address."
-        },
         "status": {
-          "$ref": "#/definitions/TradingKeyStatus"
+          "$ref": "#/definitions/TradingKeyStatus",
+          "description": "`ACTIVE` or `RETIRED`. A revoked key holds no trading permission and is no longer listed."
         },
         "slot": {
           "type": "integer",
@@ -4010,11 +4088,7 @@
         },
         "retiredAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix milliseconds. Present once `RETIRED` or `REVOKED`."
-        },
-        "revokedAt": {
-          "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix milliseconds. Present once `REVOKED`."
+          "description": "Unix milliseconds. Present once `RETIRED`."
         }
       },
       "additionalProperties": true
