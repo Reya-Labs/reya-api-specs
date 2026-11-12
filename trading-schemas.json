@@ -4084,7 +4084,7 @@
         },
         "lastUsedAt": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix milliseconds of the last accepted request it signed. Omitted if none."
+          "description": "Unix milliseconds of the last request it signed that order entry admitted, recorded to within about 30 seconds. Omitted if none."
         },
         "retiredAt": {
           "$ref": "#/definitions/UnsignedInteger",
