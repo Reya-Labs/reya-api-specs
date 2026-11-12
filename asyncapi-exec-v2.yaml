@@ -445,6 +445,13 @@ components:
         - disconnectNotice
       description: Message type for disconnect notices
 
+    DisconnectNoticeReason:
+      type: string
+      enum:
+        - SERVER_RESTART
+      description: Why the connection will be closed.
+      example: SERVER_RESTART
+
     CreateOrderRequestMessagePayload:
       type: object
       title: CreateOrderRequestMessagePayload
@@ -704,11 +711,7 @@ components:
         type:
           $ref: '#/components/schemas/DisconnectNoticeMessageType'
         reason:
-          type: string
-          enum:
-            - SERVER_RESTART
-          description: Why the connection will be closed.
-          example: SERVER_RESTART
+          $ref: '#/components/schemas/DisconnectNoticeReason'
         closeInMs:
           type: integer
           minimum: 1
