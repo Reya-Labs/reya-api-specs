@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.15
+  version: 3.7.16
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -437,9 +437,9 @@ paths:
         match fills, by block time, and its mark price: the OHLC of the mark sampled once
         a second (a perp's matching-engine mark; a spot market's base asset oracle price),
         else, for a perp, the on-chain mark at the minute's end. Liquidations,
-        auto-deleveraging and market closes are not match fills: no mode, and neither `v`
-        nor `n`, includes them. A longer candle merges its minutes: the first open, the
-        highest high, the lowest low, the last close, and the sums of `v` and `n`.
+        auto-deleveraging and market closes are not match fills: no mode, and none of `v`,
+        `qv` and `n`, includes them. A longer candle merges its minutes: the first open,
+        the highest high, the lowest low, the last close, and the sums of `v`, `qv` and `n`.
 
         `priceSource` chooses the minute's prices:
 
@@ -452,7 +452,8 @@ paths:
         - `mark`: the mark price alone. An interval without any mark is left out, and a
           spot market without an oracle price has no mark candles.
 
-        `v` (base volume) and `n` (trade count) count the interval's match fills.
+        `v` (base volume), `qv` (quote volume: each fill's size times its price) and `n`
+        (trade count) count the interval's match fills.
 
         A market's candles start at its first match fill on the order book. A market in the
         release's catalog (every perp, and each spot market whose base asset has an oracle

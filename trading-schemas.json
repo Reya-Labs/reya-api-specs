@@ -2969,6 +2969,14 @@
           "description": "Array of base volumes: the summed size of the interval's match fills, in the base asset. 0 in an interval without fills.",
           "example": ["12.5", "0", "3.2"]
         },
+        "qv": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnsignedDecimal"
+          },
+          "description": "Array of quote volumes: the summed notional (size times price) of the interval's match fills, in the quote asset. 0 in an interval without fills.",
+          "example": ["31962.5", "0", "8192.11"]
+        },
         "n": {
           "type": "array",
           "items": {
@@ -2984,7 +2992,7 @@
       "title": "Candle",
       "type": "object",
       "description": "One candle as GET /candleHistory/{symbol}/{resolution} serves it with priceSource=merged.",
-      "required": ["t", "o", "h", "l", "c", "v", "n"],
+      "required": ["t", "o", "h", "l", "c", "v", "qv", "n"],
       "properties": {
         "t": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -3015,6 +3023,11 @@
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Base volume of the candle's match fills, in the base asset",
           "example": "3.2"
+        },
+        "qv": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Quote volume of the candle's match fills (each fill's size times its price), in the quote asset",
+          "example": "8192.11"
         },
         "n": {
           "$ref": "#/definitions/UnsignedInteger",
