@@ -791,6 +791,8 @@ paths:
         empty list. A wallet with no accounts returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
         `lastTradeSequenceNumber` is the last execution each valued position includes, so a
         client can tell whether a valuation already reflects a fill it has seen.
+        `leverage` is the leverage the position's initial margin uses, as in
+        GET /wallet/{address}/leverages, or the market's `maxLeverage` without a setting.
 
         Positions are valued with the same inputs and freshness rules as
         GET /wallet/{address}/accountSummaries, and the request returns 503 rather than
@@ -995,6 +997,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WalletConfiguration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /wallet/{address}/leverages:
+    get:
+      summary: Get wallet leverage settings
+      description: |
+        Returns the leverage each of the wallet's perpetual accounts has set per market,
+        ordered by account ID, then symbol.
+
+        - **Rows:** one per account and market with a setting. A market without a row uses
+          the market's `maxLeverage` from GET /marketDefinitions.
+        - **Value:** `leverage` is what the account's initial margin uses on the market: its
+          setting, capped at the market's current `maxLeverage`. If the market's maximum is
+          lowered after the setting was saved, the cap applies; if it is raised again, the
+          saved setting applies again.
+        - **Effect:** a setting raises only the initial margin requirement of that market
+          (notional ÷ leverage). The liquidation margin requirement and liquidation price do
+          not change. Positions also report their leverage in
+          GET /wallet/{address}/positionRisk.
+
+        Pass `accountId` to select one account; an `accountId` the wallet does not own returns
+        an empty list. A wallet with no accounts returns 400 `NO_ACCOUNTS_FOUND_ERROR`.
+      operationId: getWalletLeverages
+      tags:
+        - Wallet Data
+      parameters:
+        - $ref: '#/components/parameters/AddressParam'
+        - $ref: '#/components/parameters/AccountIdFilterParam'
+      responses:
+        '200':
+          description: Leverage settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WalletLeverage'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -1499,6 +1541,8 @@ components:
       $ref: './trading-schemas.json#/definitions/AccountSummary'
     PositionRisk:
       $ref: './trading-schemas.json#/definitions/PositionRisk'
+    WalletLeverage:
+      $ref: './trading-schemas.json#/definitions/WalletLeverage'
     TriggerOrderType:
       $ref: './trading-schemas.json#/definitions/TriggerOrderType'
     LimitOrderType:
