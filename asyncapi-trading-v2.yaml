@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Reya DEX Trading WebSocket API v2
-  version: 3.7.15
+  version: 3.7.16
   description: |
     Real-time market data, order, position, and execution updates for Reya Network.
 
@@ -401,9 +401,9 @@ channels:
       carries only the accounts that were recalculated, so an account missing from a frame
       is unchanged, not removed.
 
-      An account is recalculated when its balances, positions or settlement trackers change,
-      or when the mark of a market it holds or the price of collateral it holds moves; at
-      most about once per second per account.
+      An account is recalculated when its balances, positions, settlement trackers or
+      leverage settings change, or when the mark of a market it holds or the price of
+      collateral it holds moves; at most about once per second per account.
 
       Figures are never partial. If any of the wallet's accounts cannot be valued (for
       example, a mark older than 60 seconds), the subscription fails with an error frame;

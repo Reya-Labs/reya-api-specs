@@ -659,7 +659,7 @@
           ]
         },
         "initialMarginRequirement": {
-          "description": "Initial margin required by settled positions.",
+          "description": "Initial margin required by settled positions, at the leverage the account uses on each market (see GET /wallet/{address}/leverages).",
           "example": "65",
           "allOf": [
             {
@@ -718,6 +718,40 @@
       },
       "additionalProperties": true
     },
+    "WalletLeverage": {
+      "title": "WalletLeverage",
+      "type": "object",
+      "description": "An account's leverage setting on a perpetual market. See GET /wallet/{address}/leverages.",
+      "required": [
+        "accountId",
+        "symbol",
+        "leverage"
+      ],
+      "properties": {
+        "accountId": {
+          "description": "Perpetual margin account ID.",
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "leverage": {
+          "description": "Leverage the account's initial margin uses on this market: its setting, capped at the market's current maxLeverage.",
+          "example": 10,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
     "PositionRisk": {
       "title": "PositionRisk",
       "type": "object",
@@ -735,6 +769,8 @@
         "fundingSinceChange",
         "fundingSinceOpen",
         "liquidationMarginRequirement",
+        "initialMarginRequirement",
+        "leverage",
         "liquidationPrice",
         "hasCorrelatedCollateral",
         "updatedAt",
@@ -825,6 +861,24 @@
           "allOf": [
             {
               "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "initialMarginRequirement": {
+          "description": "This position's initial margin requirement, in rUSD: what it needs at its leverage. Rounded up per position, so a wallet's positions can sum to slightly more than the account's initialMarginRequirement, which is rounded once.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "leverage": {
+          "description": "Leverage the account's initial margin uses on this market: the account's setting from GET /wallet/{address}/leverages, capped at the market's maxLeverage, or the market's maxLeverage when the account has no setting.",
+          "example": 10,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
             }
           ]
         },
