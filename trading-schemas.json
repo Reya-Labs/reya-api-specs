@@ -769,6 +769,7 @@
         "fundingSinceChange",
         "fundingSinceOpen",
         "liquidationMarginRequirement",
+        "initialMarginRequirement",
         "leverage",
         "liquidationPrice",
         "hasCorrelatedCollateral",
@@ -857,6 +858,15 @@
         "liquidationMarginRequirement": {
           "description": "This position's liquidation margin requirement, in rUSD.",
           "example": "50",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "initialMarginRequirement": {
+          "description": "This position's initial margin requirement, in rUSD: what it needs at its leverage. Rounded up per position, so a wallet's positions can sum to slightly more than the account's initialMarginRequirement, which is rounded once.",
+          "example": "100",
           "allOf": [
             {
               "$ref": "#/definitions/UnsignedDecimal"
