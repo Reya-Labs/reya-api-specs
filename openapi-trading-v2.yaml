@@ -1371,17 +1371,23 @@ paths:
           until its deadline, so keep deadlines short.
         - Each signed payload is accepted once. A second submission of the same payload,
           by anyone, returns `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`, including after the
-          first was rejected on chain. To apply the same leverage again, sign a new payload
-          with a new `deadline`. A request that returns `SERVICE_UNAVAILABLE_ERROR` or
-          `LEVERAGE_UPDATE_IN_PROGRESS_ERROR` was not submitted and can be retried unchanged.
+          first was rejected (for example with `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`, whose
+          message then asks for a new signature). To apply the same leverage again, sign a
+          new payload with a new `deadline`. A request that returns
+          `SERVICE_UNAVAILABLE_ERROR` or `LEVERAGE_UPDATE_IN_PROGRESS_ERROR` was not
+          submitted and can be retried unchanged, unless its message asks for a new
+          signature.
 
         **Execution**
 
         - The API applies the update on chain and responds once the transaction is mined;
           the response carries its `txHash`. Order checks use the new setting within
           seconds.
-        - One update per account is processed at a time. A request while another for the
-          same account is pending returns `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`.
+        - One update per account is processed at a time, and updates for an account are
+          applied in the order the API accepts them. A request while another for the same
+          account is pending, or while one whose outcome is unknown can still be applied
+          (until its `deadline`, plus a minute), returns
+          `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`.
         - An update that raises the market's initial margin requirement for the account (a
           lower leverage than the one in effect) on a market the account has traded must
           leave the account at or above its initial margin requirement; otherwise it returns
@@ -1410,8 +1416,9 @@ paths:
         - `SERVICE_UNAVAILABLE_ERROR`: the update was not submitted. Retry after backing off.
         - `ORDER_OUTCOME_UNKNOWN_ERROR`: the update was submitted but its outcome could not
           be confirmed, and it may still be applied. Check GET /wallet/{address}/leverages
-          before signing another update; until the outcome is settled (at most 70 seconds),
-          further updates for the account return `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`.
+          before signing another update. Until that update's `deadline` has passed (plus a
+          minute), further updates for the account return
+          `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`.
         - `UPDATE_LEVERAGE_OTHER_ERROR`: the update was rejected for another reason.
       operationId: updateLeverage
       tags:
@@ -1834,8 +1841,8 @@ components:
           setting, for example because the account is blocked from leverage settings or
           has traded in another collateral pool. Retrying unchanged does not help.
         - `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`: another leverage update for the account is
-          pending, or one whose outcome is unknown is still settling (at most 70 seconds).
-          Check GET /wallet/{address}/leverages, then retry.
+          pending, or one whose outcome is unknown can still be applied (until its
+          `deadline`, plus a minute). Check GET /wallet/{address}/leverages, then retry.
         - `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`: the signed leverage update was submitted
           before; each signed payload is accepted once. Sign a new one.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
