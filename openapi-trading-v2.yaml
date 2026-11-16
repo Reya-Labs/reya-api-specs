@@ -1920,7 +1920,8 @@ components:
           the request (including a full outbound queue). Re-sign with a fresh nonce and
           resubmit, retaining the same `clientOrderId` when supplied. Back off while the
           service remains unavailable. An unchanged nonce may already be below the signer's
-          nonce floor because a later request was accepted.
+          nonce floor because a later request was accepted. `POST /updateLeverage` signs no
+          nonce: retry it unchanged, as that endpoint describes.
         - `ORDER_OUTCOME_UNKNOWN_ERROR`: the transport failed after the request may have
           reached the matching engine. The operation may have been applied. Reconcile open
           orders and executions before resubmitting; never replace an unresolved attempt
@@ -1938,7 +1939,8 @@ components:
 
         Retry policy: retry unchanged after a short delay for
         `CROSSING_ORDERS_TEMPORARILY_UNAVAILABLE_ERROR`; re-sign with a fresh nonce for
-        `SERVICE_UNAVAILABLE_ERROR`; reconcile first for
+        `SERVICE_UNAVAILABLE_ERROR`, except `POST /updateLeverage`, which signs no nonce
+        and is retried unchanged; reconcile first for
         `ORDER_OUTCOME_UNKNOWN_ERROR`; retry
         `RATE_LIMITED_ERROR` after at least `retryAfterMs`; retry `CAPACITY_LIMITED_ERROR`
         using backoff with jitter. Correct validation failures and re-sign where required.
