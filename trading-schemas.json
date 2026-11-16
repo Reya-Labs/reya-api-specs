@@ -98,6 +98,7 @@
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR",
+        "LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR",
         "LEVERAGE_UPDATE_IN_PROGRESS_ERROR",
         "LEVERAGE_NOT_ALLOWED_ERROR",
         "UPDATE_LEVERAGE_OTHER_ERROR"
@@ -3930,7 +3931,6 @@
         "accountId",
         "symbol",
         "leverage",
-        "nonce",
         "deadline",
         "signature",
         "signerWallet"
@@ -3951,20 +3951,14 @@
           "description": "Whole-number leverage from 1 to the market's `maxLeverage`. `maxLeverage` resets the account to the market's default. Other values return INPUT_VALIDATION_ERROR.",
           "example": 10
         },
-        "nonce": {
-          "type": "string",
-          "pattern": "^\\d+$",
-          "description": "Leverage-update nonce for the signer as a decimal string (uint256), separate from order nonces. It must be unused; each nonce can be used once. Signed into SetAccountMarketCustomRisk.",
-          "example": "1747927089946000"
-        },
         "deadline": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Unix seconds. Signature deadline signed into SetAccountMarketCustomRisk and enforced on chain; at most 300 seconds ahead.",
+          "description": "Unix seconds. Signature deadline signed into SetAccountMarketCustomRisk and enforced on chain; at most 300 seconds ahead. The payload has no nonce and stays valid until this deadline; the API accepts each signed payload once.",
           "example": 1747927149
         },
         "signature": {
           "type": "string",
-          "description": "EIP-712 signature over `SetAccountMarketCustomRisk(uint256 verifyingChainId,uint128 accountId,uint128 marketId,int64 customRisk,uint256 nonce,uint256 deadline)`, with the value of `customRisk` computed from `leverage` as described in POST /v2/updateLeverage.",
+          "description": "EIP-712 signature over `SetAccountMarketCustomRisk(uint256 verifyingChainId,uint128 accountId,uint128 marketId,int64 customRisk,uint256 deadline)`, with the value of `customRisk` computed from `leverage` as described in POST /v2/updateLeverage.",
           "example": "0x1234..."
         },
         "signerWallet": {

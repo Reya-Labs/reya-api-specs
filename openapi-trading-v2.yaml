@@ -1359,17 +1359,21 @@ paths:
         **Signature**
 
         Sign the EIP-712 struct
-        `SetAccountMarketCustomRisk(uint256 verifyingChainId,uint128 accountId,uint128 marketId,int64 customRisk,uint256 nonce,uint256 deadline)`
+        `SetAccountMarketCustomRisk(uint256 verifyingChainId,uint128 accountId,uint128 marketId,int64 customRisk,uint256 deadline)`
         with the domain `name` `"Reya"`, `version` `"1"` and `verifyingContract` the orders
         gateway: the same domain as orders, without `chainId`. `verifyingChainId` is the
         Reya chain ID and `marketId` the market's `marketId` from GET /perpMarketDefinitions.
 
         - Signer: the account owner, or a wallet the owner granted trading permission (the
           permission that places orders). It must equal `signerWallet`.
-        - `nonce`: a leverage-update nonce, separate from order nonces. It must be unused,
-          and each nonce can be used once.
         - `deadline`: Unix seconds, at most 300 seconds ahead. It is enforced on chain, so
-          the update must be applied before it.
+          the update must be applied before it. The payload has no nonce: it stays valid
+          until its deadline, so keep deadlines short.
+        - Each signed payload is accepted once. A second submission of the same payload,
+          by anyone, returns `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`, including after the
+          first was rejected on chain. To apply the same leverage again, sign a new payload
+          with a new `deadline`. A request that returns `SERVICE_UNAVAILABLE_ERROR` or
+          `LEVERAGE_UPDATE_IN_PROGRESS_ERROR` was not submitted and can be retried unchanged.
 
         **Execution**
 
@@ -1378,9 +1382,12 @@ paths:
           seconds.
         - One update per account is processed at a time. A request while another for the
           same account is pending returns `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`.
-        - Every update, raising or lowering leverage, must leave the account at or above its
-          initial margin requirement; otherwise it returns
-          `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR` and nothing changes.
+        - An update that raises the market's initial margin requirement for the account (a
+          lower leverage than the one in effect) on a market the account has traded must
+          leave the account at or above its initial margin requirement; otherwise it returns
+          `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR` and nothing changes. Raising leverage, a
+          reset, or a setting on a market the account has never traded is not
+          margin-checked.
 
         **Errors**
 
@@ -1392,10 +1399,11 @@ paths:
         - `UNAUTHORIZED_SIGNATURE_ERROR`: the signature does not recover to `signerWallet`
           over the server-computed `customRisk`, or the signer may not trade for the
           account.
-        - `INVALID_NONCE_ERROR`: the nonce has been used. Re-sign with an unused nonce.
+        - `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`: this signed payload was submitted
+          before. Sign a new one to change leverage again.
         - `LEVERAGE_NOT_ALLOWED_ERROR`: the account or market cannot take a leverage setting.
-        - `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`: the update would leave the account below its
-          initial margin requirement.
+        - `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`: the update raises the account's initial
+          margin requirement above what the account meets.
         - `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`: another update for the account is pending.
           Retry after it completes.
         - `SERVICE_DISABLED_ERROR`: leverage updates are currently disabled.
@@ -1801,7 +1809,7 @@ components:
           order. For an armed protective stop, modify and cancel require the signer that
           created it.
         - `INVALID_NONCE_ERROR`: use a fresh, monotonically increasing nonce for the signer
-          and re-sign. For `updateLeverage`, use any unused leverage-update nonce.
+          and re-sign.
         - `ORDER_DEADLINE_PASSED_ERROR`, `ORDER_DEADLINE_TOO_HIGH_ERROR`: the signature's
           `deadline` has passed or is too far in the future. Correct it and re-sign. This
           deadline controls request acceptance, not the lifetime of an accepted order.
@@ -1828,6 +1836,8 @@ components:
         - `LEVERAGE_UPDATE_IN_PROGRESS_ERROR`: another leverage update for the account is
           pending, or one whose outcome is unknown is still settling (at most 70 seconds).
           Check GET /wallet/{address}/leverages, then retry.
+        - `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`: the signed leverage update was submitted
+          before; each signed payload is accepted once. Sign a new one.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
           code. Use `message` for display or troubleshooting; do not parse it as a stable
           machine-readable contract.
@@ -1838,7 +1848,8 @@ components:
         - `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`: the proposed trade does not meet the
           account's initial-margin or collateral requirements. An account already below
           initial margin may trade only when the trade improves its health. A leverage
-          update must leave the account at or above its initial margin requirement.
+          update that raises the account's initial margin requirement must leave the
+          account at or above it.
         - `INSUFFICIENT_BALANCE_ERROR`: the account cannot fund the order.
         - `OPEN_INTEREST_CAP_ERROR`, `OPEN_INTEREST_BUDGET_ERROR`: the trade exceeds the
           market's available open-interest capacity.
