@@ -403,7 +403,10 @@ channels:
 
       An account is recalculated when its balances, positions, settlement trackers or
       leverage settings change, or when the mark of a market it holds or the price of
-      collateral it holds moves; at most about once per second per account.
+      collateral it holds moves; at most about once per second per account. A change to a
+      market's risk parameters, its `maxLeverage` included, is not a trigger of its own: it
+      applies from the account's next recalculation, which a mark move brings within about
+      a second for an account holding the market.
 
       Figures are never partial. If any of the wallet's accounts cannot be valued (for
       example, a mark older than 60 seconds), the subscription fails with an error frame;
