@@ -98,6 +98,7 @@
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR",
+        "MODIFY_ALREADY_HELD_ERROR",
         "LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR",
         "LEVERAGE_UPDATE_IN_PROGRESS_ERROR",
         "LEVERAGE_NOT_ALLOWED_ERROR",
@@ -3420,7 +3421,7 @@
         },
         "cancelReason": {
           "$ref": "#/definitions/CancelReason",
-          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`, and a self-crossing IOC with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+          "description": "Machine-readable reason the order was cancelled. Present if and only if `status` is `CANCELLED` — e.g. a no-cross IOC returns `status: CANCELLED` with `cancelReason: NO_LIQUIDITY`. An incoming order is never cancelled with `SELF_TRADE_PREVENTION`: that reason is delivered on the account's own resting order it reached. Omitted entirely otherwise."
         },
         "cancelReasonMessage": {
           "type": "string",
@@ -3677,7 +3678,7 @@
         },
         "cancelReason": {
           "$ref": "#/definitions/CancelReason",
-          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED` — for a self-crossing non-post-only modify this is `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
+          "description": "Machine-readable reason the modified order was cancelled. Present if and only if `status` is `CANCELLED`. A modify that reaches the account's own resting orders is not cancelled: those resting orders are, with `SELF_TRADE_PREVENTION`. Omitted entirely otherwise."
         },
         "cancelReasonMessage": {
           "type": "string",
