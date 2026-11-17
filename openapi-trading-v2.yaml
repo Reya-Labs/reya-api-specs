@@ -1015,7 +1015,10 @@ paths:
         - **Value:** `leverage` is what the account's initial margin uses on the market: its
           setting, capped at the market's current `maxLeverage`. If the market's maximum is
           lowered after the setting was saved, the cap applies; if it is raised again, the
-          saved setting applies again.
+          saved setting applies again. The stored value is read back at the market's current
+          `imMultiplier`, so after governance changes the multiplier the leverage shown can
+          differ from the one set, and `initialMarginRequirement` may no longer equal
+          notional ÷ leverage.
         - **Effect:** a setting raises only the initial margin requirement of that market
           (notional ÷ leverage). The liquidation margin requirement and liquidation price do
           not change. Positions also report their leverage in
@@ -1371,8 +1374,9 @@ paths:
           until its deadline, so keep deadlines short.
         - Each signed payload is accepted once. A second submission of the same payload,
           by anyone, returns `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`, including after the
-          first was rejected (for example with `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`). To
-          apply the same leverage again, sign a new payload with a new `deadline`.
+          first was rejected on chain (for example with `ACCOUNT_BELOW_INITIAL_MARGIN_ERROR`).
+          A request rejected before it is relayed (input validation, deadline, signature or
+          permission checks) does not use up the payload. To apply the same leverage again, sign a new payload with a new `deadline`.
         - Retry by error code: a request that returns `SERVICE_UNAVAILABLE_ERROR` or
           `LEVERAGE_UPDATE_IN_PROGRESS_ERROR` was not submitted and can be retried
           unchanged. If that retry returns `LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR`, the

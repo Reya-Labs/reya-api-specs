@@ -745,7 +745,7 @@
           "$ref": "#/definitions/Symbol"
         },
         "leverage": {
-          "description": "Leverage the account's initial margin uses on this market: its setting, capped at the market's current maxLeverage.",
+          "description": "Leverage the account's initial margin uses on this market: its setting, capped at the market's current maxLeverage. The stored value is read back at the market's current imMultiplier, so after governance changes the multiplier this can differ from the leverage that was set.",
           "example": 10,
           "allOf": [
             {
@@ -869,7 +869,7 @@
           ]
         },
         "initialMarginRequirement": {
-          "description": "This position's initial margin requirement, in rUSD: what it needs at its leverage. Rounded up per position, so a wallet's positions can sum to slightly more than the account's initialMarginRequirement, which is rounded once.",
+          "description": "This position's initial margin requirement, in rUSD: what it needs at its leverage. The stored value is read back at the market's current imMultiplier, so after governance changes it this may no longer equal notional ÷ leverage. Rounded up per position, so a wallet's positions can sum to slightly more than the account's initialMarginRequirement, which is rounded once.",
           "example": "100",
           "allOf": [
             {
@@ -878,7 +878,7 @@
           ]
         },
         "leverage": {
-          "description": "Leverage the account's initial margin uses on this market: the account's setting from GET /wallet/{address}/leverages, capped at the market's maxLeverage, or the market's maxLeverage when the account has no setting.",
+          "description": "Leverage the account's initial margin uses on this market: the account's setting from GET /wallet/{address}/leverages, capped at the market's maxLeverage, or the market's maxLeverage when the account has no setting. The stored value is read back at the market's current imMultiplier, so after governance changes the multiplier this can differ from the leverage that was set.",
           "example": 10,
           "allOf": [
             {
