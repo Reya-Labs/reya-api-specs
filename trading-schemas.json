@@ -2677,12 +2677,12 @@
         "liquidationMarginParameter": {
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "Minimum percentage of notional that needs to be covered to avoid liquidation procedures for a given market; below this value, your account is subject to liquidation procedures. When cross margining, all requirements across markets are covered by the same balance, and all positions are subject to liquidations. A floating-point value: do not use it for exact arithmetic.",
-          "example": "0.05"
+          "example": "0.0192307692"
         },
         "initialMarginParameter": {
           "$ref": "#/definitions/UnsignedDecimal",
           "description": "The market's default initial margin rate: the minimum percentage of notional that needs to be covered post trade; if the account does not satisfy this requirement, trades will not get executed. An account's leverage setting can make it stricter for that account (see GET /wallet/{address}/leverages and PositionRisk.initialMarginRequirement). A floating-point value: use `imMultiplier` for exact arithmetic, such as signing a leverage update.",
-          "example": "0.04"
+          "example": "0.025"
         },
         "imMultiplier": {
           "$ref": "#/definitions/UnsignedDecimal",
