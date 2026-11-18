@@ -3315,7 +3315,7 @@
       "not": {
         "anyOf": [
           {
-            "description": "TP/SL requests must omit both fixed Boolean fields, even when false.",
+            "description": "TP/SL requests must omit reduceOnly, postOnly and postOnlyMode, even when false or REJECT.",
             "properties": {
               "orderType": {
                 "$ref": "#/definitions/TriggerOrderType"
@@ -3333,6 +3333,11 @@
               {
                 "required": [
                   "postOnly"
+                ]
+              },
+              {
+                "required": [
+                  "postOnlyMode"
                 ]
               }
             ]

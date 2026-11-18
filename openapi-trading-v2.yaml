@@ -1073,7 +1073,8 @@ paths:
           a buy, best bid plus 1 tick for a sell. The price is set when the order is placed and
           does not follow the book afterwards. An order that would not cross rests at its own
           price. It is always a maker and, like any post-only order, is never delayed by the taker
-          speedbump. Margin and open-order limits are checked at the price the order rests at.
+          speedbump. As for any resting order, margin is checked when it trades, at the price it
+          trades at.
           The order rests and fills at a price at least as good as the one signed.
 
         Example: tick 0.01, best bid 99.95, best ask 100.00. A post-only buy at 100.03 with
