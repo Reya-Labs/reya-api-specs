@@ -123,6 +123,13 @@
       "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel, GTT = Good Till Time)",
       "example": "GTC"
     },
+    "PostOnlyMode": {
+      "title": "PostOnlyMode",
+      "type": "string",
+      "enum": ["REJECT", "SLIDE"],
+      "description": "How a post-only order that would cross the book is handled. `REJECT` (default) rejects it with `POST_ONLY_WOULD_CROSS_ERROR`. `SLIDE` rests it one tick behind the best opposite price instead. See POST /v2/createOrder, Post-only orders.",
+      "example": "REJECT"
+    },
     "OrderType": {
       "title": "OrderType",
       "type": "string",
@@ -491,7 +498,13 @@
         },
         "limitPx": {
           "$ref": "#/definitions/PriceValue",
+          "description": "Price the order rests at. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`.",
           "example": "43000.00"
+        },
+        "signedLimitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Limit price the client signed. Present only when it differs from `limitPx`, i.e. when a `SLIDE` post-only order was repriced. On-chain settlement records the order as signed, so this is the price seen there.",
+          "example": "43000.03"
         },
         "orderType": {
           "$ref": "#/definitions/OrderType"
@@ -523,8 +536,12 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`.",
+          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`. See `postOnlyMode` for how a crossing post-only order is handled.",
           "example": false
+        },
+        "postOnlyMode": {
+          "$ref": "#/definitions/PostOnlyMode",
+          "description": "Post-only mode in force for the order. Present only when `postOnly` is true. Updated by every `modifyOrder`: `REJECT` after a modify that omitted it."
         },
         "status": {
           "$ref": "#/definitions/OrderStatus"
@@ -3257,8 +3274,12 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "Post-only (maker-only) intent for LIMIT GTC/GTT orders; rejected on IOC. Omit for STOP_LOSS/TAKE_PROFIT, including false: triggers sign OrderDetails.postOnly=false. A post-only LIMIT that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR.",
+          "description": "Post-only (maker-only) intent for LIMIT GTC/GTT orders; rejected on IOC. Omit for STOP_LOSS/TAKE_PROFIT, including false: triggers sign OrderDetails.postOnly=false. A post-only LIMIT that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR unless `postOnlyMode` is `SLIDE`.",
           "example": false
+        },
+        "postOnlyMode": {
+          "$ref": "#/definitions/PostOnlyMode",
+          "description": "Optional; defaults to `REJECT`. `SLIDE` rests a crossing post-only order one tick behind the best opposite price instead of rejecting it. Accepted only with `postOnly: true`, otherwise `INPUT_VALIDATION_ERROR`. Not part of the signed order. See POST /v2/createOrder, Post-only orders."
         },
         "signature": {
           "type": "string",
@@ -3540,8 +3561,12 @@
             },
             "postOnly": {
               "type": "boolean",
-              "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged.",
+              "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged unless `postOnlyMode` is `SLIDE`.",
               "example": false
+            },
+            "postOnlyMode": {
+              "$ref": "#/definitions/PostOnlyMode",
+              "description": "Optional; defaults to `REJECT`. Not carried over from the resting order: a modify is handled like a new order, so omitting it means `REJECT`. Accepted only with `postOnly: true`, otherwise `INPUT_VALIDATION_ERROR`. Not part of the signed order. See POST /v2/createOrder, Post-only orders."
             }
           }
         }
@@ -3570,6 +3595,10 @@
             "postOnly": {
               "not": {},
               "description": "Must be omitted for TP/SL, including false. The signed value is reconstructed as false."
+            },
+            "postOnlyMode": {
+              "not": {},
+              "description": "Must be omitted for TP/SL: `postOnlyMode` requires `postOnly: true`."
             }
           }
         }

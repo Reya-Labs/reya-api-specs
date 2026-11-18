@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Reya DEX Trading API v2
-  version: 3.7.17
+  version: 3.7.18
   contact:
     name: Reya Network
     url: https://reya.xyz
@@ -1062,6 +1062,25 @@ paths:
         Stops and their children only reduce positions, even though their signed `reduceOnly`
         field is `false`. They cannot open a new position.
 
+        **Post-only orders.** A post-only order never takes liquidity. The optional `postOnlyMode`
+        (`REJECT` default, or `SLIDE`) sets what happens when its price would cross the book. It
+        is not part of the signed order (the EIP-712 signature is unchanged) and is accepted only
+        with `postOnly: true`; otherwise the request returns `INPUT_VALIDATION_ERROR`.
+
+        - `REJECT` (or absent): a crossing order is rejected with `POST_ONLY_WOULD_CROSS_ERROR`.
+        - `SLIDE`: a buy at or above the best ask (a sell at or below the best bid) is not
+          rejected. It rests one tick behind the best opposite price: best ask minus 1 tick for
+          a buy, best bid plus 1 tick for a sell. The price is set when the order is placed and
+          does not follow the book afterwards. An order that would not cross rests at its own
+          price. It is always a maker and, like any post-only order, is never delayed by the taker
+          speedbump. Margin and open-order limits are checked at the price the order rests at.
+          The order rests and fills at a price at least as good as the one signed.
+
+        Example: tick 0.01, best bid 99.95, best ask 100.00. A post-only buy at 100.03 with
+        `SLIDE` rests at 99.99: the order reports `limitPx` 99.99 and `signedLimitPx` 100.03.
+        On-chain settlement records the order as signed. `postOnlyMode` is reported on post-only
+        orders only.
+
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
 
         **Responses and fill correlation**
@@ -1114,7 +1133,7 @@ paths:
 
         | Order class | Modifiable fields | Requirements |
         | --- | --- | --- |
-        | `LIMIT` | `limitPx`, `qty`, `postOnly`, `expiresAfter` | Omit `triggerPx`. Send total `qty`, strictly greater than `cumQty`; otherwise `MODIFY_QTY_BELOW_FILLED_ERROR`. |
+        | `LIMIT` | `limitPx`, `qty`, `postOnly`, `postOnlyMode`, `expiresAfter` | Omit `triggerPx`. Send total `qty`, strictly greater than `cumQty`; otherwise `MODIFY_QTY_BELOW_FILLED_ERROR`. |
         | Armed `STOP_LOSS` / `TAKE_PROFIT` | `limitPx`, `triggerPx` | Send `triggerPx`; omit `qty` and sign the full-position sentinel `±int256.max`, with sign from `isBuy`. Omit `reduceOnly` and `postOnly`; sign both as `false`. Supplied flags, including `false`, are rejected. |
 
         `exchangeId`, `isBuy`, `orderType`, `timeInForce`, `clientOrderId`,
@@ -1136,8 +1155,13 @@ paths:
           `qty` or changing `limitPx` loses priority.
         - An unchanged LIMIT request returns `EMPTY_MODIFY_ERROR`. An armed stop may
           be re-signed with a fresh `signature`, `nonce`, and `deadline` at unchanged prices.
-        - A post-only modification that would cross returns `POST_ONLY_WOULD_CROSS_ERROR`
-          and leaves the order unchanged. A non-post-only crossing modification can
+        - `postOnlyMode` is not carried over from the resting order. A modification is handled
+          like a new order, so without the field it uses `REJECT`. With `SLIDE`, see
+          `POST /v2/createOrder`, Post-only orders. Queue priority is judged on the price after
+          any repricing: the same price with no `qty` increase keeps the place; anything else
+          goes to the back of the queue at its new price.
+        - A post-only modification that would cross without `SLIDE` returns
+          `POST_ONLY_WOULD_CROSS_ERROR` and leaves the order unchanged. A non-post-only crossing modification can
           execute immediately; the response reports `execQty` and `status`.
         - An order or modification that would take liquidity can be briefly delayed before
           it reaches the book. While a modification of an order is delayed, another
@@ -1686,8 +1710,9 @@ components:
           liquidity and is still being delayed before it reaches the book. Nothing was changed
           and the request's nonce was not used. Wait for the earlier modification's response,
           then send this one again.
-        - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately. Choose a
-          non-crossing price or change the post-only intent and re-sign.
+        - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately and `postOnlyMode`
+          is `REJECT` or absent. Choose a non-crossing price, send `postOnlyMode: SLIDE`, or
+          change the post-only intent and re-sign.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
           code. Use `message` for display or troubleshooting; do not parse it as a stable
           machine-readable contract.
