@@ -541,7 +541,7 @@
         },
         "postOnlyMode": {
           "$ref": "#/definitions/PostOnlyMode",
-          "description": "Post-only mode in force for the order. Present only when `postOnly` is true. Updated by every `modifyOrder`: `REJECT` after a modify that omitted it."
+          "description": "Post-only mode in force for the order. Present only when `postOnly` is true. Updated by every `modifyOrder`: `REJECT` after a modify that omitted it. `orderHistory` rows written before this field existed omit it."
         },
         "status": {
           "$ref": "#/definitions/OrderStatus"
@@ -3350,7 +3350,8 @@
       "type": "object",
       "required": [
         "status",
-        "orderId"
+        "orderId",
+        "limitPx"
       ],
       "properties": {
         "status": {
@@ -3373,7 +3374,7 @@
         },
         "limitPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Price the order rests at after this request. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
+          "description": "Always present. Price the order rests at after this request. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
           "example": "43000.00"
         },
         "signedLimitPx": {
@@ -3625,7 +3626,8 @@
       "type": "object",
       "required": [
         "status",
-        "orderId"
+        "orderId",
+        "limitPx"
       ],
       "properties": {
         "status": {
@@ -3648,7 +3650,7 @@
         },
         "limitPx": {
           "$ref": "#/definitions/PriceValue",
-          "description": "Price the order rests at after this modification. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
+          "description": "Always present. Price the order rests at after this modification. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
           "example": "43000.00"
         },
         "signedLimitPx": {

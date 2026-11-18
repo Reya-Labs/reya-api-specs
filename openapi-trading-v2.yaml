@@ -1008,7 +1008,7 @@ paths:
         Create a new spot or perp order. `timeInForce` is required for every order class.
         STOP_LOSS and TAKE_PROFIT orders are supported only on perp markets.
         On trigger creates and modifications, omit `reduceOnly`, `postOnly` and `postOnlyMode`,
-        including `false`. Supplied flags return `INPUT_VALIDATION_ERROR`. SDK signing and server
+        including `false` or `REJECT`. Supplied flags return `INPUT_VALIDATION_ERROR`. SDK signing and server
         verification reconstruct `reduceOnly` and `postOnly` as `false`; they never inherit stored
         values.
 
@@ -1074,14 +1074,20 @@ paths:
           ask minus 1 tick for a buy, best bid plus 1 tick for a sell. The price is set when the
           order is placed and does not follow the book afterwards. An order that would not cross
           rests at its own price. It is always a maker and, like any post-only order, is never
-          delayed by the taker speedbump. As for any resting order, margin is checked when it
-          trades, at the price it trades at. The order rests and fills at a price at least as
-          good as the one signed.
+          delayed by the taker speedbump. Open-order limits are checked at the price the order
+          rests at; as for any resting order, margin is checked when it trades, at the price it
+          trades at. The order rests and fills at a price at least as good as the one signed,
+          but a price signed far through the book gives no protection beyond the book at entry.
+        - A crossing `SLIDE` order is still rejected with `POST_ONLY_WOULD_CROSS_ERROR` when it
+          cannot be repriced: the market has no usable price tick, or the repriced price fails
+          the usual price checks (it must be above zero, within the market's maximum price and
+          on the tick grid).
 
         The response's `limitPx` is the price the order rests at, and `signedLimitPx` is the
         price you signed, present only when the order was repriced. Orders on `orderChanges`,
         `openOrders` and `orderHistory` carry the same two fields, and `postOnlyMode` on
-        post-only orders only. On-chain settlement records the order as signed.
+        post-only orders only (`orderHistory` rows written before this field existed omit it).
+        On-chain settlement records the order as signed.
 
         Example: tick 0.01, best bid 99.95, best ask 100.00. A post-only buy at 100.03 with
         `SLIDE` rests at 99.99: `limitPx` 99.99, `signedLimitPx` 100.03.
@@ -1163,7 +1169,8 @@ paths:
           order and keep its place, sign its current `limitPx` (the resting price).
         - A LIMIT request that changes nothing after any repricing (resting price, signed
           price, `qty`, flags, `expiresAfter` and `postOnlyMode`) returns `EMPTY_MODIFY_ERROR`.
-          A change of `postOnlyMode` alone is accepted and keeps the order's place. An armed
+          A change of `postOnlyMode` alone is accepted and keeps the order's place, provided
+          the order does not cross under the new mode. An armed
           stop may be re-signed with a fresh `signature`, `nonce`, and `deadline` at unchanged
           prices.
         - `postOnlyMode` is not carried over from the resting order. A modification is handled
@@ -1722,9 +1729,10 @@ components:
           liquidity and is still being delayed before it reaches the book. Nothing was changed
           and the request's nonce was not used. Wait for the earlier modification's response,
           then send this one again.
-        - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately and `postOnlyMode`
-          is `REJECT` or absent. Choose a non-crossing price, send `postOnlyMode: SLIDE`, or
-          change the post-only intent and re-sign.
+        - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately, and either
+          `postOnlyMode` is `REJECT` or absent, or `SLIDE` could not reprice it (see
+          `POST /v2/createOrder`, Post-only orders). Choose a non-crossing price, send
+          `postOnlyMode: SLIDE`, or change the post-only intent and re-sign.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
           code. Use `message` for display or troubleshooting; do not parse it as a stable
           machine-readable contract.
