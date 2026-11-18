@@ -127,7 +127,7 @@
       "title": "PostOnlyMode",
       "type": "string",
       "enum": ["REJECT", "SLIDE"],
-      "description": "How a post-only order that would cross the book is handled. `REJECT` (default) rejects it with `POST_ONLY_WOULD_CROSS_ERROR`. `SLIDE` rests it one tick away from the best opposite price, on its own side, instead. See POST /v2/createOrder, Post-only orders.",
+      "description": "How a post-only order that would cross the book is handled. `REJECT` (default) rejects it with `POST_ONLY_WOULD_CROSS_ERROR`. `SLIDE` rests it one tick away from the best opposite price, on its own side, instead, when it can be repriced; otherwise it is rejected the same way. See POST /v2/createOrder, Post-only orders.",
       "example": "REJECT"
     },
     "OrderType": {
@@ -3341,6 +3341,24 @@
                 ]
               }
             ]
+          },
+          {
+            "description": "`postOnlyMode` requires `postOnly: true`.",
+            "required": [
+              "postOnlyMode"
+            ],
+            "not": {
+              "required": [
+                "postOnly"
+              ],
+              "properties": {
+                "postOnly": {
+                  "enum": [
+                    true
+                  ]
+                }
+              }
+            }
           }
         ]
       }
@@ -3517,12 +3535,12 @@
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0). Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately. On a `STOP_LOSS`/`TAKE_PROFIT` modify it is the fired child's worst acceptable price and is re-checked against the market's trigger band alongside the post-modify `triggerPx` (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
+          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0). Always required — send the complete intended value even when it is unchanged from the resting order. For a repriced `SLIDE` order this is the price you sign, not necessarily the resting price. Queue priority is judged on the price the order rests at after any `SLIDE` repricing: changing that resting price loses priority; a non-post-only modification whose new price crosses executes immediately. On a `STOP_LOSS`/`TAKE_PROFIT` modify it is the fired child's worst acceptable price and is re-checked against the market's trigger band alongside the post-modify `triggerPx` (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
           "example": "50000.0"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
-          "description": "The post-modify TOTAL order quantity (not remaining). Required for a `LIMIT` modify; omit for a `STOP_LOSS`/`TAKE_PROFIT` modify — a trigger modify restates the signed full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`; protect the whole position). When present, send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
+          "description": "The post-modify TOTAL order quantity (not remaining). Required for a `LIMIT` modify; omit for a `STOP_LOSS`/`TAKE_PROFIT` modify — a trigger modify restates the signed full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`; protect the whole position). When present, send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged resting price (after any `SLIDE` repricing) preserves queue priority; an increase loses it.",
           "example": "0.1"
         },
         "expiresAfter": {
@@ -3565,6 +3583,24 @@
             "reduceOnly",
             "postOnly"
           ],
+          "not": {
+            "description": "`postOnlyMode` requires `postOnly: true`.",
+            "required": [
+              "postOnlyMode"
+            ],
+            "not": {
+              "required": [
+                "postOnly"
+              ],
+              "properties": {
+                "postOnly": {
+                  "enum": [
+                    true
+                  ]
+                }
+              }
+            }
+          },
           "properties": {
             "orderType": {
               "$ref": "#/definitions/LimitOrderType",

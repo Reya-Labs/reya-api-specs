@@ -1069,8 +1069,9 @@ paths:
         with `postOnly: true`; otherwise the request returns `INPUT_VALIDATION_ERROR`.
 
         - `REJECT` (or absent): a crossing order is rejected with `POST_ONLY_WOULD_CROSS_ERROR`.
-        - `SLIDE`: a buy at or above the best ask (a sell at or below the best bid) is not
-          rejected. It rests one tick away from the best opposite price, on its own side: best
+        - `SLIDE`: a buy at or above the best ask (a sell at or below the best bid) is repriced
+          instead of rejected, when it can be (see below). It rests one tick away from the best
+          opposite price, on its own side: best
           ask minus 1 tick for a buy, best bid plus 1 tick for a sell. The price is set when the
           order is placed and does not follow the book afterwards. An order that would not cross
           rests at its own price. It is always a maker and, like any post-only order, is never
@@ -1180,7 +1181,8 @@ paths:
           `POST_ONLY_WOULD_CROSS_ERROR` and leaves the order unchanged. A non-post-only crossing
           modification can execute immediately; the response reports `execQty` and `status`.
         - The response's `limitPx` is the price the order rests at after the modification, and
-          `signedLimitPx` is the price you signed, present only when the order was repriced.
+          `signedLimitPx` is the price you signed, present only when the order was repriced. If
+          nothing rests (the modification fully filled), `limitPx` is the order's limit price.
         - An order or modification that would take liquidity can be briefly delayed before
           it reaches the book; a post-only modification, `SLIDE` included, never is. While a
           modification of an order is delayed, another
@@ -1732,7 +1734,9 @@ components:
         - `POST_ONLY_WOULD_CROSS_ERROR`: the order would execute immediately, and either
           `postOnlyMode` is `REJECT` or absent, or `SLIDE` could not reprice it (see
           `POST /v2/createOrder`, Post-only orders). Choose a non-crossing price, send
-          `postOnlyMode: SLIDE`, or change the post-only intent and re-sign.
+          `postOnlyMode: SLIDE` if the request did not already use it, or change the post-only
+          intent and re-sign. When `SLIDE` could not reprice the order, sending it again does not
+          help while the book and the market's tick are unchanged.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
           code. Use `message` for display or troubleshooting; do not parse it as a stable
           machine-readable contract.
