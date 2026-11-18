@@ -1007,9 +1007,10 @@ paths:
       description: |
         Create a new spot or perp order. `timeInForce` is required for every order class.
         STOP_LOSS and TAKE_PROFIT orders are supported only on perp markets.
-        On trigger creates and modifications, omit `reduceOnly` and `postOnly`, including
-        `false`. Supplied flags return `INPUT_VALIDATION_ERROR`. SDK signing and server
-        verification reconstruct both as `false`; they never inherit stored values.
+        On trigger creates and modifications, omit `reduceOnly`, `postOnly` and `postOnlyMode`,
+        including `false`. Supplied flags return `INPUT_VALIDATION_ERROR`. SDK signing and server
+        verification reconstruct `reduceOnly` and `postOnly` as `false`; they never inherit stored
+        values.
 
         **Armed stops.** A protective stop is not executable liquidity until it fires. While armed,
         it remains modifiable and cancellable and appears as `OPEN`, with `triggered: false` in
@@ -1069,18 +1070,21 @@ paths:
 
         - `REJECT` (or absent): a crossing order is rejected with `POST_ONLY_WOULD_CROSS_ERROR`.
         - `SLIDE`: a buy at or above the best ask (a sell at or below the best bid) is not
-          rejected. It rests one tick behind the best opposite price: best ask minus 1 tick for
-          a buy, best bid plus 1 tick for a sell. The price is set when the order is placed and
-          does not follow the book afterwards. An order that would not cross rests at its own
-          price. It is always a maker and, like any post-only order, is never delayed by the taker
-          speedbump. As for any resting order, margin is checked when it trades, at the price it
-          trades at.
-          The order rests and fills at a price at least as good as the one signed.
+          rejected. It rests one tick away from the best opposite price, on its own side: best
+          ask minus 1 tick for a buy, best bid plus 1 tick for a sell. The price is set when the
+          order is placed and does not follow the book afterwards. An order that would not cross
+          rests at its own price. It is always a maker and, like any post-only order, is never
+          delayed by the taker speedbump. As for any resting order, margin is checked when it
+          trades, at the price it trades at. The order rests and fills at a price at least as
+          good as the one signed.
+
+        The response's `limitPx` is the price the order rests at, and `signedLimitPx` is the
+        price you signed, present only when the order was repriced. Orders on `orderChanges`,
+        `openOrders` and `orderHistory` carry the same two fields, and `postOnlyMode` on
+        post-only orders only. On-chain settlement records the order as signed.
 
         Example: tick 0.01, best bid 99.95, best ask 100.00. A post-only buy at 100.03 with
-        `SLIDE` rests at 99.99: the order reports `limitPx` 99.99 and `signedLimitPx` 100.03.
-        On-chain settlement records the order as signed. `postOnlyMode` is reported on post-only
-        orders only.
+        `SLIDE` rests at 99.99: `limitPx` 99.99, `signedLimitPx` 100.03.
 
         Also available on the order-entry WebSocket (`asyncapi-exec-v2.yaml`, `createOrder`).
 
@@ -1135,12 +1139,12 @@ paths:
         | Order class | Modifiable fields | Requirements |
         | --- | --- | --- |
         | `LIMIT` | `limitPx`, `qty`, `postOnly`, `postOnlyMode`, `expiresAfter` | Omit `triggerPx`. Send total `qty`, strictly greater than `cumQty`; otherwise `MODIFY_QTY_BELOW_FILLED_ERROR`. |
-        | Armed `STOP_LOSS` / `TAKE_PROFIT` | `limitPx`, `triggerPx` | Send `triggerPx`; omit `qty` and sign the full-position sentinel `±int256.max`, with sign from `isBuy`. Omit `reduceOnly` and `postOnly`; sign both as `false`. Supplied flags, including `false`, are rejected. |
+        | Armed `STOP_LOSS` / `TAKE_PROFIT` | `limitPx`, `triggerPx` | Send `triggerPx`; omit `qty` and sign the full-position sentinel `±int256.max`, with sign from `isBuy`. Omit `reduceOnly`, `postOnly` and `postOnlyMode`; sign `reduceOnly` and `postOnly` as `false`. Supplied flags, including `false`, are rejected. |
 
         `exchangeId`, `isBuy`, `orderType`, `timeInForce`, `clientOrderId`,
         `accountId`, and `signerWallet` must match the existing order. LIMIT modifies also
         restate `reduceOnly`; triggers reconstruct `reduceOnly=false` and `postOnly=false`
-        before signature verification and engine submission. A mismatch returns
+        before signature verification and engine submission, and must omit `postOnlyMode`. A mismatch returns
         `INPUT_VALIDATION_ERROR`. For all order classes, omit `expiresAfter` for GTC/IOC;
         GTT requires a future expiry strictly greater than `deadline`.
 
@@ -1152,20 +1156,27 @@ paths:
 
         **Priority and execution**
 
-        - Decreasing `qty` at unchanged `limitPx` preserves queue priority. Increasing
-          `qty` or changing `limitPx` loses priority.
-        - An unchanged LIMIT request returns `EMPTY_MODIFY_ERROR`. An armed stop may
-          be re-signed with a fresh `signature`, `nonce`, and `deadline` at unchanged prices.
+        - Queue priority is judged on the price the order will rest at, after any `SLIDE`
+          repricing. Decreasing `qty` at an unchanged resting price preserves queue priority.
+          Increasing `qty` or changing the resting price loses priority.
+        - `limitPx` in a modification is the price you sign. To reduce the size of a repriced
+          order and keep its place, sign its current `limitPx` (the resting price).
+        - A LIMIT request that changes nothing after any repricing (resting price, signed
+          price, `qty`, flags, `expiresAfter` and `postOnlyMode`) returns `EMPTY_MODIFY_ERROR`.
+          A change of `postOnlyMode` alone is accepted and keeps the order's place. An armed
+          stop may be re-signed with a fresh `signature`, `nonce`, and `deadline` at unchanged
+          prices.
         - `postOnlyMode` is not carried over from the resting order. A modification is handled
-          like a new order, so without the field it uses `REJECT`. With `SLIDE`, see
-          `POST /v2/createOrder`, Post-only orders. Queue priority is judged on the price after
-          any repricing: the same price with no `qty` increase keeps the place; anything else
-          goes to the back of the queue at its new price.
+          like a new order, so without the field it uses `REJECT`. With `SLIDE`, a crossing
+          post-modify price is repriced as described in `POST /v2/createOrder`, Post-only orders.
         - A post-only modification that would cross without `SLIDE` returns
-          `POST_ONLY_WOULD_CROSS_ERROR` and leaves the order unchanged. A non-post-only crossing modification can
-          execute immediately; the response reports `execQty` and `status`.
+          `POST_ONLY_WOULD_CROSS_ERROR` and leaves the order unchanged. A non-post-only crossing
+          modification can execute immediately; the response reports `execQty` and `status`.
+        - The response's `limitPx` is the price the order rests at after the modification, and
+          `signedLimitPx` is the price you signed, present only when the order was repriced.
         - An order or modification that would take liquidity can be briefly delayed before
-          it reaches the book. While a modification of an order is delayed, another
+          it reaches the book; a post-only modification, `SLIDE` included, never is. While a
+          modification of an order is delayed, another
           modification of the same order returns `MODIFY_ALREADY_HELD_ERROR`; wait for the
           first response, then resend. Likewise, modify an order only after its create has
           been answered: a modification that arrives while the create is still delayed

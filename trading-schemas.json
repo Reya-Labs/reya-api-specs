@@ -127,7 +127,7 @@
       "title": "PostOnlyMode",
       "type": "string",
       "enum": ["REJECT", "SLIDE"],
-      "description": "How a post-only order that would cross the book is handled. `REJECT` (default) rejects it with `POST_ONLY_WOULD_CROSS_ERROR`. `SLIDE` rests it one tick behind the best opposite price instead. See POST /v2/createOrder, Post-only orders.",
+      "description": "How a post-only order that would cross the book is handled. `REJECT` (default) rejects it with `POST_ONLY_WOULD_CROSS_ERROR`. `SLIDE` rests it one tick away from the best opposite price, on its own side, instead. See POST /v2/createOrder, Post-only orders.",
       "example": "REJECT"
     },
     "OrderType": {
@@ -3279,7 +3279,7 @@
         },
         "postOnlyMode": {
           "$ref": "#/definitions/PostOnlyMode",
-          "description": "Optional; defaults to `REJECT`. `SLIDE` rests a crossing post-only order one tick behind the best opposite price instead of rejecting it. Accepted only with `postOnly: true`, otherwise `INPUT_VALIDATION_ERROR`. Not part of the signed order. See POST /v2/createOrder, Post-only orders."
+          "description": "Optional; defaults to `REJECT`. `SLIDE` rests a crossing post-only order one tick away from the best opposite price, on its own side, instead of rejecting it. Accepted only with `postOnly: true`, otherwise `INPUT_VALIDATION_ERROR`. Not part of the signed order. See POST /v2/createOrder, Post-only orders."
         },
         "signature": {
           "type": "string",
@@ -3370,6 +3370,16 @@
           "$ref": "#/definitions/PriceValue",
           "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
+        },
+        "limitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Price the order rests at after this request. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
+          "example": "43000.00"
+        },
+        "signedLimitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Limit price the client signed. Present only when it differs from `limitPx`, i.e. when a `SLIDE` post-only order was repriced.",
+          "example": "43000.03"
         },
         "orderId": {
           "type": "string",
@@ -3635,6 +3645,16 @@
           "$ref": "#/definitions/PriceValue",
           "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
+        },
+        "limitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Price the order rests at after this modification. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
+          "example": "43000.00"
+        },
+        "signedLimitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Limit price the client signed. Present only when it differs from `limitPx`, i.e. when a `SLIDE` post-only order was repriced.",
+          "example": "43000.03"
         },
         "orderId": {
           "type": "string",
