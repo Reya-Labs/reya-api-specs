@@ -98,7 +98,11 @@
         "CAPACITY_LIMITED_ERROR",
         "NOT_WHITELISTED_ERROR",
         "ACCOUNT_SUSPENDED_ERROR",
-        "MODIFY_ALREADY_HELD_ERROR"
+        "MODIFY_ALREADY_HELD_ERROR",
+        "LEVERAGE_UPDATE_ALREADY_SUBMITTED_ERROR",
+        "LEVERAGE_UPDATE_IN_PROGRESS_ERROR",
+        "LEVERAGE_NOT_ALLOWED_ERROR",
+        "UPDATE_LEVERAGE_OTHER_ERROR"
       ],
       "description": "Machine-readable request rejection code. REST returns HTTP 400, except SERVICE_UNAVAILABLE_ERROR on endpoints that document HTTP 503 instead (market depth, account summaries and position risk). The order-entry WebSocket returns the same code in its correlated error response. See the REST API HTTP 400 response reference for per-code meanings and retry guidance. For an HTTP 503 on a read endpoint, retry the same request after backing off; no signature, nonce or clientOrderId is involved."
     },
@@ -660,7 +664,7 @@
           ]
         },
         "initialMarginRequirement": {
-          "description": "Initial margin required by settled positions.",
+          "description": "Initial margin required by settled positions, at the leverage the account uses on each market (see GET /wallet/{address}/leverages).",
           "example": "65",
           "allOf": [
             {
@@ -719,6 +723,40 @@
       },
       "additionalProperties": true
     },
+    "WalletLeverage": {
+      "title": "WalletLeverage",
+      "type": "object",
+      "description": "An account's leverage setting on a perpetual market. See GET /wallet/{address}/leverages.",
+      "required": [
+        "accountId",
+        "symbol",
+        "leverage"
+      ],
+      "properties": {
+        "accountId": {
+          "description": "Perpetual margin account ID.",
+          "example": 12345,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "leverage": {
+          "description": "Leverage the account's initial margin uses on this market: its setting, capped at the market's current maxLeverage. The stored value is read back at the market's current imMultiplier, so after governance changes the multiplier this can differ from the leverage that was set.",
+          "example": 10,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
     "PositionRisk": {
       "title": "PositionRisk",
       "type": "object",
@@ -736,6 +774,8 @@
         "fundingSinceChange",
         "fundingSinceOpen",
         "liquidationMarginRequirement",
+        "initialMarginRequirement",
+        "leverage",
         "liquidationPrice",
         "hasCorrelatedCollateral",
         "updatedAt",
@@ -826,6 +866,24 @@
           "allOf": [
             {
               "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "initialMarginRequirement": {
+          "description": "This position's initial margin requirement, in rUSD: what it needs at its leverage. The stored value is read back at the market's current imMultiplier, so after governance changes it this may no longer equal notional ÷ leverage. Rounded up per position, so a wallet's positions can sum to slightly more than the account's initialMarginRequirement, which is rounded once.",
+          "example": "100",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedDecimal"
+            }
+          ]
+        },
+        "leverage": {
+          "description": "Leverage the account's initial margin uses on this market: the account's setting from GET /wallet/{address}/leverages, capped at the market's maxLeverage, or the market's maxLeverage when the account has no setting. The stored value is read back at the market's current imMultiplier, so after governance changes the multiplier this can differ from the leverage that was set.",
+          "example": 10,
+          "allOf": [
+            {
+              "$ref": "#/definitions/UnsignedInteger"
             }
           ]
         },
@@ -2595,6 +2653,7 @@
         "tickSize",
         "liquidationMarginParameter",
         "initialMarginParameter",
+        "imMultiplier",
         "maxLeverage",
         "oiCap"
       ],
@@ -2623,13 +2682,18 @@
         },
         "liquidationMarginParameter": {
           "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Minimum percentage of notional that needs to be covered to avoid liquidation procedures for a given market; below this value, your account is subject to liquidation procedures. When cross margining, all requirements across markets are covered by the same balance, and all positions are subject to liquidations.",
-          "example": "0.05"
+          "description": "Minimum percentage of notional that needs to be covered to avoid liquidation procedures for a given market; below this value, your account is subject to liquidation procedures. When cross margining, all requirements across markets are covered by the same balance, and all positions are subject to liquidations. A floating-point value: do not use it for exact arithmetic.",
+          "example": "0.0192307692"
         },
         "initialMarginParameter": {
           "$ref": "#/definitions/UnsignedDecimal",
-          "description": "Minimum percentage of notional that needs to be covered post trade; if the account does not satisfy this requirement, trades will not get executed.",
-          "example": "0.04"
+          "description": "The market's default initial margin rate: the minimum percentage of notional that needs to be covered post trade; if the account does not satisfy this requirement, trades will not get executed. An account's leverage setting can make it stricter for that account (see GET /wallet/{address}/leverages and PositionRisk.initialMarginRequirement). A floating-point value: use `imMultiplier` for exact arithmetic, such as signing a leverage update.",
+          "example": "0.025"
+        },
+        "imMultiplier": {
+          "$ref": "#/definitions/UnsignedDecimal",
+          "description": "Initial-margin multiplier of the market's collateral pool, exact as stored on chain (a 1e18 fixed-point value as a decimal string): the default initial margin rate is this multiplier times the liquidation margin rate. Use it for exact arithmetic, such as computing the value a leverage update signs; see POST /updateLeverage.",
+          "example": "1.3"
         },
         "maxLeverage": {
           "$ref": "#/definitions/UnsignedInteger",
@@ -3861,6 +3925,83 @@
           "$ref": "#/definitions/UnsignedInteger",
           "description": "Advisory Unix timestamp in milliseconds at which the countdown will fire unless refreshed or disarmed. The countdown starts when the request is accepted, using the requested `timeoutMs`. Use this timestamp for display and schedule refreshes well before expiry. Omitted when `timeoutMs` is `0`.",
           "example": 1747927119946
+        }
+      },
+      "additionalProperties": true
+    },
+    "UpdateLeverageRequest": {
+      "title": "UpdateLeverageRequest",
+      "description": "Set an account's leverage on one perpetual market using a signed request. See POST /v2/updateLeverage for the signed value, the signature and execution.",
+      "type": "object",
+      "required": [
+        "accountId",
+        "symbol",
+        "leverage",
+        "deadline",
+        "signature",
+        "signerWallet"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Perpetual margin account ID.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol",
+          "description": "Perpetual market symbol."
+        },
+        "leverage": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Whole-number leverage from 1 to the market's `maxLeverage`. `maxLeverage` resets the account to the market's default. Other values return INPUT_VALIDATION_ERROR.",
+          "example": 10
+        },
+        "deadline": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Unix seconds. Signature deadline signed into SetAccountMarketCustomRisk and enforced on chain; at most 300 seconds ahead. The payload has no nonce and stays valid until this deadline; the API accepts each signed payload once.",
+          "example": 1747927149
+        },
+        "signature": {
+          "type": "string",
+          "description": "EIP-712 signature over `SetAccountMarketCustomRisk(uint256 verifyingChainId,uint128 accountId,uint128 marketId,int64 customRisk,uint256 deadline)`, with the value of `customRisk` computed from `leverage` as described in POST /v2/updateLeverage.",
+          "example": "0x1234..."
+        },
+        "signerWallet": {
+          "$ref": "#/definitions/Address",
+          "description": "Address of the signer that produced the signature: the account owner or a wallet with trading permission for it. Must match the signature."
+        }
+      },
+      "additionalProperties": true
+    },
+    "UpdateLeverageResponse": {
+      "title": "UpdateLeverageResponse",
+      "type": "object",
+      "required": [
+        "accountId",
+        "symbol",
+        "leverage",
+        "txHash"
+      ],
+      "properties": {
+        "accountId": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "Account ID, echoed from the request.",
+          "example": 12345
+        },
+        "symbol": {
+          "$ref": "#/definitions/Symbol"
+        },
+        "leverage": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "The leverage now set; the market's `maxLeverage` after a reset.",
+          "example": 10
+        },
+        "txHash": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "description": "Hash of the mined transaction that applied the update.",
+          "example": "0x5f3c1a2b4d6e8f0a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a"
         }
       },
       "additionalProperties": true
