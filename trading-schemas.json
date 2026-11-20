@@ -966,6 +966,11 @@
           "$ref": "#/definitions/PriceValue",
           "example": "43000.00"
         },
+        "markPrice": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "The market's mark price when the matching engine matched this execution: the mark it admitted the taker order against. Compare it with `price` to measure the execution against the mark. Only on ORDER_MATCH executions, and absent whenever no mark was recorded for the execution, for example on executions matched before marks were recorded.",
+          "example": "42995.10"
+        },
         "takerFee": {
           "$ref": "#/definitions/SignedDecimal",
           "description": "Gross taker fee debit in rUSD (signed; positive means the taker paid a fee). When a fee breakdown is present, this equals `protocolFeeCredit + referrerFeeCredit + takerRebateCredit + poolFeeCredit`.",
