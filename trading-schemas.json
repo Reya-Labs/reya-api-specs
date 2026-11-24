@@ -123,6 +123,13 @@
       "description": "Order time in force (IOC = Immediate or Cancel, GTC = Good Till Cancel, GTT = Good Till Time)",
       "example": "GTC"
     },
+    "PostOnlyMode": {
+      "title": "PostOnlyMode",
+      "type": "string",
+      "enum": ["REJECT", "SLIDE"],
+      "description": "How a post-only order that would cross the book is handled. `REJECT` (default) rejects it with `POST_ONLY_WOULD_CROSS_ERROR`. `SLIDE` rests it one tick away from the best opposite price, on its own side, instead, when it can be repriced; otherwise it is rejected the same way. See POST /v2/createOrder, Post-only orders.",
+      "example": "REJECT"
+    },
     "OrderType": {
       "title": "OrderType",
       "type": "string",
@@ -491,7 +498,13 @@
         },
         "limitPx": {
           "$ref": "#/definitions/PriceValue",
+          "description": "Price the order rests at. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`.",
           "example": "43000.00"
+        },
+        "signedLimitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Limit price the client signed. Present only when it differs from `limitPx`, i.e. when a `SLIDE` post-only order was repriced. On-chain settlement records the order as signed, so this is the price seen there.",
+          "example": "43000.03"
         },
         "orderType": {
           "$ref": "#/definitions/OrderType"
@@ -523,8 +536,12 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`.",
+          "description": "Whether this is a post-only (maker-only) order. Mirrors `CreateOrderRequest.postOnly`; updated by `modifyOrder`. See `postOnlyMode` for how a crossing post-only order is handled.",
           "example": false
+        },
+        "postOnlyMode": {
+          "$ref": "#/definitions/PostOnlyMode",
+          "description": "Post-only mode in force for the order. Present only when `postOnly` is true. Updated by every `modifyOrder`: `REJECT` after a modify that omitted it. `orderHistory` rows written before this field existed omit it."
         },
         "status": {
           "$ref": "#/definitions/OrderStatus"
@@ -3262,8 +3279,12 @@
         },
         "postOnly": {
           "type": "boolean",
-          "description": "Post-only (maker-only) intent for LIMIT GTC/GTT orders; rejected on IOC. Omit for STOP_LOSS/TAKE_PROFIT, including false: triggers sign OrderDetails.postOnly=false. A post-only LIMIT that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR.",
+          "description": "Post-only (maker-only) intent for LIMIT GTC/GTT orders; rejected on IOC. Omit for STOP_LOSS/TAKE_PROFIT, including false: triggers sign OrderDetails.postOnly=false. A post-only LIMIT that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR unless `postOnlyMode` is `SLIDE`.",
           "example": false
+        },
+        "postOnlyMode": {
+          "$ref": "#/definitions/PostOnlyMode",
+          "description": "Optional; defaults to `REJECT`. `SLIDE` rests a crossing post-only order one tick away from the best opposite price, on its own side, instead of rejecting it. Accepted only with `postOnly: true`, otherwise `INPUT_VALIDATION_ERROR`. Not part of the signed order. See POST /v2/createOrder, Post-only orders."
         },
         "signature": {
           "type": "string",
@@ -3299,7 +3320,7 @@
       "not": {
         "anyOf": [
           {
-            "description": "TP/SL requests must omit both fixed Boolean fields, even when false.",
+            "description": "TP/SL requests must omit reduceOnly, postOnly and postOnlyMode, even when false or REJECT.",
             "properties": {
               "orderType": {
                 "$ref": "#/definitions/TriggerOrderType"
@@ -3318,8 +3339,31 @@
                 "required": [
                   "postOnly"
                 ]
+              },
+              {
+                "required": [
+                  "postOnlyMode"
+                ]
               }
             ]
+          },
+          {
+            "description": "`postOnlyMode` requires `postOnly: true`.",
+            "required": [
+              "postOnlyMode"
+            ],
+            "not": {
+              "required": [
+                "postOnly"
+              ],
+              "properties": {
+                "postOnly": {
+                  "enum": [
+                    true
+                  ]
+                }
+              }
+            }
           }
         ]
       }
@@ -3329,7 +3373,8 @@
       "type": "object",
       "required": [
         "status",
-        "orderId"
+        "orderId",
+        "limitPx"
       ],
       "properties": {
         "status": {
@@ -3349,6 +3394,16 @@
           "$ref": "#/definitions/PriceValue",
           "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
+        },
+        "limitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Always present. Price the order rests at after this request. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
+          "example": "43000.00"
+        },
+        "signedLimitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Limit price the client signed. Present only when it differs from `limitPx`, i.e. when a `SLIDE` post-only order was repriced.",
+          "example": "43000.03"
         },
         "orderId": {
           "type": "string",
@@ -3485,12 +3540,12 @@
         },
         "limitPx": {
           "$ref": "#/definitions/SignedDecimal",
-          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0). Always required — send the complete intended value even when it is unchanged from the resting order. Changing it loses queue priority; a non-post-only modification whose new price crosses executes immediately. On a `STOP_LOSS`/`TAKE_PROFIT` modify it is the fired child's worst acceptable price and is re-checked against the market's trigger band alongside the post-modify `triggerPx` (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
+          "description": "The post-modify worst acceptable execution price. Must be a positive number (> 0). Always required — send the complete intended value even when it is unchanged from the resting order. For a repriced `SLIDE` order this is the price you sign, not necessarily the resting price. Queue priority is judged on the price the order rests at after any `SLIDE` repricing: changing that resting price loses priority; a non-post-only modification whose new price crosses executes immediately. On a `STOP_LOSS`/`TAKE_PROFIT` modify it is the fired child's worst acceptable price and is re-checked against the market's trigger band alongside the post-modify `triggerPx` (`TRIGGER_LIMIT_OUTSIDE_BAND_ERROR`).",
           "example": "50000.0"
         },
         "qty": {
           "$ref": "#/definitions/Qty",
-          "description": "The post-modify TOTAL order quantity (not remaining). Required for a `LIMIT` modify; omit for a `STOP_LOSS`/`TAKE_PROFIT` modify — a trigger modify restates the signed full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`; protect the whole position). When present, send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged `limitPx` preserves queue priority; an increase loses it.",
+          "description": "The post-modify TOTAL order quantity (not remaining). Required for a `LIMIT` modify; omit for a `STOP_LOSS`/`TAKE_PROFIT` modify — a trigger modify restates the signed full-position sentinel (`quantity = ±int256.max`, sign from `isBuy`; protect the whole position). When present, send the complete intended value even when it is unchanged from the resting order. Must be strictly greater than the order's `cumQty` (else `MODIFY_QTY_BELOW_FILLED_ERROR`). A decrease at an unchanged resting price (after any `SLIDE` repricing) preserves queue priority; an increase loses it.",
           "example": "0.1"
         },
         "expiresAfter": {
@@ -3533,6 +3588,24 @@
             "reduceOnly",
             "postOnly"
           ],
+          "not": {
+            "description": "`postOnlyMode` requires `postOnly: true`.",
+            "required": [
+              "postOnlyMode"
+            ],
+            "not": {
+              "required": [
+                "postOnly"
+              ],
+              "properties": {
+                "postOnly": {
+                  "enum": [
+                    true
+                  ]
+                }
+              }
+            }
+          },
           "properties": {
             "orderType": {
               "$ref": "#/definitions/LimitOrderType",
@@ -3545,8 +3618,12 @@
             },
             "postOnly": {
               "type": "boolean",
-              "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged.",
+              "description": "Post-modify maker-only flag, required for LIMIT. Omit for STOP_LOSS/TAKE_PROFIT, including false: the SDK and server reconstruct the fixed signed value false. A post-only LIMIT modification that would cross is rejected with POST_ONLY_WOULD_CROSS_ERROR and leaves the order unchanged unless `postOnlyMode` is `SLIDE`.",
               "example": false
+            },
+            "postOnlyMode": {
+              "$ref": "#/definitions/PostOnlyMode",
+              "description": "Optional; defaults to `REJECT`. Not carried over from the resting order: a modify is handled like a new order, so omitting it means `REJECT`. Accepted only with `postOnly: true`, otherwise `INPUT_VALIDATION_ERROR`. Not part of the signed order. See POST /v2/createOrder, Post-only orders."
             }
           }
         }
@@ -3575,6 +3652,10 @@
             "postOnly": {
               "not": {},
               "description": "Must be omitted for TP/SL, including false. The signed value is reconstructed as false."
+            },
+            "postOnlyMode": {
+              "not": {},
+              "description": "Must be omitted for TP/SL: `postOnlyMode` requires `postOnly: true`."
             }
           }
         }
@@ -3586,7 +3667,8 @@
       "type": "object",
       "required": [
         "status",
-        "orderId"
+        "orderId",
+        "limitPx"
       ],
       "properties": {
         "status": {
@@ -3606,6 +3688,16 @@
           "$ref": "#/definitions/PriceValue",
           "description": "Quantity-weighted average execution price across all fills of the order so far (both maker and taker), excluding fees. Corresponds to cumQty, not execQty. Rounded half-up to at most 9 decimal places from exact cumulative executed notional. Preserved across amendments of the same order and cancellation. Exposed on create/modify responses, orderChanges, openOrders and orderHistory after the first fill; omitted when cumQty is zero.",
           "example": "3450.25"
+        },
+        "limitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Always present. Price the order rests at after this modification. Equal to the signed price unless a `SLIDE` post-only order was repriced; see `signedLimitPx`. For an order that did not rest (an IOC, or an order fully filled), its limit price.",
+          "example": "43000.00"
+        },
+        "signedLimitPx": {
+          "$ref": "#/definitions/PriceValue",
+          "description": "Limit price the client signed. Present only when it differs from `limitPx`, i.e. when a `SLIDE` post-only order was repriced.",
+          "example": "43000.03"
         },
         "orderId": {
           "type": "string",
