@@ -1070,19 +1070,16 @@ paths:
 
         - `REJECT` (or absent): a crossing order is rejected with `POST_ONLY_WOULD_CROSS_ERROR`.
         - `SLIDE`: a buy at or above the best ask (a sell at or below the best bid) is repriced
-          instead of rejected, when it can be (see below). It rests one tick away from the best
-          opposite price, on its own side: best
-          ask minus 1 tick for a buy, best bid plus 1 tick for a sell. The price is set when the
-          order is placed and does not follow the book afterwards. An order that would not cross
-          rests at its own price. It is always a maker and, like any post-only order, is never
-          delayed by the taker speedbump. Open-order limits are checked at the price the order
+          instead of rejected. It rests one tick away from the best opposite price, on its own
+          side: best ask minus 1 tick for a buy, best bid plus 1 tick for a sell. The price is set
+          when the order is placed and does not follow the book afterwards. An order that would
+          not cross rests at its own price. It is always a maker and, like any post-only order, is
+          never delayed by the taker speedbump. Open-order limits are checked at the price the order
           rests at; as for any resting order, margin is checked when it trades, at the price it
           trades at. The order rests and fills at a price at least as good as the one signed,
           but a price signed far through the book gives no protection beyond the book at entry.
-        - A crossing `SLIDE` order is still rejected with `POST_ONLY_WOULD_CROSS_ERROR` when it
-          cannot be repriced: the market has no usable price tick, or the repriced price fails
-          the usual price checks (it must be above zero, within the market's maximum price and
-          on the tick grid).
+        - The one exception: a crossing `SLIDE` order is still rejected with
+          `POST_ONLY_WOULD_CROSS_ERROR` when that price would be zero or above the maximum price.
 
         The response's `limitPx` is the price the order rests at, and `signedLimitPx` is the
         price you signed, present only when the order was repriced. Orders on `orderChanges`,
@@ -1736,7 +1733,7 @@ components:
           `POST /v2/createOrder`, Post-only orders). Choose a non-crossing price, send
           `postOnlyMode: SLIDE` if the request did not already use it, or change the post-only
           intent and re-sign. When `SLIDE` could not reprice the order, sending it again does not
-          help while the book and the market's tick are unchanged.
+          help while the book is unchanged.
         - The `*_OTHER_ERROR` codes are operation-specific failures without a more specific
           code. Use `message` for display or troubleshooting; do not parse it as a stable
           machine-readable contract.
