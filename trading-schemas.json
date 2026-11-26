@@ -1048,7 +1048,7 @@
         },
         "matchTimestamp": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "When the matching engine matched this execution, in milliseconds. It is the same time as the fill's `timestamp` on the wallet fills channel (`/v2/wallet/{address}/fills`). Only on ORDER_MATCH executions, and absent on legacy executions that have no `fillId`.",
+          "description": "When the matching engine matched this execution, in milliseconds. Executions from the same matching round share it. The `timestamp` of the fill on the wallet fills channel (`/v2/wallet/{address}/fills`) is when the engine published the fill, which can be a few milliseconds later. Only on ORDER_MATCH executions, and absent on legacy executions that have no `fillId`.",
           "example": 1747927088652
         },
         "sequenceNumber": {
