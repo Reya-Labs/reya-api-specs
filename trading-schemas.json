@@ -1043,8 +1043,13 @@
         },
         "timestamp": {
           "$ref": "#/definitions/UnsignedInteger",
-          "description": "Execution timestamp (milliseconds)",
-          "example": 1747927089946
+          "description": "Time of the block that settled this execution, in milliseconds. Block times are whole seconds, so this is always a multiple of 1000. For when the matching engine matched the execution, use `matchTimestamp`.",
+          "example": 1747927089000
+        },
+        "matchTimestamp": {
+          "$ref": "#/definitions/UnsignedInteger",
+          "description": "When the matching engine matched this execution, in milliseconds. Executions from the same matching round share it. The `timestamp` of the fill on the wallet fills channel (`/v2/wallet/{address}/fills`) is when the engine published the fill, which can be a few milliseconds later. Only on ORDER_MATCH executions, and absent on legacy executions that have no `fillId`.",
+          "example": 1747927088652
         },
         "sequenceNumber": {
           "$ref": "#/definitions/UnsignedInteger",
